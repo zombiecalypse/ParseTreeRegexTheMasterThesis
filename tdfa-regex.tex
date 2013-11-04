@@ -4,6 +4,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[latin9]{inputenc}
 \usepackage{verbatim}
+\usepackage{listings}
 \usepackage{refstyle}
 \usepackage{float}
 \usepackage{textcomp}
@@ -153,13 +154,13 @@ and then capture groups, in turn.
 When the regular expression ((b+)b?|a)+ is matched against input bb,
 capture group 2 is expected to match ``bb'', not ``b'', because
 the matching of b+ is greedy. In the NFA, we model this by connecting
-b+ to its following state via an $\epsilon$-transitions of \textit{low
+b+ to its following state via an $\epsilon$-transitions of \emph{low
 priority}, SEE EXAMPLE. More generally, the NFA will prefer to follow
 normal edges over those of low priority. Rather than formalize this
 notion of preference, we come back to priorized edges when discussing
 the transformation from NFA states to DFA states.
 
-To model capture groups in the NFA, we add \textit{commit tags} to
+To model capture groups in the NFA, we add \emph{commit tags} to
 the transition graph. The transition into a capture group is tagged
 by a commit, the transition to leave a capture group is tagged by
 a another commit. To keep the transition graphs readable, we will
@@ -284,7 +285,7 @@ Initialize~TDFA~with~$start$~as~start~state.
 
 $Q\leftarrow start$
 
-2.~Consume~string
+  2.~Consume~string
 
 for~all~indices~$pos$~and~values~$a$~of~$input$
 \begin{lyxcode}
@@ -323,7 +324,6 @@ as follows:
 \delta'(R,a)=\bigcup_{r\in R}\delta(r,a)\mbox{.}
 \]
 
-
 Now we need to consider the $\epsilon$ arrows, some of which contain
 tags. We use the following notation:
 
@@ -335,87 +335,54 @@ pair denotes the memory locations of all tags for their corresponding
 NFA state.
 
 \begin{algorithm}
-\begin{lyxcode}
-Name:~~~$epsilonClosure(q,x)$
-
-Input:~~DFA~state~$Q$,~character~to~consume~$chr$
-
-Output:~$R$~is~the~new~DFA~state,~$instructions$~are~the~instructions~that~need~to~be~executed.
+\begin{lstlisting}[mathescape,tabsize=2]
+Input: Graph of transitions for an NFA,
+	Input character $a$,
+	Input position $pos$,
+	a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
+	where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
+Output: Set of threads $R$.
 
 $R\leftarrow\{\}$
+Initialize empty stack $low$
+Initialize empty stack $high$
 
-Initialize~empty~stack~$low$
+// 1. push follow states with old histories.
+For any $a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$.
+	if $t$ has low priority push $(q', H)$ to $low$, else to $high$.
+end for
 
-Initialize~empty~stack~$high$
+// 2. Follow $\varepsilon$-transitions
+While $high$ and $low$ are not both empty
+	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
+	if $(q', H) \in R$ for some $H$, continue while
+	add $(q', [h_{1},\dots,h_{n}])$ to $R$
+	for all transitions $t$ from $q'$ to $q''$
+		if $(q'', H) \in R$ for some $H$, continue for loop.
+		if $t$ is tagged with an open or close tag:
+			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
+			Make a new history $h'$.
+			$h_{i} \rightarrow h'$ (*)
+			if $t$ has a open tag:
+				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$
+				$h' \leftarrow pos+1$ (*)
+			else, $t$ has a close tag:
+				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag
+				Make a new history $h''$
+				$h_{i'} \rightarrow h''$ (*)
+				$h'' \leftarrow pos$ (*)
+				Commit $h'$
+				Commit $h''$
+				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
+			end if
+		end if				
+				
+		// Push according to priority of transition:
+		if $t$ has low priority, push $(q'', newHistories)$ to $low$, else to $high$
+	end for
+end while
+\end{lstlisting}
 
-1.~Consuming~the~input
-
-For~every~transition~$t$~from~any~of~$q\in Q$~to~$q'$~that~consumes~$chr$
-\begin{lyxcode}
-if~$t$~has~high~priority,~push~$q'$~to~$high$,~else~to~$low$
-\end{lyxcode}
-2.~Following~$\varepsilon$-transitions
-
-While~$high$~and~$low$~are~not~both~empty
-\begin{lyxcode}
-pop~$q'$~with~store~$[l_{1},\dots,l_{n}]$~from~$high$~if~possible,~else~from~$low$
-
-if~$q'\in R$~jump~to~start~of~while~loop
-
-add~$q'$~to~$R$
-
-for~all~transitions~$t$~from~$q'$~to~$q''$
-\begin{lyxcode}
-2.1.~continue~if~$q''$~has~been~seen:
-
-if~$q''\in R$~jump~to~start~of~for~loop~to~avoid~conflict.
-
-2.2~Create~new~NFA~state~and~instructions.
-
-if~$t$~has~the~opening~tag~$\tau_{i}\uparrow$
-\begin{lyxcode}
-Copy~$l$~as~$newHistories$
-
-Create~new~history~cell~$h$~and~put~it~into~$position_{open}(i)$~of~$newHistories$
-
-put~$h\leftarrow\pos+1$~into~$instructions$~to~store~new~start~of~the~group.
-\end{lyxcode}
-else~if~$t$~has~the~closing~tag~$\tau_{i}\downarrow$
-\begin{lyxcode}
-Copy~$l$~as~$newHistories$
-
-Create~new~history~cell~$h$~and~put~it~into~$position_{open}(i)$~of~$newHistories$
-
-Create~new~history~cell~$h'$~and~put~it~into~$position_{close}(i)$~of~$newHistories$
-
-put~$h'\leftarrow l[position_{close}(i)]$~into~$instructions$
-
-put~$h'\leftarrow\pos$~into~$instructions$
-
-put~$c\uparrow(h)$~and~$c\downarrow(h')$~into~$instructions$~to~commit~them~into~the~immutable~history~of~this~thread.
-
-end~if
-\end{lyxcode}
-else
-\begin{lyxcode}
-Copy~$l$~as~$newHistories$
-\end{lyxcode}
-end~if
-
-
-
-2.4.~Push~according~to~priority~of~transition:
-
-if~$t$~has~low~priority,~push~$q''$~with~$newHistories$~to~$low$,~else~to~$high$
-\end{lyxcode}
-end~for
-\end{lyxcode}
-end~while
-
-return~$R$~and~$instructions$
-
-
-\end{lyxcode}
 \caption{Compute the follow-up state for DFA state $Q$}
 \end{algorithm}
 
