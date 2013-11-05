@@ -128,30 +128,49 @@ Parsers that can return abstract syntax trees are more useful than
 ones that only give a flat list of matches. Of course only regular
 grammars can be matched by our approach.
 
+Let us recall what NFAs and DFAs are. A DFA is a state machine that
+will walk over the transition graph, one step for every input
+character. The choice of transition is limited by the transition's
+character range. A transition can only be followed if the current
+input character is inside transition's character range. NFAs differ
+from DFAs in that for some input character and some state, there may
+be more than applicable transition. If there is, an NFA will magically
+guess the correct one. \figref{example-automaton} shows an example of
+an NFA's transition graph. For the moment, let us discuss regular
+expression matching on NFAs. Assuming that the NFA just magicly knows
+the right transition lets us focus on the important things, greediness control
+and capture groups.
 
 \section{Algorithm}
 
-The first step of our algorithm is to transform the regular expression
-into the graph of an NFA. Let us recall what NFAs and DFAs are. A
-DFA is a state machine that will walk over the transition graph, one
-step for every input character. The choice of transition is limited
-by the transition's character range. A transition can only be followed
-if the current input character is inside transition's character range. 
+Conceptually, our approach is the following pipeline of four stages.
+\begin{enumerate}
+  \item Parse the regular expression string into an AST.
+  \item Transform the AST to an NFA.
+  \item Transform the NFA to a DFA.
+  \item Compactify the DFA.
+\end{enumerate}
 
-NFAs differ from DFAs in that, when several transitions are allowed
-from one state to another, an NFA will magically guess the correct
-one. \figref{example-automaton} shows an example of an NFA's transition
-graph. For the moment, let us discuss regular expression matching
-on NFAs. Assuming that the NFA just magicly knows the right transition
-lets us focus on the important things, greediness and capture groups.
+In reality, things are a little more involved, since the
+transformation to DFA is lazy, and the compactification only happens
+after no lazy compilation occurred in a while. Worse, compactification
+can be undone if needed. We'll get back to these details in TODO
+LATER. Let's discuss the stages in turn, starting with 2, since
+parsing the regex grammar is reasonably straightforward.
 
-To control greediness, or discern capture groups, our approach adds
-$\epsilon$ transitions to the transition graph. An $\epsilon$-transition
-has no input range assigned, and can thus always be used. It does
-not consume an input character. Let us look at greediness control,
-and then capture groups, in turn. 
+\subsection{Thompson's construction} 
 
-When the regular expression ((b+)b?|a)+ is matched against input bb,
+In step 2, we transform the AST of the regular expression into an NFA,
+in a modified version of Thompson's NFA construction. TODO: ref. To
+control greedines, or discern capture groups, our approach adds
+$\epsilon$ transitions to the transition graph. An
+$\epsilon$-transition has no input range assigned, and can thus always
+be used. It does not consume an input character. The additions are
+needed for greediness control and capture groups. Let's look at both,
+in turn.
+
+When the regular expression \texttt{(({[}a-zA-Z{]}+),(\textbackslash{}d+);)+} 
+ is matched against input \texttt{bb},
 capture group 2 is expected to match ``bb'', not ``b'', because
 the matching of b+ is greedy. In the NFA, we model this by connecting
 b+ to its following state via an $\epsilon$-transitions of \emph{low
@@ -160,31 +179,21 @@ normal edges over those of low priority. Rather than formalize this
 notion of preference, we come back to priorized edges when discussing
 the transformation from NFA states to DFA states.
 
-To model capture groups in the NFA, we add \emph{commit tags} to
-the transition graph. The transition into a capture group is tagged
-by a commit, the transition to leave a capture group is tagged by
-a another commit. To keep the transition graphs readable, we will
-visually distinguish opening and closing commits. However, they work
-exactly the same way. The NFA keeps a history for every transition
-with a commit. Each time the transition is walked, the current position
-is added to its history. It is easy to see that the entire match tree
-can be reconstructed from the list of histories. 
-
-The details of how the NFA is constructed can easily be determined
-from REFERENCE TO CODE.
+To model capture groups in the NFA, we add \emph{commit tags} to the
+transition graph. The transition into a capture group is tagged by a
+commit, the transition to leave a capture group is tagged by a another
+commit. We distinguish opening and closing commits. The NFA keeps a
+history for every transition with a commit. Each time the transition
+is walked, the current position is added to its history. It is easy to
+see that the entire match tree can be reconstructed from the list of
+histories.
 
 \begin{figure}
-\includegraphics[width=0.69\textwidth]{graphs/automaton}
+\includegraphics[width=0.69\textwidth]{graphs/lehrer_automaton}
 
-\caption{\label{fig:example-automaton}Automaton for ((b+)|a)+. The $\epsilon$-transition
-labeled $\sigma\text{\textuparrow}$ is tagged with an an opening
-commit of capture group $\sigma$. Likewise, $\tau\text{\textdownarrow}$
-is tagged with a closing commit of capture group $\tau$. The edge
-from node 4 to 5 is labeled with a minus, meaning that the edge is
-of low priority. The start state is 1. The only end state is 8.}
+\caption{\label{fig:example-automaton}
+Automaton for \texttt{(({[}a-zA-Z{]}+),(\textbackslash{}d+);)+} }
 \end{figure}
-
-
 
 \subsection{DFAs}
 
