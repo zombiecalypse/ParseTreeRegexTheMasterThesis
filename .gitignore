@@ -36,3 +36,5 @@ bin/
 *.vrb
 *.xdy
 *.tdo
+*.bbl
+*.fls
