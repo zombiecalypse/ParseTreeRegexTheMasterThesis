@@ -36,5 +36,4 @@ bin/
 *.vrb
 *.xdy
 *.tdo
-*.bbl
-*.fls
+tdfa-regex.pdf

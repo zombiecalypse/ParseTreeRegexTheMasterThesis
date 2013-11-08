@@ -1,8 +1,7 @@
-%% LyX 2.0.6 created this file.  For more info, see http://www.lyx.org/.
-%% Do not edit unless you really know what you are doing.
-\documentclass[oneside,english]{amsart}
+\documentclass[english]{sigplanconf}
 \usepackage[T1]{fontenc}
 \usepackage[latin9]{inputenc}
+\usepackage[english]{babel}
 \usepackage{verbatim}
 \usepackage{listings}
 \usepackage{refstyle}
@@ -12,62 +11,34 @@
 \usepackage{amstext}
 \usepackage{amssymb}
 \usepackage{graphicx}
-
-\makeatletter
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
-
-\AtBeginDocument{\providecommand\figref[1]{\ref{fig:#1}}}
-\floatstyle{ruled}
-\newfloat{algorithm}{tbp}{loa}
-\providecommand{\algorithmname}{Algorithm}
-\floatname{algorithm}{\protect\algorithmname}
-\RS@ifundefined{subref}
-  {\def\RSsubtxt{section~}\newref{sub}{name = \RSsubtxt}}
-  {}
-\RS@ifundefined{thmref}
-  {\def\RSthmtxt{theorem~}\newref{thm}{name = \RSthmtxt}}
-  {}
-\RS@ifundefined{lemref}
-  {\def\RSlemtxt{lemma~}\newref{lem}{name = \RSlemtxt}}
-  {}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Textclass specific LaTeX commands.
-\numberwithin{equation}{section}
-\numberwithin{figure}{section}
-\newenvironment{lyxcode}
-{\par\begin{list}{}{
-\setlength{\rightmargin}{\leftmargin}
-\setlength{\listparindent}{0pt}% needed for AMS classes
-\raggedright
-\setlength{\itemsep}{0pt}
-\setlength{\parsep}{0pt}
-\normalfont\ttfamily}%
- \item[]}
-{\end{list}}
-\theoremstyle{plain}
-\newtheorem{thm}{\protect\theoremname}
-  \theoremstyle{definition}
-  \newtheorem{defn}[thm]{\protect\definitionname}
-  \theoremstyle{definition}
-  \newtheorem{example}[thm]{\protect\examplename}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+\usepackage{xcolor}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
-\frenchspacing
 
-\makeatother
-
-\usepackage{babel}
-  \providecommand{\definitionname}{Definition}
-  \providecommand{\examplename}{Example}
-\providecommand{\theoremname}{Theorem}
+\lstdefinestyle{sharpc}{language=[Sharp]C, frame=lr, rulecolor=\color{blue!80!black}}
 
 \begin{document}
+\special{papersize=8.5in,11in}
+\setlength{\pdfpageheight}{\paperheight}
+\setlength{\pdfpagewidth}{\paperwidth}
+
+\conferenceinfo{CONF 'yy}{Month d--d, 20yy, City, ST, Country}
+\copyrightyear{20yy} 
+\copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
+\doi{nnnnnnn.nnnnnnn}
+
+\frenchspacing
 
 \title{Efficient regexp implementation for finding parse trees}
+
+\authorinfo{John}
+
+\authorinfo{John}
+      
+\authorinfo{John}
+
+\maketitle
+
 \begin{abstract}
 Regular expressions naturally and intuitively define ASTs that describe
 the text that they're parsing. We describe a technique for building
@@ -83,7 +54,7 @@ the fly-weight pattern, a history of the all groups. Thus, we log
 enough information during parsing to build up the complete AST at
 the end of parsing.
 \end{abstract}
-\maketitle
+
 
 \section{Introduction}
 
@@ -278,8 +249,7 @@ memory location $n$ into the tail of the same memory location. The
 two instructions don't differ in their effect, but in the order in
 which they are executed.
 \end{description}
-\begin{algorithm}
-\begin{lyxcode}
+\begin{lstlisting}
 Name:~$interpret(input)$
 
 Input:~~$input$~is~a~sequence~of~characters
@@ -297,26 +267,17 @@ $Q\leftarrow start$
   2.~Consume~string
 
 for~all~indices~$pos$~and~values~$a$~of~$input$
-\begin{lyxcode}
 Try~to~find~a~mappable~state~$Q'$~with~$instructions$~on~the~transition~in~TDFA
 
 if~$Q'$~was~found
-\begin{lyxcode}
 execute~$instructions$
 
 jump~back~to~start~of~for~loop.
-\end{lyxcode}
 else
-\begin{lyxcode}
 $Q',instructions\leftarrow epsilonClosure(Q,a)$
-\end{lyxcode}
+%\caption{TDFA from TNFA}
+\end{lstlisting}
 
-\end{lyxcode}
-\end{lyxcode}
-\caption{TDFA from TNFA}
-\end{algorithm}
-
-\begin{defn}
 For $I\subset\naturals$ and $n\in\naturals$, DFA state$\{(q_{i},(a_{ij})_{j=1..n}):i\in I\}$
 is \emph{mappable} to another DFA state $\{(q_{i},(b_{ij})_{j=1..n}):i\in I\}$
 iff there is a bijection $\nu$ such that $\forall i\in I,\, j=1..n:\,(a_{ij})=(\nu(b_{ij}))$.
@@ -399,11 +360,10 @@ end while
 \[
 \delta^{\star}(R,a)=\{q\in Q:q\in E(\delta(r,a))\text{ for some }r\in R\}
 \]
-\end{defn}
-\begin{example}
 Computing the next state from the DFA state $(1[2,5,3,4],2[6,5,3,4],3[2,0,3,1],4[2,0,3,1],5[2,0,3,1],6[2,0,3,4],7[2,0,3,4],8[2,5,3,4])$,
 which is the state after reading a single ``b'' input, in figure
-\ref{fig:example-automaton}: \end{example}
+\ref{fig:example-automaton}: 
+
 \begin{enumerate}
 \item Since only $3$ has a $b$ transition and no tags are written in consuming
 transitions, $high=(4[2,0,3,1])$ after the initializing for loop
@@ -514,7 +474,6 @@ a commit is made, which handles whether the new or the old match is
 longer. 
 \end{comment}
 
-\begin{example}
 \begin{figure}
 \begin{centering}
 \includegraphics[width=0.75\textwidth]{graphs/abc}
@@ -524,7 +483,7 @@ longer.
 \end{figure}
 In the following, the regex \texttt{(((a+)b)+c)+} will be converted
 to a \textsc{dfa} lazily while matching the string ``abaababc'',
-the resulting DFA can be seen in \ref{fig:lazy-dfa}:\end{example}
+the resulting DFA can be seen in \ref{fig:lazy-dfa}: 
 \begin{enumerate}
 \item The starting state is $(1[-1,-2],2[0,-2])$ and the memory location
 $0$ is initialized to hold the index $0$.
