@@ -282,34 +282,34 @@ memory location $n$ into the tail of the same memory location. The
 two instructions don't differ in their effect, but in the order in
 which they are executed.
 \end{description}
-\begin{lstlisting}
-Name:~$interpret(input)$
+\begin{algorithm*}[tb]
+\begin{lstlisting}[mathescape]
+Name: $interpret(input)$
 
-Input:~~$input$~is~a~sequence~of~characters
+Input: $input$ is a sequence of characters
 
-Output:~a~tree~of~matching~capture~groups~for~the~regex
+Output: a tree of matching capture groups for the regex
 
-1.~Compute~all~states~after~start
+// 1. Compute all states after start
 
-$start\leftarrow epsilonClosure(startState,\varepsilon)$~and~execute~its~instructions
+$start\leftarrow epsilonClosure(startState,\varepsilon)$ and execute its instructions
 
-Initialize~TDFA~with~$start$~as~start~state.
+Initialize TDFA with $start$ as start state.
 
 $Q\leftarrow start$
 
-  2.~Consume~string
+// 2. Consume string
 
-for~all~indices~$pos$~and~values~$a$~of~$input$
-Try~to~find~a~mappable~state~$Q'$~with~$instructions$~on~the~transition~in~TDFA
+For all indices $pos$ and values $a$ of $input$
+  Try to find a mappable state $Q'$ with $instructions$ on the transition in TDFA
 
-if~$Q'$~was~found
-execute~$instructions$
-
-jump~back~to~start~of~for~loop.
-else
-$Q',instructions\leftarrow epsilonClosure(Q,a)$
-%\caption{TDFA from TNFA}
+  if $Q'$ was found
+    execute $instructions$
+    jump back to start of for loop.
+  else
+    $Q',\, instructions\leftarrow epsilonClosure(Q, a)$
 \end{lstlisting}
+\end{algorithm*}
 
 For $I\subset\naturals$ and $n\in\naturals$, DFA state$\{(q_{i},(a_{ij})_{j=1..n}):i\in I\}$
 is \emph{mappable} to another DFA state $\{(q_{i},(b_{ij})_{j=1..n}):i\in I\}$
@@ -337,13 +337,13 @@ including the members of $R$ themselves. The second element of each
 pair denotes the memory locations of all tags for their corresponding
 NFA state.
 
-\begin{algorithm}
+\begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
 Input: Graph of transitions for an NFA,
-	Input character $a$,
-	Input position $pos$,
-	a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
-	where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
+	   Input character $a$,
+	   Input position $pos$,
+	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
+	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
 Output: Set of threads $R$.
 
 $R\leftarrow\{\}$
@@ -387,7 +387,7 @@ end while
 \end{lstlisting}
 
 \caption{Compute the follow-up state for DFA state $Q$}
-\end{algorithm}
+\end{algorithm*}
 
 
 \[
