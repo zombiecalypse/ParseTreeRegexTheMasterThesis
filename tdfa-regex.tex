@@ -163,7 +163,7 @@ histories.
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
 \caption{\label{fig:example-automaton}
-Automaton for \texttt{(({[}a-zA-Z{]}+),(\textbackslash{}d+);)+} }
+Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} }
 \end{figure}
 
 \subsection{DFAs}
@@ -446,6 +446,14 @@ data in this subtree represents precisely the subtree of the AST that
 is currently being matched. Upon commit of the hierarchy node, it
 constructs this AST subtree, and stores it as a previous match. Iteratively,
 this produces all matches of all capture groups.
+
+
+\includegraphics[width=0.8\textwidth]{graphs/lehrer_after}
+
+\caption{Matching \texttt{(\textbackslash{}w+) (\textbackslash{}w+)}}
+
+
+\end{figure}
 
 
 \begin{comment}
