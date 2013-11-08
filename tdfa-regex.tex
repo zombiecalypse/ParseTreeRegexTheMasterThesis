@@ -130,19 +130,14 @@ parsing the regex grammar is reasonably straightforward.
 
 \subsection{Thompson's construction} 
 
-\begin{figure*}[tb]
-\includegraphics[width=\linewidth]{graphs/thompson}
-\caption{Modified Thompson~\cite{ThompsonRegex} construction of the automaton}
-\end{figure*}
-
 In step 2, we transform the AST of the regular expression into an NFA,
-in a modified version of Thompson's NFA construction. TODO: ref. To
+in a modified version of Thompson's NFA construction. To
 control greedines, or discern capture groups, our approach adds
 $\epsilon$ transitions to the transition graph. An
 $\epsilon$-transition has no input range assigned, and can thus always
-be used. It does not consume an input character. The additions are
-needed for greediness control and capture groups. Let's look at both,
-in turn.
+be used. It does not consume an input character.
+The additions are needed for greediness control and capture groups.
+Let's look at both, in turn.
 
 To see the importance of greediness control, consider again regular
 expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question
@@ -180,6 +175,13 @@ More generally, the NFA will prefer to follow transitions of normal
 priority over those of low priority. Rather than formalize this
 notion of preference on NFAs, we come back to priorized edges when
 discussing the transformation from NFA states to DFA states.
+
+\begin{figure*}[tb]
+\includegraphics[width=\linewidth]{graphs/thompson}
+\caption{Modified Thompson~\cite{ThompsonRegex} construction of the automaton}
+\label{fig:thompson-construction}
+\end{figure*}
+A list of constructions can be seen in figure \ref{fig:thompson-construction}.
 
 To model capture groups in the NFA, we add \emph{commit tags} to the
 transition graph. The transition into a capture group is tagged by a
