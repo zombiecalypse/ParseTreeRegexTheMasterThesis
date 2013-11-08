@@ -74,7 +74,6 @@ is the length of the regular expression and $n$ is the length of
 the parsed string. This is asymptotically as fast as the best matchers
 that don't extract parse trees. 
 
-
 \subsection{Motivation}
 
 This is the age of big data, and the first step of processing big
@@ -145,15 +144,42 @@ be used. It does not consume an input character. The additions are
 needed for greediness control and capture groups. Let's look at both,
 in turn.
 
-When the regular expression \texttt{(({[}a-zA-Z{]}+),(\textbackslash{}d+);)+} 
- is matched against input \texttt{bb},
-capture group 2 is expected to match ``bb'', not ``b'', because
-the matching of b+ is greedy. In the NFA, we model this by connecting
-b+ to its following state via an $\epsilon$-transitions of \emph{low
-priority}, SEE EXAMPLE. More generally, the NFA will prefer to follow
-normal edges over those of low priority. Rather than formalize this
-notion of preference, we come back to priorized edges when discussing
-the transformation from NFA states to DFA states.
+To see the importance of greediness control, consider again regular
+expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question
+mark sets the \texttt{.*} part of the regular expression to
+\emph{non-greedy}, which means that it will match as little as
+possible while still producing a valid match, if any.  Without
+provisioning \texttt{.*} to be non-greedy, a matching against input
+\texttt{``Tom Lehrer,1;Alan Turing,2;''} would match as much as
+possible into the first capture group, including the record separator
+`,'.  Thus, the first capture group would suddenly contain only one
+entry, and it would contain more than just names, namely``Tom
+Lehrer,1;Alan Turin''.  This is, of course, not what we expect.
+Non-greediness, here, ensures that we get ``Tom Lehrer'', then
+``Alan Turing'' as the matches of the first capture group.
+
+In the NFA, we model greedy repetition or non-greedy repetition of
+an expression as follows.  First, we construct an NFA graph for the
+expression, without any repetition.  We can see how this plays out
+in our running example, which contains the expression \texttt{.*?}.
+First, an automaton for \texttt{.} is constructed.  As we can see
+in \figref{example-automaton}, expression \texttt{.} is modeled as
+just two nodes labeled 3 and 4, and a transition labeled ``any''
+between them.  Repeating is achieved by adding two $\varepsilon$
+transitions: one from 4 back to 3, to match more than one time any
+character, and another one from 3 to 4, to enable matching nothing
+at all.  Importantly, the transition from 4 back to 3 is marked as
+low priority, while the transition leaving the automaton, from 4
+to 5, is unmarked, which means normal priority.  This means that
+the NFA will prefer leaving the repeating expression, rather than
+staying in it.  If the expression were greedy, then we would mark
+the transition from 4 to 5 as low-priority, and the NFA would prefer
+to match any character repeatedly.
+
+More generally, the NFA will prefer to follow transitions of normal
+priority over those of low priority. Rather than formalize this
+notion of preference on NFAs, we come back to priorized edges when
+discussing the transformation from NFA states to DFA states.
 
 To model capture groups in the NFA, we add \emph{commit tags} to the
 transition graph. The transition into a capture group is tagged by a
@@ -167,8 +193,8 @@ histories.
 \begin{figure}
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
-\caption{\label{fig:example-automaton}
-Automaton for \texttt{(({[}a-zA-Z{]}+),(\textbackslash{}d+);)+} }
+\caption{\figlabel{example-automaton}
+Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} }
 \end{figure}
 
 \subsection{DFAs}
