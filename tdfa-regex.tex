@@ -130,19 +130,14 @@ parsing the regex grammar is reasonably straightforward.
 
 \section{Thompson's construction} 
 
-\begin{figure*}[tb]
-\includegraphics[width=\linewidth]{graphs/thompson}
-\caption{Modified Thompson~\cite{ThompsonRegex} construction of the automaton}
-\end{figure*}
-
 In step 2, we transform the AST of the regular expression into an NFA,
-in a modified version of Thompson's NFA construction. TODO: ref. To
+in a modified version of Thompson's NFA construction. To
 control greedines, or discern capture groups, our approach adds
 $\epsilon$ transitions to the transition graph. An
 $\epsilon$-transition has no input range assigned, and can thus always
-be used. It does not consume an input character. The additions are
-needed for greediness control and capture groups. Let's look at both,
-in turn.
+be used. It does not consume an input character.
+The additions are needed for greediness control and capture groups.
+Let's look at both, in turn.
 
 \subsection{Greediness control}
 
@@ -182,6 +177,13 @@ More generally, the NFA will prefer to follow transitions of normal
 priority over those of low priority. Rather than formalize this
 notion of preference on NFAs, we come back to priorized edges when
 discussing the transformation from NFA states to DFA states.
+
+\begin{figure*}[tb]
+\includegraphics[width=\linewidth]{graphs/thompson}
+\caption{Modified Thompson~\cite{ThompsonRegex} construction of the automaton}
+\label{fig:thompson-construction}
+\end{figure*}
+A complete list of constructions can be seen in figure \ref{fig:thompson-construction}.
 
 \subsection{Capture groups}
 
@@ -296,34 +298,34 @@ memory location $n$ into the tail of the same memory location. The
 two instructions don't differ in their effect, but in the order in
 which they are executed.
 \end{description}
-\begin{lstlisting}
-Name:~$interpret(input)$
+\begin{algorithm*}[tb]
+\begin{lstlisting}[mathescape]
+Name: $interpret(input)$
 
-Input:~~$input$~is~a~sequence~of~characters
+Input: $input$ is a sequence of characters
 
-Output:~a~tree~of~matching~capture~groups~for~the~regex
+Output: a tree of matching capture groups for the regex
 
-1.~Compute~all~states~after~start
+// 1. Compute all states after start
 
-$start\leftarrow epsilonClosure(startState,\varepsilon)$~and~execute~its~instructions
+$start\leftarrow epsilonClosure(startState,\varepsilon)$ and execute its instructions
 
-Initialize~TDFA~with~$start$~as~start~state.
+Initialize TDFA with $start$ as start state.
 
 $Q\leftarrow start$
 
-  2.~Consume~string
+// 2. Consume string
 
-for~all~indices~$pos$~and~values~$a$~of~$input$
-Try~to~find~a~mappable~state~$Q'$~with~$instructions$~on~the~transition~in~TDFA
+For all indices $pos$ and values $a$ of $input$
+  Try to find a mappable state $Q'$ with $instructions$ on the transition in TDFA
 
-if~$Q'$~was~found
-execute~$instructions$
-
-jump~back~to~start~of~for~loop.
-else
-$Q',instructions\leftarrow epsilonClosure(Q,a)$
-%\caption{TDFA from TNFA}
+  if $Q'$ was found
+    execute $instructions$
+    jump back to start of for loop.
+  else
+    $Q',\, instructions\leftarrow epsilonClosure(Q, a)$
 \end{lstlisting}
+\end{algorithm*}
 
 For $I\subset\naturals$ and $n\in\naturals$, DFA state$\{(q_{i},(a_{ij})_{j=1..n}):i\in I\}$
 is \emph{mappable} to another DFA state $\{(q_{i},(b_{ij})_{j=1..n}):i\in I\}$
@@ -351,13 +353,13 @@ including the members of $R$ themselves. The second element of each
 pair denotes the memory locations of all tags for their corresponding
 NFA state.
 
-\begin{algorithm}
+\begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
 Input: Graph of transitions for an NFA,
-	Input character $a$,
-	Input position $pos$,
-	a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
-	where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
+	   Input character $a$,
+	   Input position $pos$,
+	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
+	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
 Output: Set of threads $R$.
 
 $R\leftarrow\{\}$
@@ -401,7 +403,7 @@ end while
 \end{lstlisting}
 
 \caption{Compute the follow-up state for DFA state $Q$}
-\end{algorithm}
+\end{algorithm*}
 
 
 \[
