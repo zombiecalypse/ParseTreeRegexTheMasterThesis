@@ -131,6 +131,11 @@ parsing the regex grammar is reasonably straightforward.
 
 \subsection{Thompson's construction} 
 
+\begin{figure*}[tb]
+\includegraphics[width=\linewidth]{graphs/thompson}
+\caption{Modified Thompson~\cite{ThompsonRegex} construction of the automaton}
+\end{figure*}
+
 In step 2, we transform the AST of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. TODO: ref. To
 control greedines, or discern capture groups, our approach adds
@@ -163,7 +168,7 @@ histories.
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
 \caption{\label{fig:example-automaton}
-Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} }
+Automaton for \texttt{(({[}a-zA-Z{]}+),(\textbackslash{}d+);)+} }
 \end{figure}
 
 \subsection{DFAs}
