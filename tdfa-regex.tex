@@ -257,7 +257,6 @@ performance, it would also lead to ambiguity: if the two threads
 disagree on the histories, which one is correct?
 
 
-
 Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of threads
 running after the input character has been read. It makes sure that
@@ -322,36 +321,40 @@ end while
 Name: $interpret(input)$
 Input: $input$ is a sequence of characters
 Output: a tree of matching capture groups for the regex
+	Lazily compiles a DFA while matching.
 
-// 1. Compute all states after start
+// Set $Q$ to startState.
+// A thread is an NFA state, with an array of histories.
+Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.
+Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.
+But unlike in $oneStep$, do not consume an input character.
 
-$start\leftarrow epsilonClosure(startState,\varepsilon)$ and execute its instructions
+// Create the transition map of the DFA.
+Set $T$ to an empty map from state and input to new state and instructions.
 
-Initialize DFA with $start$ as start state.
-
-$Q\leftarrow start$
-
-// 2. Consume string
-
-For all indices $pos$ and values $a$ of $input$
-  Try to find an existing transition to the state $Q_{new}$ with $instructions$ in the DFA
-
-  if $Q_{new}$ was found
-    execute $instructions$
-    $Q\leftarrow Q_{new}$
-    jump back to start of for loop.
-  else
-    $Q_{new},\, instructions\leftarrow epsilonClosure(Q,\, a)$
-    $Q_{mappable},\, mapping\leftarrow findMapping(Q_{new}, DFA)$
-    if $Q_{mappable}$ was found
-      add $mapping$ to $instructions$
-      Create a transition in the DFA with the $instructions$
-      execute $instructions$
-      $Q\leftarrow Q_{mappable}$
-    else
-      Create the state and the transition in the DFA
-      execute $instructions$
-      $Q\leftarrow Q_{new}$
+// Consume string
+For all positions $pos$ in $input$
+	Let $a$ be the character at position $pos$ in $input$.
+	
+	if $T$ has an entry for $Q$ and $a$
+		// Let the DFA handle $a$
+		Read the instructions and new state $Q'$ out of $T$
+		execute the instructions
+		$Q\leftarrow Q'$
+		jump back to start of for loop.
+	else
+		// lazily compile another DFA state.
+		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions 
+		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$
+		if $Q''$ was found
+			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$
+			Execute the instructions.
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.
+			Set $Q$ to $Q''$
+		else
+			Execute the instructions found by oneStep.
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.
+			Set $Q$ to $Q'$.
 \end{lstlisting}
 \caption{Interpretation and lazy compilation of the NFA}
 \end{algorithm*}
