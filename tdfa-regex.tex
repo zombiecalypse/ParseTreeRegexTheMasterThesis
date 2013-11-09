@@ -190,9 +190,33 @@ transition graph. The transition into a capture group is tagged by a
 commit, the transition to leave a capture group is tagged by a another
 commit. We distinguish opening and closing commits. The NFA keeps a
 history for every transition with a commit. Each time the transition
-is walked, the current position is added to its history. It is easy to
-see that the entire match tree can be reconstructed from the list of
-histories.
+is walked, the current position is added to its history. 
+
+We model histories as linked list, where the payload of each node
+is a position.  Only the payload of \emph{head}, the first node,
+is mutable, the \emph{rest}, all other nodes, are immutable.  Because
+the rests are immutable, they may be shared between histories.  This
+is an application of the flyweight pattern, and ensures that all
+of the following instructions on histories can be performed in
+constant time. Here, the \emph{position} is the current position
+of the matcher.  It is well-defined at all times since all threads
+are executed in lock-step, such that at any point in time, all
+threads are at the same position.
+
+\global\long\def\naturals{\mathbb{N}}
+\global\long\def\integers{\mathbb{Z}}
+\global\long\def\pos{\mathbf{\mathbf{p}}}
+
+\begin{description}
+\item [$h\leftarrow\mathbf{p}$] Stores the current position into the head of the linked list $h$.
+\item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
+\item [$h\leftarrow h'$] Sets head->next of $h$ to be head->next of $h'$. 
+	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
+\item [$c\uparrow(h)$] $c\downarrow(h)$ Prepends linked list $h$ with an extra node, which becomes the new head.
+This effectively \emph{commits} the old head, which is henceforth considered immutable.
+\end{description}
+
+It is easy to see that, after matching, given the history of every tag, the entire match tree can be reconstructed.
 
 \begin{figure}
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
@@ -230,13 +254,15 @@ is already running. Not only is an explosion of threads bad for
 performance, it would also lead to ambiguity: if the two threads
 disagree on the histories, which one is correct?
 
-The following algorithm takes as an input a set of threads, an NFA
+
+
+Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of threads
 running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
 follows greedy matching will survive.
 
-\begin{algorithm*}[tb]
+\begin{algorithm*}[H]
 \begin{lstlisting}[mathescape,tabsize=2]
 Input: Graph of transitions for an NFA,
 	   Input character $a$,
@@ -285,52 +311,13 @@ While $high$ and $low$ are not both empty
 end while
 \end{lstlisting}
 
-\caption{Compute the follow-up state for DFA state $Q$}
+\caption{\label{onestep} Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
-\section{The TDFA powerset construction algorithm\label{sec:The-TNFA-algorithm}}
-
-\global\long\def\naturals{\mathbb{N}}
-\global\long\def\integers{\mathbb{Z}}
-\global\long\def\pos{\mathbf{\mathbf{p}}}
 
 
-\begin{comment}
- In the TNFA algorithm, the state of the machine is not only determined
-by the position in the state graph, but also by a number of positions
-in the string that is read, that can later be used to construct the
-subgroups of the match. 
-\end{comment}
-{} Our description adapts the thread metaphor of \cite{Cox2007}, where
-each (T)NFA state describes the state of a single thread in a virtual
-machine and the (T)DFA state is a collection of such threads.
 
-Our algorithm runs two phases for each character read. First it creates
-a new TDFA state from the current state and tries to map this state
-and the instructions on the transition to a known state(as in \cite{laurikari2000nfas}),
-then it executes the instructions found.
 
-The memory model differs from other regular expression engines in
-that locations are not stored in a fixed number of cells. Instead
-each cell is the head of a singly linked list that describes the history
-of the value. This allows us to extract all capture groups matching
-a subpattern after the matching phase ended. Whenever threads are
-forked, the histories of the matches sofar are shared, but we ensure
-that further modifications will be thread-bound.
-
-We need the following instructions:
-\begin{description}
-\item [{$n\leftarrow\mathbf{p}$}] Stores the current position in the input
-string into the head of memory location $n$.
-\item [{$n\leftarrow\pos+1$}] Stores the position after the current one
-in the input string into the head of memory location $n$.
-\item [{$n\leftarrow m$}] Replaces memory location $m$ with a copy of
-head and history of memory location $n$.
-\item [{$c\uparrow(n)$,}] $c\downarrow(n)$ Puts the current state of
-memory location $n$ into the tail of the same memory location. The
-two instructions don't differ in their effect, but in the order in
-which they are executed.
-\end{description}
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape]
 Name: $interpret(input)$
@@ -692,7 +679,6 @@ regex would fail to deliver the best match in most cases. Such cases
 can occur in data mining, in bioinformatics, both of which are handling
 massive data, so that efficiency can be a problem.
 \end{comment}
-
 
 
 \section{Benchmark}
