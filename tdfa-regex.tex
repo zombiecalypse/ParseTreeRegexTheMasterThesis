@@ -121,16 +121,18 @@ Conceptually, our approach is the following pipeline of four stages.
   \item Compactify the DFA.
 \end{enumerate}
 
-In reality, things are a little more involved, since the
-transformation to DFA is lazy, and the compactification only happens
-after no lazy compilation occurred in a while. Worse, compactification
-can be undone if needed. We'll get back to these details in TODO
-LATER. Let's discuss the stages in turn, starting with 2, since
-parsing the regex grammar is reasonably straightforward.
+In reality, things are a little more involved, since the transformation
+to DFA is lazy, and the compactification only happens after no lazy
+compilation occurred in a while. Worse, compactification can be
+undone if needed. We'll get back to these details in TODO LATER.
+Let's discuss the stages in turn, starting with 2, since step 1,
+the parsing of the regular expression grammar, is reasonably
+straightforward.
+
 
 \subsection{Thompson's construction} 
 
-In step 2, we transform the AST of the regular expression into an NFA,
+We transform the AST of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
 control greedines, or discern capture groups, our approach adds
 $\epsilon$ transitions to the transition graph. An
@@ -224,9 +226,9 @@ all threads, kill the ones that have no legal transition for the input
 character, and fork more threads as needed.
 
 Trouble starts when we want to fork a thread for an NFA state that
-is already running. Not is an explosion of threads bad for performance,
-it would also lead to ambiguity: if the two threads disagree on the
-histories, which one is correct?
+is already running. Not only is an explosion of threads bad for
+performance, it would also lead to ambiguity: if the two threads
+disagree on the histories, which one is correct?
 
 The following algorithm takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of threads
@@ -234,18 +236,65 @@ running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
 follows greedy matching will survive.
 
+\begin{algorithm*}[tb]
+\begin{lstlisting}[mathescape,tabsize=2]
+Input: Graph of transitions for an NFA,
+	   Input character $a$,
+	   Input position $pos$,
+	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
+	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
+Output: Set of threads $R$.
+
+$R\leftarrow\{\}$
+Initialize empty stack $low$
+Initialize empty stack $high$
+
+// 1. push follow states with old histories.
+For any $a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$.
+	if $t$ has low priority push $(q', H)$ to $low$, else to $high$.
+end for
+
+// 2. Follow $\varepsilon$-transitions
+While $high$ and $low$ are not both empty
+	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
+	if $(q', H) \in R$ for some $H$, continue while
+	add $(q', [h_{1},\dots,h_{n}])$ to $R$
+	for all transitions $t$ from $q'$ to $q''$
+		if $(q'', H) \in R$ for some $H$, continue for loop.
+		if $t$ is tagged with an open or close tag:
+			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
+			Make a new history $h'$.
+			$h_{i} \rightarrow h'$ (*)
+			if $t$ has a open tag:
+				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$
+				$h' \leftarrow pos+1$ (*)
+			else, $t$ has a close tag:
+				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag
+				Make a new history $h''$
+				$h_{i'} \rightarrow h''$ (*)
+				$h'' \leftarrow pos$ (*)
+				Commit $h'$
+				Commit $h''$
+				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
+			end if
+		end if				
+				
+		// Push according to priority of transition:
+		if $t$ has low priority, push $(q'', newHistories)$ to $low$, else to $high$
+	end for
+end while
+\end{lstlisting}
+
+\caption{Compute the follow-up state for DFA state $Q$}
+\end{algorithm*}
 
 \section{The TDFA powerset construction algorithm\label{sec:The-TNFA-algorithm}}
 
 \global\long\def\naturals{\mathbb{N}}
 \global\long\def\integers{\mathbb{Z}}
 \global\long\def\pos{\mathbf{\mathbf{p}}}
-Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
-which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
-However instead of compiling the TNFA to a TDFA before matching, we
-create the TDFA lazily as we match the string. For clarity, and because
-the original description contains a few errors, we outline his algorithm
-here, omitting his proof for correctness and termination.%
+
+
 \begin{comment}
  In the TNFA algorithm, the state of the machine is not only determined
 by the position in the state graph, but also by a number of positions
@@ -650,6 +699,8 @@ massive data, so that efficiency can be a problem.
 
 
 \section{Related work}
+Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
+which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
 
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
