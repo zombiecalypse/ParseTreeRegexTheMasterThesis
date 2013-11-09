@@ -433,7 +433,7 @@ This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 
 \begin{enumerate}
 \item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$
-\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$, $q'\leftarrow 4$.
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$.
 \item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
 \item $4\rightarrow 3$ is visited. \begin{enumerate}
 	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
@@ -476,9 +476,9 @@ Q=\{
 This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \begin{enumerate}
 \item The character ``,'' can be consumed by the transition $5\rightarrow 6$ and the transition $3\rightarrow 4$.
-\item $(6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))$ is pushed to the stack $high$
+\item $(6, (h_1, h_2, h_7, h_8, h_5, h_6))$ is pushed to the stack $high$
 \item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to the stack $high$
-\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$, $q'\leftarrow 4$.
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$.
 \item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
 \item $4\rightarrow 3$ is visited. \begin{enumerate}
 	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
@@ -545,6 +545,7 @@ This is the execution of $findMapping(Q', DFA)$:
 \end{enumerate}
 \item The mapping is successful and the instructions $h_8 \leftarrow h_{10}$ and $h_7 \leftarrow h_9$ are returned.
 \end{enumerate}
+Note that by construction at most one candidate fulfils the requirement that the same states are present.
 \end{example}
 \section{TDFA with commits\label{sec:TNFA-with-hierarchical}}
 DEPRECATED
