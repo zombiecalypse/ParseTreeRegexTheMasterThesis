@@ -380,17 +380,25 @@ Output:
   The ordered instructions $m$ that reorder the memory 
     locations of $Q$ to $Q'$ and don't interfere with each other.
     
-for all $Q'$ such that $\{q_i\} = \{q'_i\}$
-  Initialize mapping hypothesis $m$
-  for all $q_i=q'_i$ with histories $H$ and $H'$ respectively
-    for $i=0\dots length(H)-1$
-      hypothesize that $H'(i)\leftarrow H(i)$ is a valid map
+For all $Q'$ such that $\{q_i\} = \{q'_i\}$
+  Initialize empty map $m$
+  
+  // Invariant: For each history $H$ there is at most one $H'$
+  //   so that $H\leftarrow H'$ is part of the mapping.
+  
+  For all $q_i=q'_i$ with histories $H$ and $H'$ respectively
+    For $i=0\dots length(H)-1$
+    
+      Hypothesize that  is a valid map
       if $H(i)$ is in $m$ as a key already and does not map to $H'(i)$
-        the mapping fails
+        Fail
       else
-        add the hypothesis to $m$
+        Add $H'(i)\leftarrow H(i)$ to $m$
+        
   // The mapping was found and is in $m$ if we didn't fail.
+  
   sort $m$ in reverse topological order so that no values are overwritten.
+  
   return $Q'$ and $m$
 \end{lstlisting}
 \end{algorithm*}
