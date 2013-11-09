@@ -297,7 +297,7 @@ two instructions don't differ in their effect, but in the order in
 which they are executed.
 \end{description}
 \begin{algorithm*}[tb]
-\begin{lstlisting}[mathescape]
+\begin{lstlisting}[mathescape,tabsize=2]
 Name: $interpret(input)$
 Input: $input$ is a sequence of characters
 Output: a tree of matching capture groups for the regex
@@ -313,58 +313,58 @@ $Q\leftarrow start$
 // 2. Consume string
 
 For all indices $pos$ and values $a$ of $input$
-  Try to find an existing transition to the state $Q_{new}$ with $instructions$ in the DFA
+	Try to find an existing transition to the state $Q_{new}$ with $instructions$ in the DFA
 
-  if $Q_{new}$ was found
-    execute $instructions$
-    $Q\leftarrow Q_{new}$
-    jump back to start of for loop.
-  else
-    $Q_{new},\, instructions\leftarrow epsilonClosure(Q,\, a)$
-    $Q_{mappable},\, mapping\leftarrow findMapping(Q_{new}, DFA)$
-    if $Q_{mappable}$ was found
-      add $mapping$ to $instructions$
-      Create a transition in the DFA with the $instructions$
-      execute $instructions$
-      $Q\leftarrow Q_{mappable}$
-    else
-      Create the state and the transition in the DFA
-      execute $instructions$
-      $Q\leftarrow Q_{new}$
+	if $Q_{new}$ was found
+		execute $instructions$
+		$Q\leftarrow Q_{new}$
+		jump back to start of for loop.
+	else
+		$Q_{new},\, instructions\leftarrow epsilonClosure(Q,\, a)$
+		$Q_{mappable},\, mapping\leftarrow findMapping(Q_{new}, DFA)$
+		if $Q_{mappable}$ was found
+			add $mapping$ to $instructions$
+			Create a transition in the DFA with the $instructions$
+			execute $instructions$
+			$Q\leftarrow Q_{mappable}$
+		else
+			Create the state and the transition in the DFA
+			execute $instructions$
+			$Q\leftarrow Q_{new}$
 \end{lstlisting}
 \caption{Interpretation and lazy compilation of the NFA}
 \end{algorithm*}
 
 \begin{algorithm*}
 % TODO(akarper) maybe change environment for better pseudocode formatting.
-\begin{lstlisting}[mathescape]
+\begin{lstlisting}[mathescape,tabsize=2]
 Name: $findMapping(Q, DFA)$
 Input: $Q=\{(q_i, h_i)\}_{i=1\dots n}$ is a DFA state.
 Output: 
-  A state $Q'$ that $Q$ is \emph{mappable} to
-  The ordered instructions $m$ that reorder the memory 
-    locations of $Q$ to $Q'$ and don't interfere with each other.
+	A state $Q'$ that $Q$ is \emph{mappable} to
+	The ordered instructions $m$ that reorder the memory 
+		locations of $Q$ to $Q'$ and don't interfere with each other.
     
 For all $Q'$ such that $\{q_i\} = \{q'_i\}$
-  Initialize empty map $m$
+	Initialize empty map $m$
   
-  // Invariant: For each history $H$ there is at most one $H'$
-  //   so that $H\leftarrow H'$ is part of the mapping.
+	// Invariant: For each history $H$ there is at most one $H'$
+	//   so that $H\leftarrow H'$ is part of the mapping.
   
-  For all $q_i=q'_i$ with histories $H$ and $H'$ respectively
-    For $i=0\dots length(H)-1$
+	For all $q_i=q'_i$ with histories $H$ and $H'$ respectively
+		For $i=0\dots length(H)-1$
     
-      Hypothesize that  is a valid map
-      if $H(i)$ is in $m$ as a key already and does not map to $H'(i)$
-        Fail
-      else
-        Add $H'(i)\leftarrow H(i)$ to $m$
+			Hypothesize that  is a valid map
+			if $H(i)$ is in $m$ as a key already and does not map to $H'(i)$
+				Fail
+			else
+				Add $H'(i)\leftarrow H(i)$ to $m$
         
-  // The mapping was found and is in $m$ if we didn't fail.
+	// The mapping was found and is in $m$ if we didn't fail.
   
-  sort $m$ in reverse topological order so that no values are overwritten.
+	sort $m$ in reverse topological order so that no values are overwritten.
   
-  return $Q'$ and $m$
+	return $Q'$ and $m$
 \end{lstlisting}
 \end{algorithm*}
 
@@ -372,10 +372,10 @@ For all $Q'$ such that $\{q_i\} = \{q'_i\}$
 \begin{lstlisting}[mathescape,tabsize=2]
 Name: $epsilonClosure$
 Input: Graph of transitions for an NFA,
-	   Input character $a$,
-	   Input position $pos$,
-	   a set of threads $Q = \{(q_i, [h_{1}^i,\dots,h_{n}^i])\}$,
-	     where each $q_i$ is an NFA state and $[h_{1}^i,\dots,h_{n}^i]$ is an array of histories.
+	Input character $a$,
+	Input position $pos$,
+	a set of threads $Q = \{(q_i, [h_{1}^i,\dots,h_{n}^i])\}$,
+		where each $q_i$ is an NFA state and $[h_{1}^i,\dots,h_{n}^i]$ is an array of histories.
 Output: Set of threads $R$.
 
 $R\leftarrow\{\}$
@@ -457,6 +457,12 @@ This is the execution of $epsilonClosure(NFA, ``a'', 1, Q)$:
 \item No further transitions are visited from $3$.
 \item Both stacks are empty, $R$ is returned.
 \end{enumerate}
+\end{example}
+\begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
+
+Take the NFA as above and $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[1,1], h_8=[1,1], h_5=[0], h_6=[0]))\}$.
+
+This is the execution of $epsilonClosure(NFA, ``,'', 2, Q)$:
 \end{example}
 \[
 \delta^{\star}(R,a)=\{q\in Q:q\in E(\delta(r,a))\text{ for some }r\in R\}
