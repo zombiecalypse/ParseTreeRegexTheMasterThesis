@@ -14,6 +14,8 @@
 \usepackage{xcolor}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
+\theoremstyle{definition}
+\newtheorem{example}{Example}[section]
 
 \lstdefinestyle{sharpc}{language=mathescape, frame=lr, rulecolor=\color{blue!80!black}}
 
@@ -431,6 +433,7 @@ NFA state.
 
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
+Name: $epsilonClosure$
 Input: Graph of transitions for an NFA,
 	   Input character $a$,
 	   Input position $pos$,
@@ -452,7 +455,7 @@ While $high$ and $low$ are not both empty
 	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
 	if $(q', H) \in R$ for some $H$, continue while
 	add $(q', [h_{1},\dots,h_{n}])$ to $R$
-	for all transitions $t$ from $q'$ to $q''$
+	for all $\varepsilon$-transitions $t$ from $q'$ to $q''$
 		if $(q'', H) \in R$ for some $H$, continue for loop.
 		if $t$ is tagged with an open or close tag:
 			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
@@ -481,7 +484,43 @@ end while
 \caption{Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
+\begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
 
+\includegraphics[width=.75\linewidth]{graphs/lehrer_automaton}
+
+Assume as an example the automaton above (the same as in figure \ref{fig:example-automaton}) is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[0,0], h_8=[0,0], h_5=[0], h_6=[0]))\}$ (which is the case after initialization or before any commas are read).
+
+This is the execution of $epsilonClosure(NFA, ``a'', 1, Q)$:
+
+\begin{enumerate}
+\item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ os pushed to $high$
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$, $q'\leftarrow 4$.
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
+\item $4\rightarrow 3$ is visited. \begin{enumerate}
+	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
+\end{enumerate}
+\item $4\rightarrow 5$ is visited. \begin{enumerate}
+	\item A new history $h_9$ is created.
+	\item $h_3\rightarrow h_9$ is executed.
+	\item A new history $h_{10}$ is created.
+	\item $h_4\rightarrow h_{10}$ is executed.
+	\item $h_{10} \leftarrow 1$ is executed.
+	\item Commit $h_9$. It is now $h_9=[0,0]$.
+	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
+	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
+\end{enumerate}
+\item No further transitions are visited from $4$.
+\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is popped from $high$.
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)), (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
+\item No transitions are visited from $5$.
+\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $low$.
+\item $3\rightarrow 4$ is visited \begin{enumerate}
+	\item $4$ is in $R$, so no further steps are taken.
+\end{enumerate}
+\item No further transitions are visited from $3$.
+\item Both stacks are empty, $R$ is returned.
+\end{enumerate}
+\end{example}
 \[
 \delta^{\star}(R,a)=\{q\in Q:q\in E(\delta(r,a))\text{ for some }r\in R\}
 \]
