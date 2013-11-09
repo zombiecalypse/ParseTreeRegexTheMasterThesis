@@ -317,35 +317,6 @@ end while
 \end{algorithm*}
 
 
-
-
-
-Our algorithm runs two phases for each character read. First it creates
-a new TDFA state from the current state and tries to map this state
-and the instructions on the transition to a known state(as in \cite{laurikari2000nfas}),
-then it executes the instructions found.
-
-The memory model differs from other regular expression engines in
-that locations are not stored in a fixed number of cells. Instead
-each cell is the head of a singly linked list that describes the history
-of the value. This allows us to extract all capture groups matching
-a subpattern after the matching phase ended. Whenever threads are
-forked, the histories of the matches sofar are shared, but we ensure
-that further modifications will be thread-bound.
-
-We need the following instructions:
-\begin{description}
-\item [{$n\leftarrow\mathbf{p}$}] Stores the current position in the input
-string into the head of history $n$.
-\item [{$n\leftarrow\pos+1$}] Stores the position after the current one
-in the input string into the head of history $n$.
-\item [{$n\leftarrow m$}] Replaces history $m$ with a copy of
-head and history $n$.
-\item [{$c\uparrow(n)$,}] $c\downarrow(n)$ Puts the current state of
-history $n$ into the tail of the same history. The
-two instructions don't differ in their effect, but in the order in
-which they are executed.
-\end{description}
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape]
 Name: $interpret(input)$
