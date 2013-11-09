@@ -427,7 +427,7 @@ end while
 
 Assume as an example the automaton above (the same as in figure \ref{fig:example-automaton}) is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[0,0], h_8=[0,0], h_5=[0], h_6=[0]))\}$ (which is the case after initialization or before any commas are read).
 
-This is the execution of $epsilonClosure(NFA, ``a'', 1, Q)$:
+This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 
 \begin{enumerate}
 \item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$
@@ -462,7 +462,7 @@ This is the execution of $epsilonClosure(NFA, ``a'', 1, Q)$:
 
 Take the NFA as above and $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[1,1], h_8=[1,1], h_5=[0], h_6=[0]))\}$.
 
-This is the execution of $epsilonClosure(NFA, ``,'', 2, Q)$:
+This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \begin{enumerate}
 \item The character ``,'' can be consumed by the transition $5\rightarrow 6$ and the transition $3\rightarrow 4$.
 \item $(6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))$ is pushed to the stack $high$
