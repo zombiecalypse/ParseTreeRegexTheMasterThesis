@@ -321,13 +321,13 @@ that further modifications will be thread-bound.
 We need the following instructions:
 \begin{description}
 \item [{$n\leftarrow\mathbf{p}$}] Stores the current position in the input
-string into the head of memory location $n$.
+string into the head of history $n$.
 \item [{$n\leftarrow\pos+1$}] Stores the position after the current one
-in the input string into the head of memory location $n$.
-\item [{$n\leftarrow m$}] Replaces memory location $m$ with a copy of
-head and history of memory location $n$.
+in the input string into the head of history $n$.
+\item [{$n\leftarrow m$}] Replaces history $m$ with a copy of
+head and history $n$.
 \item [{$c\uparrow(n)$,}] $c\downarrow(n)$ Puts the current state of
-memory location $n$ into the tail of the same memory location. The
+history $n$ into the tail of the same history. The
 two instructions don't differ in their effect, but in the order in
 which they are executed.
 \end{description}
@@ -426,7 +426,7 @@ For any state $R$ of $M$ we define $E(R)=\bigcup_{(r,t)\in R}e(q,t)$
 to be a set of pairs. The first elements of the pairs are the states
 that can be reached from $R$ by going along only $\epsilon$-arrows,
 including the members of $R$ themselves. The second element of each
-pair denotes the memory locations of all tags for their corresponding
+pair denotes the histories of all tags for their corresponding
 NFA state.
 
 \begin{algorithm*}[tb]
