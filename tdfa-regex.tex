@@ -197,7 +197,7 @@ histories.
 \begin{figure}
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
-\caption{\figlabel{example-automaton}
+\caption{\label{fig:example-automaton}
 Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} }
 \end{figure}
 
@@ -434,8 +434,8 @@ NFA state.
 Input: Graph of transitions for an NFA,
 	   Input character $a$,
 	   Input position $pos$,
-	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
-	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
+	   a set of threads $Q = \{(q_i, [h_{1}^i,\dots,h_{n}^i])\}$,
+	     where each $q_i$ is an NFA state and $[h_{1}^i,\dots,h_{n}^i]$ is an array of histories.
 Output: Set of threads $R$.
 
 $R\leftarrow\{\}$
@@ -477,7 +477,7 @@ While $high$ and $low$ are not both empty
 	end for
 end while
 \end{lstlisting}
-
+\label{alg:epsilonClosure}
 \caption{Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
