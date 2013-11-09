@@ -153,7 +153,7 @@ provisioning \texttt{.*} to be non-greedy, a matching against input
 possible into the first capture group, including the record separator
 `,'.  Thus, the first capture group would suddenly contain only one
 entry, and it would contain more than just names, namely``Tom
-Lehrer,1;Alan Turin''.  This is, of course, not what we expect.
+Lehrer,1;Alan Turing''.  This is, of course, not what we expect.
 Non-greediness, here, ensures that we get ``Tom Lehrer'', then
 ``Alan Turing'' as the matches of the first capture group.
 
@@ -180,12 +180,24 @@ priority over those of low priority. Rather than formalize this
 notion of preference on NFAs, we come back to priorized edges when
 discussing the transformation from NFA states to DFA states.
 
+Here is a full list of recursive expansions for the constructs 
+of regular expressions, visualized in \ref{fig:thompson-construction},
+following the construction algorithm of \cite{Thom68a}:
+\begin{description}
+\item[\texttt{a}] is expanded to the automaton with the single transition consuming $a$.
+\item[\texttt{$S$?}] is expanded to the automaton of $S$, but an additional $\varepsilon$-transition is allowed from the start node to the end node.
+\item[\texttt{$S$+}]  is expanded to the automaton of $S$, but an additional $\varepsilon$-transition is allowed from the end node to the start node. The end node of the outer automaton is connected to the end node of $S$ with a $\varepsilon$-transition with negative priority.
+\item[\texttt{$S$*}]  is expanded to the automaton of $S$, but an additional $\varepsilon$-transition is allowed from the end node to the start node and another one from the start node to the end node. The end node of the outer automaton is connected to the end node of $S$ with a $\varepsilon$-transition with negative priority.
+\item[\texttt{$S$+?}]  is expanded to the automaton of $S$, but an additional $\varepsilon$-transition is allowed from the end node to the start node with negative priority. The end node of the outer automaton is connected to the end node of $S$ with a $\varepsilon$-transition.
+\item[\texttt{$S$*?}]  is expanded to the automaton of $S$, but an additional $\varepsilon$-transition is allowed from the end node to the start node with negative priority and another  $\varepsilon$-transition with regular priority from the start node to the end node. The end node of the outer automaton is connected to the end node of $S$ with a $\varepsilon$-transition
+\item[\texttt{$(S)$}] is expanded to the automaton of $S$. If $i$ is the index of the capture group, the start node of the outer automaton is connected to the inner start node with an $\varepsilon$-transition tagged with $\tau_i\uparrow$. The end node of the inner automaton is connected to the outer end node with an $\varepsilon$-transition tagged with $\tau_i\downarrow$.
+\end{description}
+
 \begin{figure*}[tb]
 \includegraphics[width=\linewidth]{graphs/thompson}
 \caption{Modified Thompson~\cite{ThompsonRegex} construction of the automaton}
 \label{fig:thompson-construction}
 \end{figure*}
-A list of constructions can be seen in figure \ref{fig:thompson-construction}.
 
 To model capture groups in the NFA, we add \emph{commit tags} to the
 transition graph. The transition into a capture group is tagged by a
