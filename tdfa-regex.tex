@@ -14,6 +14,8 @@
 \usepackage{xcolor}
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
+\theoremstyle{definition}
+\newtheorem{example}{Example}[section]
 
 \lstdefinestyle{sharpc}{language=mathescape, frame=lr, rulecolor=\color{blue!80!black}}
 
@@ -221,7 +223,7 @@ It is easy to see that, after matching, given the history of every tag, the enti
 \begin{figure}
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
-\caption{\figlabel{example-automaton}
+\caption{\label{fig:example-automaton}
 Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} }
 \end{figure}
 
@@ -318,6 +320,32 @@ end while
 
 
 
+Our algorithm runs two phases for each character read. First it creates
+a new TDFA state from the current state and tries to map this state
+and the instructions on the transition to a known state(as in \cite{laurikari2000nfas}),
+then it executes the instructions found.
+
+The memory model differs from other regular expression engines in
+that locations are not stored in a fixed number of cells. Instead
+each cell is the head of a singly linked list that describes the history
+of the value. This allows us to extract all capture groups matching
+a subpattern after the matching phase ended. Whenever threads are
+forked, the histories of the matches sofar are shared, but we ensure
+that further modifications will be thread-bound.
+
+We need the following instructions:
+\begin{description}
+\item [{$n\leftarrow\mathbf{p}$}] Stores the current position in the input
+string into the head of history $n$.
+\item [{$n\leftarrow\pos+1$}] Stores the position after the current one
+in the input string into the head of history $n$.
+\item [{$n\leftarrow m$}] Replaces history $m$ with a copy of
+head and history $n$.
+\item [{$c\uparrow(n)$,}] $c\downarrow(n)$ Puts the current state of
+history $n$ into the tail of the same history. The
+two instructions don't differ in their effect, but in the order in
+which they are executed.
+\end{description}
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape]
 Name: $interpret(input)$
@@ -367,17 +395,25 @@ Output:
   The ordered instructions $m$ that reorder the memory 
     locations of $Q$ to $Q'$ and don't interfere with each other.
     
-for all $Q'$ such that $\{q_i\} = \{q'_i\}$
-  Initialize mapping hypothesis $m$
-  for all $q_i=q'_i$ with histories $H$ and $H'$ respectively
-    for $i=0\dots length(H)-1$
-      hypothesize that $H'(i)\leftarrow H(i)$ is a valid map
+For all $Q'$ such that $\{q_i\} = \{q'_i\}$
+  Initialize empty map $m$
+  
+  // Invariant: For each history $H$ there is at most one $H'$
+  //   so that $H\leftarrow H'$ is part of the mapping.
+  
+  For all $q_i=q'_i$ with histories $H$ and $H'$ respectively
+    For $i=0\dots length(H)-1$
+    
+      Hypothesize that  is a valid map
       if $H(i)$ is in $m$ as a key already and does not map to $H'(i)$
-        the mapping fails
+        Fail
       else
-        add the hypothesis to $m$
+        Add $H'(i)\leftarrow H(i)$ to $m$
+        
   // The mapping was found and is in $m$ if we didn't fail.
+  
   sort $m$ in reverse topological order so that no values are overwritten.
+  
   return $Q'$ and $m$
 \end{lstlisting}
 \end{algorithm*}
@@ -405,16 +441,17 @@ For any state $R$ of $M$ we define $E(R)=\bigcup_{(r,t)\in R}e(q,t)$
 to be a set of pairs. The first elements of the pairs are the states
 that can be reached from $R$ by going along only $\epsilon$-arrows,
 including the members of $R$ themselves. The second element of each
-pair denotes the memory locations of all tags for their corresponding
+pair denotes the histories of all tags for their corresponding
 NFA state.
 
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
+Name: $epsilonClosure$
 Input: Graph of transitions for an NFA,
 	   Input character $a$,
 	   Input position $pos$,
-	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
-	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
+	   a set of threads $Q = \{(q_i, [h_{1}^i,\dots,h_{n}^i])\}$,
+	     where each $q_i$ is an NFA state and $[h_{1}^i,\dots,h_{n}^i]$ is an array of histories.
 Output: Set of threads $R$.
 
 $R\leftarrow\{\}$
@@ -431,7 +468,7 @@ While $high$ and $low$ are not both empty
 	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
 	if $(q', H) \in R$ for some $H$, continue while
 	add $(q', [h_{1},\dots,h_{n}])$ to $R$
-	for all transitions $t$ from $q'$ to $q''$
+	for all $\varepsilon$-transitions $t$ from $q'$ to $q''$
 		if $(q'', H) \in R$ for some $H$, continue for loop.
 		if $t$ is tagged with an open or close tag:
 			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
@@ -456,11 +493,47 @@ While $high$ and $low$ are not both empty
 	end for
 end while
 \end{lstlisting}
-
+\label{alg:epsilonClosure}
 \caption{Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
+\begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
 
+\includegraphics[width=.75\linewidth]{graphs/lehrer_automaton}
+
+Assume as an example the automaton above (the same as in figure \ref{fig:example-automaton}) is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[0,0], h_8=[0,0], h_5=[0], h_6=[0]))\}$ (which is the case after initialization or before any commas are read).
+
+This is the execution of $epsilonClosure(NFA, ``a'', 1, Q)$:
+
+\begin{enumerate}
+\item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ os pushed to $high$
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$, $q'\leftarrow 4$.
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
+\item $4\rightarrow 3$ is visited. \begin{enumerate}
+	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
+\end{enumerate}
+\item $4\rightarrow 5$ is visited. \begin{enumerate}
+	\item A new history $h_9$ is created.
+	\item $h_3\rightarrow h_9$ is executed.
+	\item A new history $h_{10}$ is created.
+	\item $h_4\rightarrow h_{10}$ is executed.
+	\item $h_{10} \leftarrow 1$ is executed.
+	\item Commit $h_9$. It is now $h_9=[0,0]$.
+	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
+	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
+\end{enumerate}
+\item No further transitions are visited from $4$.
+\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is popped from $high$.
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)), (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
+\item No transitions are visited from $5$.
+\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $low$.
+\item $3\rightarrow 4$ is visited \begin{enumerate}
+	\item $4$ is in $R$, so no further steps are taken.
+\end{enumerate}
+\item No further transitions are visited from $3$.
+\item Both stacks are empty, $R$ is returned.
+\end{enumerate}
+\end{example}
 \[
 \delta^{\star}(R,a)=\{q\in Q:q\in E(\delta(r,a))\text{ for some }r\in R\}
 \]
