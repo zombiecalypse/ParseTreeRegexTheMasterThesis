@@ -15,7 +15,7 @@
 \usepackage{algorithm}
 \usepackage[noend]{algpseudocode}
 
-\lstdefinestyle{sharpc}{language=[Sharp]C, frame=lr, rulecolor=\color{blue!80!black}}
+\lstdefinestyle{sharpc}{language=mathescape, frame=lr, rulecolor=\color{blue!80!black}}
 
 \begin{document}
 \special{papersize=8.5in,11in}
@@ -128,7 +128,7 @@ can be undone if needed. We'll get back to these details in TODO
 LATER. Let's discuss the stages in turn, starting with 2, since
 parsing the regex grammar is reasonably straightforward.
 
-\section{Thompson's construction} 
+\subsection{Thompson's construction} 
 
 In step 2, we transform the AST of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
@@ -138,8 +138,6 @@ $\epsilon$-transition has no input range assigned, and can thus always
 be used. It does not consume an input character.
 The additions are needed for greediness control and capture groups.
 Let's look at both, in turn.
-
-\subsection{Greediness control}
 
 To see the importance of greediness control, consider again regular
 expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question
@@ -183,31 +181,16 @@ discussing the transformation from NFA states to DFA states.
 \caption{Modified Thompson~\cite{ThompsonRegex} construction of the automaton}
 \label{fig:thompson-construction}
 \end{figure*}
-A complete list of constructions can be seen in figure \ref{fig:thompson-construction}.
+A list of constructions can be seen in figure \ref{fig:thompson-construction}.
 
-\subsection{Capture groups}
-
-To model capture groups in the NFA, we add \emph{commit tags} to
-the transition graph. First, we construct an automaton for the
-expression inside of the capture group.  For example, to produce
-capture group \texttt{(.*?)}, we first produce a transition graph
-for \texttt{.*?}. In \figref{example-automaton}, states 3, 4 and
-all transitions between them are exactly the transition graph for
-expression ``\texttt{.*?}''.  This transition graph has a well-known
-entrance, state 3, and a well-known exit, state 4.  To model a
-capture group, we add two more states, 2 and 5,  that will serve
-as the new entrance and exit, respectively.  We then connect the
-new entrance to the old entrance, 2 to 3, via an $\varepsilon$
-transition that is tagged with an open commit, and similarly, we
-connect the old exit to the new exit, 4 to 5, via an $\varepsilon$
-transition that is tagged witha  close commit.  The commit tags are
-labeled with the number of their capture group.
-
-Now, whenever the NFA moves from one state to another via a transition
-that is tagged with a commit, it keeps, for this commit, a history
-of all positions in which it was triggered.  It is easy to see that
-the entire match tree can be reconstructed from the list of histories.
-
+To model capture groups in the NFA, we add \emph{commit tags} to the
+transition graph. The transition into a capture group is tagged by a
+commit, the transition to leave a capture group is tagged by a another
+commit. We distinguish opening and closing commits. The NFA keeps a
+history for every transition with a commit. Each time the transition
+is walked, the current position is added to its history. It is easy to
+see that the entire match tree can be reconstructed from the list of
+histories.
 
 \begin{figure}
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
@@ -257,7 +240,8 @@ follows greedy matching will survive.
 \global\long\def\naturals{\mathbb{N}}
 \global\long\def\integers{\mathbb{Z}}
 \global\long\def\pos{\mathbf{\mathbf{p}}}
-
+Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
+which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
 However instead of compiling the TNFA to a TDFA before matching, we
 create the TDFA lazily as we match the string. For clarity, and because
 the original description contains a few errors, we outline his algorithm
@@ -301,29 +285,64 @@ which they are executed.
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape]
 Name: $interpret(input)$
-
 Input: $input$ is a sequence of characters
-
 Output: a tree of matching capture groups for the regex
 
 // 1. Compute all states after start
 
 $start\leftarrow epsilonClosure(startState,\varepsilon)$ and execute its instructions
 
-Initialize TDFA with $start$ as start state.
+Initialize DFA with $start$ as start state.
 
 $Q\leftarrow start$
 
 // 2. Consume string
 
 For all indices $pos$ and values $a$ of $input$
-  Try to find a mappable state $Q'$ with $instructions$ on the transition in TDFA
+  Try to find an existing transition to the state $Q_{new}$ with $instructions$ in the DFA
 
-  if $Q'$ was found
+  if $Q_{new}$ was found
     execute $instructions$
+    $Q\leftarrow Q_{new}$
     jump back to start of for loop.
   else
-    $Q',\, instructions\leftarrow epsilonClosure(Q, a)$
+    $Q_{new},\, instructions\leftarrow epsilonClosure(Q,\, a)$
+    $Q_{mappable},\, mapping\leftarrow findMapping(Q_{new}, DFA)$
+    if $Q_{mappable}$ was found
+      add $mapping$ to $instructions$
+      Create a transition in the DFA with the $instructions$
+      execute $instructions$
+      $Q\leftarrow Q_{mappable}$
+    else
+      Create the state and the transition in the DFA
+      execute $instructions$
+      $Q\leftarrow Q_{new}$
+\end{lstlisting}
+\caption{Interpretation and lazy compilation of the NFA}
+\end{algorithm*}
+
+\begin{algorithm*}
+% TODO(akarper) maybe change environment for better pseudocode formatting.
+\begin{lstlisting}[mathescape]
+Name: $findMapping(Q, DFA)$
+Input: $Q=\{(q_i, h_i)\}_{i=1\dots n}$ is a DFA state.
+Output: 
+  A state $Q'$ that $Q$ is \emph{mappable} to
+  The ordered instructions $m$ that reorder the memory 
+    locations of $Q$ to $Q'$ and don't interfere with each other.
+    
+for all $Q'$ such that $\{q_i\} = \{q'_i\}$
+  Initialize mapping hypothesis $m$
+  for all $q_i=q'_i$ with histories $H$ and $H'$ respectively
+    for $i=0\dots length(H)-1$
+      hypothesize that $H'(i)\leftarrow H(i)$ is a valid map
+      if $H(i)$ is in $m$ as a key already and does not map to $H'(i)$
+        the mapping fails
+      else
+        add the hypothesis to $m$
+  // The mapping was found and is in $m$ if we didn't fail.
+  sort $m$ in reverse topological order so that no values are overwritten.
+  return $Q'$ and $m$
 \end{lstlisting}
 \end{algorithm*}
 
@@ -631,8 +650,6 @@ massive data, so that efficiency can be a problem.
 
 
 \section{Related work}
-Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
-which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
 
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
