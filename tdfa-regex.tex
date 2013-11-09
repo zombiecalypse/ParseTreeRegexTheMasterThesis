@@ -9,6 +9,7 @@
 \usepackage{textcomp}
 \usepackage{amsthm}
 \usepackage{amstext}
+\usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{xcolor}
@@ -254,7 +255,7 @@ by the position in the state graph, but also by a number of positions
 in the string that is read, that can later be used to construct the
 subgroups of the match. 
 \end{comment}
-{} Our description adapts the thread metaphor of \cite{Cox2007}, where
+Our description adapts the thread metaphor of \cite{Cox2007}, where
 each (T)NFA state describes the state of a single thread in a virtual
 machine and the (T)DFA state is a collection of such threads.
 
@@ -414,10 +415,19 @@ end while
 \end{algorithm*}
 
 \begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
+\label{ex:oneStep1}
 
 \includegraphics[width=.75\linewidth]{graphs/lehrer_automaton}
 
-Assume as an example the automaton above (the same as in figure \ref{fig:example-automaton}) is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[0,0], h_8=[0,0], h_5=[0], h_6=[0]))\}$ (which is the case after initialization or before any commas are read).
+Assume as an example the automaton above (the same as in figure \ref{fig:example-automaton}) is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} 
+\begin{align*}
+Q=\{
+	(q_3, (&h_1=[0], h_2=[0], h_3=[0], \\
+	&h_4=[0], h_5=[0], h_6=[0])), \\
+	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0], \\
+	&h_8=[0,0], h_5=[0], h_6=[0]))\}
+	\end{align*}. 
+This is the case after initialization or before any commas are read.
 
 This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 
@@ -440,7 +450,7 @@ This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 \end{enumerate}
 \item No further transitions are visited from $4$.
 \item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is popped from $high$.
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)), (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)),\allowbreak (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
 \item No transitions are visited from $5$.
 \item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $low$.
 \item $3\rightarrow 4$ is visited \begin{enumerate}
@@ -450,9 +460,18 @@ This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 \item Both stacks are empty, $R$ is returned.
 \end{enumerate}
 \end{example}
+
+
 \begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
 
-Take the NFA as above and $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[1,1], h_8=[1,1], h_5=[0], h_6=[0]))\}$.
+Take the NFA as above and 
+\begin{align*}
+Q=\{
+	(q_3, (&h_1=[0], h_2=[0], h_3=[0], \\
+	&h_4=[0], h_5=[0], h_6=[0])),\\
+	(q_5, (&h_1=[0], h_2=[0], h_7=[1,1],\\ 
+	&h_8=[1,1], h_5=[0], h_6=[0]))\}
+\end{align*}.
 
 This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \begin{enumerate}
@@ -476,10 +495,10 @@ This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \end{enumerate}
 \item No further transitions are visited from $4$.
 \item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is popped from $high$.
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)), (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)),\allowbreak (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
 \item No transitions are visited from $5$.
 \item $(6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))$ is popped from $high$.
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)), (5, (h_1, h_2, h_9, h_{10}, h_5, h_6)), (6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))\}$
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)),\allowbreak (5, (h_1, h_2, h_9, h_{10}, h_5, h_6)),\allowbreak (6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))\}$
 \item $6\rightarrow 7$ is visited.\begin{enumerate}
 	\item A new history $h_{11}$ is created.
 	\item $h_5\rightarrow h_{11}$ is executed.
@@ -495,9 +514,40 @@ This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \item No further transitions are visited from $3$.
 \item Both stacks are empty, $R$ is returned.
 \end{enumerate}
+\label{ex:oneStep2}
 \end{example}
 
+\begin{example} Executing $findMapping$:
+
+After the execution seen in example~\ref{ex:oneStep1} the new proposed state is 
+\begin{align*}
+Q'=\{(q_4, (&h_1=[0], h_2=[0], h_3=[0], \\
+	&h_4=[0], h_5=[0], h_6=[0])), \\
+	(q_5, (&h_1=[0], h_2=[0], h_9=[0,0],\\
+	& h_{10}=[1,1], h_5=[0], h_6=[0]))\}
+\intertext{and the previous DFA state was}
+Q=\{(q_3, (&h_1=[0], h_2=[0], h_3=[0],\\
+	&h_4=[0], h_5=[0], h_6=[0])),\\
+	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0],\\
+	&h_8=[0,0], h_5=[0], h_6=[0]))\}
+\end{align*}.
+
+This is the execution of $findMapping(Q', DFA)$: 
+\begin{enumerate}
+\item $Q$ is considered as a candidate
+\item $q_3$ is checked \begin{enumerate}
+	\item All histories can be mapped with the identity.
+\end{enumerate}
+\item $q_5$ is checked \begin{enumerate}
+	\item $h_1, h_2, h_5, h_6$ can be mapped with the identity.
+	\item $h_9$ can be mapped to $h_7$.
+	\item $h_{10}$ can be mapped to $h_8$.
+\end{enumerate}
+\item The mapping is successful and the instructions $h_8 \leftarrow h_{10}$ and $h_7 \leftarrow h_9$ are returned.
+\end{enumerate}
+\end{example}
 \section{TDFA with commits\label{sec:TNFA-with-hierarchical}}
+DEPRECATED
 
 The overall idea is simple: whenever the TDFA is reading in a run
 of characters that belong to a capture group, we push the previous
