@@ -430,7 +430,7 @@ Assume as an example the automaton above (the same as in figure \ref{fig:example
 This is the execution of $epsilonClosure(NFA, ``a'', 1, Q)$:
 
 \begin{enumerate}
-\item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ os pushed to $high$
+\item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$
 \item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$, $q'\leftarrow 4$.
 \item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
 \item $4\rightarrow 3$ is visited. \begin{enumerate}
@@ -463,6 +463,46 @@ This is the execution of $epsilonClosure(NFA, ``a'', 1, Q)$:
 Take the NFA as above and $Q=\{(q_3, (h_1=[0], h_2=[0], h_3=[0], h_4=[0], h_5=[0], h_6=[0])),\allowbreak (q_5, (h_1=[0], h_2=[0], h_7=[1,1], h_8=[1,1], h_5=[0], h_6=[0]))\}$.
 
 This is the execution of $epsilonClosure(NFA, ``,'', 2, Q)$:
+\begin{enumerate}
+\item The character ``,'' can be consumed by the transition $5\rightarrow 6$ and the transition $3\rightarrow 4$.
+\item $(6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))$ is pushed to the stack $high$
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to the stack $high$
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$, $q'\leftarrow 4$.
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
+\item $4\rightarrow 3$ is visited. \begin{enumerate}
+	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
+\end{enumerate}
+\item $4\rightarrow 5$ is visited. \begin{enumerate}
+	\item A new history $h_9$ is created.
+	\item $h_3\rightarrow h_9$ is executed.
+	\item A new history $h_{10}$ is created.
+	\item $h_4\rightarrow h_{10}$ is executed.
+	\item $h_{10} \leftarrow 1$ is executed.
+	\item Commit $h_9$. It is now $h_9=[0,0]$.
+	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
+	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
+\end{enumerate}
+\item No further transitions are visited from $4$.
+\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is popped from $high$.
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)), (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
+\item No transitions are visited from $5$.
+\item $(6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))$ is popped from $high$.
+\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)), (5, (h_1, h_2, h_9, h_{10}, h_5, h_6)), (6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))\}$
+\item $6\rightarrow 7$ is visited.\begin{enumerate}
+	\item A new history $h_{11}$ is created.
+	\item $h_5\rightarrow h_{11}$ is executed.
+	\item $(7, (h_1, h_2, h_7, h_8, h_{11}, h_6))$ is pushed to $high$.
+\end{enumerate}
+\item No further transitions are visited from $6$.
+\item $(7, (h_1, h_2, h_7, h_8, h_{11}, h_6))$ is popped from $high$.
+\item No transitions are visited from $7$.
+\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $low$.
+\item $3\rightarrow 4$ is visited \begin{enumerate}
+	\item $4$ is in $R$, so no further steps are taken.
+\end{enumerate}
+\item No further transitions are visited from $3$.
+\item Both stacks are empty, $R$ is returned.
+\end{enumerate}
 \end{example}
 \[
 \delta^{\star}(R,a)=\{q\in Q:q\in E(\delta(r,a))\text{ for some }r\in R\}
