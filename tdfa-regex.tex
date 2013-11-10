@@ -417,80 +417,88 @@ Initialize empty stack $high$\;
 
 
 \begin{algorithm*}[tb]
-\begin{lstlisting}[mathescape,tabsize=2]
-Name: $interpret(input)$
-Input: $input$ is a sequence of characters
-Output: a tree of matching capture groups for the regex
-	Lazily compiles a DFA while matching.
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{$input$ is a sequence of characters}
+\Output{a tree of matching capture groups for the regex}
+\Begin{
+\tcp{Lazily compiles a DFA while matching.}
 
-// Set $Q$ to startState.
-// A thread is an NFA state, with an array of histories.
-Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.
-Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.
-But unlike in $oneStep$, do not consume an input character.
+Set $Q$ to startState.\;
+\tcp{A thread is an NFA state, with an array of histories.}
+Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.\;
+Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.\;
 
-// Create the transition map of the DFA.
+\tcp{Create the transition map of the DFA.}
 Set $T$ to an empty map from state and input to new state and instructions.
-
-// Consume string
-For all positions $pos$ in $input$
+\;
+\tcp{Consume string}
+\ForEach{position $pos$ in $input$}{
 	Let $a$ be the character at position $pos$ in $input$.
 	
-	if $T$ has an entry for $Q$ and $a$
+	\eIf{$T$ has an entry for $Q$ and $a$}{
 		// Let the DFA handle $a$
-		Read the instructions and new state $Q'$ out of $T$
-		execute the instructions
-		$Q\leftarrow Q'$
-		jump back to start of for loop.
-	else
-		// lazily compile another DFA state.
-		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions 
-		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$
-		if $Q''$ was found
-			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$
-			Execute the instructions.
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.
-			Set $Q$ to $Q''$
-		else
-			Execute the instructions found by oneStep.
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.
-			Set $Q$ to $Q'$.
-\end{lstlisting}
+		Read the instructions and new state $Q'$ out of $T$\;
+		execute the instructions\;
+		$Q\leftarrow Q'$\;
+		jump back to start of for loop.\;
+	}{ %else
+		\tcp{lazily compile another DFA state.}
+		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions \;
+		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$\;
+		\eIf{$Q''$ was found}{
+			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$\;
+			Execute the instructions.\;
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.\;
+			Set $Q$ to $Q''$\;
+		}{ %else
+			Execute the instructions found by oneStep.\;
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.\;
+			Set $Q$ to $Q'$.\;
+		}
+	}
+
+}
+}
 \caption{Interpretation and lazy compilation of the NFA
 \on{This looks really horrible monospaced -- please don't use the listings package here!}}
 \end{algorithm*}
 
 \begin{algorithm*}
-% TODO(akarper) maybe change environment for better pseudocode formatting.
-\begin{lstlisting}[mathescape,tabsize=2]
-Name: $findMapping(Q, DFA)$
-Input: $Q=\{(q_i, h_i)\}_{i=1\dots n}$ is a DFA state.
-Output: 
-	A state $Q'$ that $Q$ is \emph{mappable} to
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{$Q=\{(q_i, h_i)\}_{i=1\dots n}$ is a DFA state.}
+\Output{A state $Q'$ that $Q$ is \emph{mappable} to.\\
 	The ordered instructions $m$ that reorder the memory 
-		locations of $Q$ to $Q'$ and don't interfere with each other.
+		locations of $Q$ to $Q'$ and don't interfere with each other.}
+\Begin{
     
-For all $Q'$ such that $\{q_i\} = \{q'_i\}$
-	Initialize empty map $m$
-  
-	// Invariant: For each history $H$ there is at most one $H'$
-	//   so that $H\leftarrow H'$ is part of the mapping.
-  
-	For all $q_i=q'_i$ with histories $H$ and $H'$ respectively
-		For $i=0\dots length(H)-1$
+\ForEach{ $Q'$ such that $\{q_i\} = \{q'_i\}$}{
+
+	\tcc{Invariant: For each history $H$ there is at most one $H'$\\ so that $H\leftarrow H'$ is part of the mapping.}
+	Initialize empty map $m$\;
+	
+	\ForEach{$q_i=q'_i$ with histories $H$ and $H'$ respectively}{
+		\For{$i=0\dots length(H)-1$}{
     
-			Hypothesize that  is a valid map
-			if $H(i)$ is in $m$ as a key already and does not map to $H'(i)$
-				Fail
-			else
-				Add $H'(i)\leftarrow H(i)$ to $m$
-        
-	// The mapping was found and is in $m$ if we didn't fail.
+			
+			\eIf{$H(i)$ is in $m$ as a key already and does not map to $H'(i)$}{
+				Fail\;
+			}{
+			
+				Add $H'(i)\leftarrow H(i)$ to $m$ \tcp*{Hypothesize that this is part of a valid map}
+				}
+			}
+		}
+    }
+	\tcp{The mapping was found and is in $m$ if we didn't fail.}
   
-	sort $m$ in reverse topological order so that no values are overwritten.
+	sort $m$ in reverse topological order so that no values are overwritten. \;
   
-	return $Q'$ and $m$
-\end{lstlisting}
+	\Return{$Q'$ and $m$}
+}
 \end{algorithm*}
 
 \begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
