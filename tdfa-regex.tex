@@ -489,59 +489,6 @@ For all $Q'$ such that $\{q_i\} = \{q'_i\}$
 \end{lstlisting}
 \end{algorithm*}
 
-\begin{algorithm*}[tb]
-\begin{lstlisting}[mathescape,tabsize=2]
-Name: $epsilonClosure$
-Input: Graph of transitions for an NFA,
-	Input character $a$,
-	Input position $pos$,
-	a set of threads $Q = \{(q_i, [h_{1}^i,\dots,h_{n}^i])\}$,
-		where each $q_i$ is an NFA state and $[h_{1}^i,\dots,h_{n}^i]$ is an array of histories.
-Output: Set of threads $R$.
-
-$R\leftarrow\{\}$
-Initialize empty stack $low$
-Initialize empty stack $high$
-
-// 1. push follow states with old histories.
-For any $a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$.
-	if $t$ has low priority push $(q', H)$ to $low$, else to $high$.
-end for
-
-// 2. Follow $\varepsilon$-transitions
-While $high$ and $low$ are not both empty
-	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
-	if $(q', H) \in R$ for some $H$, continue while
-	add $(q', [h_{1},\dots,h_{n}])$ to $R$
-	for all $\varepsilon$-transitions $t$ from $q'$ to $q''$
-		if $(q'', H) \in R$ for some $H$, continue for loop.
-		if $t$ is tagged with an open or close tag:
-			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
-			Make a new history $h'$.
-			$h_{i} \rightarrow h'$ (*)
-			if $t$ has a open tag:
-				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$
-				$h' \leftarrow pos+1$ (*)
-			else, $t$ has a close tag:
-				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag
-				Make a new history $h''$
-				$h_{i'} \rightarrow h''$ (*)
-				$h'' \leftarrow pos$ (*)
-				Commit $h'$
-				Commit $h''$
-				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
-			end if
-		end if				
-				
-		// Push according to priority of transition:
-		if $t$ has low priority, push $(q'', newHistories)$ to $low$, else to $high$
-	end for
-end while
-\end{lstlisting}
-\label{alg:epsilonClosure}
-\caption{Compute the follow-up state for DFA state $Q$}
-\end{algorithm*}
-
 \begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
 \label{ex:oneStep1}
 
