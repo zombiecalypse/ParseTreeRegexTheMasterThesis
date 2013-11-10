@@ -13,8 +13,7 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage{algorithm}
-\usepackage[noend]{algpseudocode}
+\usepackage[lined,linesnumbered,commentsnumbered]{algorithm2e}
 \theoremstyle{definition}
 \newtheorem{example}{Example}[section]
 
@@ -359,54 +358,59 @@ running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
 follows greedy matching will survive.
 
-\begin{algorithm*}[H]
-\begin{lstlisting}[mathescape,tabsize=2]
-Input: Graph of transitions for an NFA,
-	   Input character $a$,
-	   Input position $pos$,
+\begin{algorithm*}[tbh]
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{Graph of transitions for an NFA,\\
+	   Input character $a$,\\
+	   Input position $pos$,\\
 	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
-	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
-Output: Set of threads $R$.
+	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
+\Output{ Set of threads $R$.}
+\Begin{
 
-$R\leftarrow\{\}$
-Initialize empty stack $low$
-Initialize empty stack $high$
+$R\leftarrow\{\}$\;
+Initialize empty stack $low$\;
+Initialize empty stack $high$\;
 
-// 1. push follow states with old histories.
-For any $a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$.
-	if $t$ has low priority push $(q', H)$ to $low$, else to $high$.
-end for
+\tcp{1. push follow states with old histories.}
+\ForEach{$a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$}{
+	\lIf{$t$ has low priority}{push $(q', H)$ to $low$ \lElse to $high$}
+}
 
-// 2. Follow $\varepsilon$-transitions
-While $high$ and $low$ are not both empty
-	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
-	if $(q', H) \in R$ for some $H$, continue while
-	add $(q', [h_{1},\dots,h_{n}])$ to $R$
-	for all transitions $t$ from $q'$ to $q''$
-		if $(q'', H) \in R$ for some $H$, continue for loop.
-		if $t$ is tagged with an open or close tag:
-			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
-			Make a new history $h'$.
-			$h_{i} \rightarrow h'$ (*)
-			if $t$ has a open tag:
-				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$
-				$h' \leftarrow pos+1$ (*)
-			else, $t$ has a close tag:
-				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag
-				Make a new history $h''$
-				$h_{i'} \rightarrow h''$ (*)
-				$h'' \leftarrow pos$ (*)
-				Commit $h'$
-				Commit $h''$
-				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
-			end if
-		end if				
+\tcp{2. Follow $\varepsilon$-transitions}
+\While{$high$ and $low$ are not both empty}{
+	\lIf{possible}{pop $(q', [h_{1},\dots,h_{n}]$ from $high$ \lElse else from $low$\;}
+	\lIf{$(q', H) \in R$ for some $H$}{ continue while \;}
+	add $(q', [h_{1},\dots,h_{n}])$ to $R$\;
+	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
+		\lIf{$(q'', H) \in R$ for some $H$}{continue for loop\;}
+		\If{$t$ is tagged with an open or close tag}{
+			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
+			Make a new history $h'$\;
+			$h_{i} \rightarrow h'$ \label{algline:old-copy}\tcp*{Copy old history}
+			\eIf{$t$ has a open tag}{
+				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
+				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
+			}{
+			\tcp{$t$ has a close tag}
+			Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
+			Make a new history $h''$\;
+			$h_{i'} \rightarrow h''$ \label{algline:old-copy2}\tcp*{Copy old history}
+			$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
+			Commit $h'$\;
+			Commit $h''$\;
+			Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
+			}
+		}
+					
 				
-		// Push according to priority of transition:
-		if $t$ has low priority, push $(q'', newHistories)$ to $low$, else to $high$
-	end for
-end while
-\end{lstlisting}
+		\tcp{Push according to priority of transition:}
+		\lIf{$t$ has low priority}{push $(q'', newHistories)$ to $low$, \lElse to $high$}
+	}
+}
+}
 
 \caption{\label{onestep} Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
