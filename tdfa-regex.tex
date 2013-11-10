@@ -13,8 +13,7 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage{algorithm}
-\usepackage[noend]{algpseudocode}
+\usepackage[lined,linesnumbered,commentsnumbered]{algorithm2e}
 \theoremstyle{definition}
 \newtheorem{example}{Example}[section]
 
@@ -351,141 +350,156 @@ is already running. Not only is an explosion of threads bad for
 performance, it would also lead to ambiguity: if the two threads
 disagree on the histories, which one is correct?
 
-Algorithm~\ref{onestep} takes as an input a set of threads, an NFA
+
+
+Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of threads
 running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
 follows greedy matching will survive.
 
-\begin{algorithm*}[tb]
-\begin{lstlisting}[mathescape,tabsize=2]
-Name: oneStep
-Input: Graph of transitions for an NFA,
-	   Input character $a$,
-	   Input position $pos$,
+\begin{algorithm*}[tbh]
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{Graph of transitions for an NFA,\\
+	   Input character $a$,\\
+	   Input position $pos$,\\
 	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
-	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
-Output: Set of threads $R$.
+	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
+\Output{ Set of threads $R$.}
+\Begin{
 
-$R\leftarrow\{\}$
-Initialize empty stack $low$
-Initialize empty stack $high$
+$R\leftarrow\{\}$\;
+Initialize empty stack $low$\;
+Initialize empty stack $high$\;
 
-// 1. push follow states with old histories.
-For any $a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$.
-	if $t$ has low priority push $(q', H)$ to $low$, else to $high$.
-end for
+\tcp{1. push follow states with old histories.}
+\ForEach{$a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$}{
+	\lIf{$t$ has low priority}{push $(q', H)$ to $low$ \lElse to $high$}
+}
 
-// 2. Follow $\varepsilon$-transitions
-While $high$ and $low$ are not both empty
-	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
-	if $(q', H') \in R$ for some array of histories $H'$, continue while
-	add $(q', [h_{1},\dots,h_{n}])$ to $R$
-	for all transitions $t$ from $q'$ to $q''$
-		if $(q'', H'') \in R$ for some $H''$, continue for loop.
-		if $t$ is tagged with an open or close tag:
-			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
-			Make a new history $h'$.
-			$h_{i} \rightarrow h'$ (*)
-			if $t$ has a open tag:
-				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$
-				$h' \leftarrow pos+1$ (*)
-			else, $t$ has a close tag:
-				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag
-				Make a new history $h''$
-				$h_{i'} \rightarrow h''$ (*)
-				$h'' \leftarrow pos$ (*)
-				Commit $h'$
-				Commit $h''$
-				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
-			end if
-		end if				
+\tcp{2. Follow $\varepsilon$-transitions}
+\While{$high$ and $low$ are not both empty}{
+	\lIf{possible}{pop $(q', [h_{1},\dots,h_{n}]$ from $high$ \lElse else from $low$\;}
+	\lIf{$(q', H) \in R$ for some $H$}{ continue while \;}
+	add $(q', [h_{1},\dots,h_{n}])$ to $R$\;
+	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
+		\lIf{$(q'', H) \in R$ for some $H$}{continue for loop\;}
+		\If{$t$ is tagged with an open or close tag}{
+			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
+			Make a new history $h'$\;
+			$h_{i} \rightarrow h'$ \label{algline:old-copy}\tcp*{Copy old history}
+			\eIf{$t$ has a open tag}{
+				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
+				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
+			}{
+			\tcp{$t$ has a close tag}
+			Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
+			Make a new history $h''$\;
+			$h_{i'} \rightarrow h''$ \label{algline:old-copy2}\tcp*{Copy old history}
+			$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
+			Commit $h'$\;
+			Commit $h''$\;
+			Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
+			}
+		}
+					
 				
-		// Push according to priority of transition:
-		if $t$ has low priority, push $(q'', newHistories)$ to $low$, else to $high$
-	end for
-end while
-\end{lstlisting}
+		\tcp{Push according to priority of transition:}
+		\lIf{$t$ has low priority}{push $(q'', newHistories)$ to $low$, \lElse to $high$}
+	}
+}
+}
 
-\caption{\label{onestep} Algorithm oneStep. Compute the follow-up state for DFA state $Q$}
+\caption{\label{onestep}$oneStep(NFA, a, pos, Q)$: Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
 
 \begin{algorithm*}[tb]
-\begin{lstlisting}[mathescape,tabsize=2]
-Name: $interpret(input)$
-Input: $input$ is a sequence of characters
-Output: a tree of matching capture groups for the regex
-	Lazily compiles a DFA while matching.
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{$input$ is a sequence of characters}
+\Output{a tree of matching capture groups for the regex}
+\Begin{
+\tcp{Lazily compiles a DFA while matching.}
 
-// Set $Q$ to startState.
-// A thread is an NFA state, with an array of histories.
-Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.
-Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.
-But unlike in $oneStep$, do not consume an input character.
+Set $Q$ to startState.\;
+\tcp{A thread is an NFA state, with an array of histories.}
+Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.\;
+Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.\;
 
-// Create the transition map of the DFA.
+\tcp{Create the transition map of the DFA.}
 Set $T$ to an empty map from state and input to new state and instructions.
-
-// Consume string
-For all positions $pos$ in $input$
+\;
+\tcp{Consume string}
+\ForEach{position $pos$ in $input$}{
 	Let $a$ be the character at position $pos$ in $input$.
 	
-	if $T$ has an entry for $Q$ and $a$
+	\eIf{$T$ has an entry for $Q$ and $a$}{
 		// Let the DFA handle $a$
-		Read the instructions and new state $Q'$ out of $T$
-		execute the instructions
-		$Q\leftarrow Q'$
-		jump back to start of for loop.
-	else
-		// lazily compile another DFA state.
-		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions 
-		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$
-		if $Q''$ was found
-			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$
-			Execute the instructions.
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.
-			Set $Q$ to $Q''$
-		else
-			Execute the instructions found by oneStep.
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.
-			Set $Q$ to $Q'$.
-\end{lstlisting}
-\caption{Interpretation and lazy compilation of the NFA
+		Read the instructions and new state $Q'$ out of $T$\;
+		execute the instructions\;
+		$Q\leftarrow Q'$\;
+		jump back to start of for loop.\;
+	}{ %else
+		\tcp{lazily compile another DFA state.}
+		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions \;
+		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$\;
+		\eIf{$Q''$ was found}{
+			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$\;
+			Execute the instructions.\;
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.\;
+			Set $Q$ to $Q''$\;
+		}{ %else
+			Execute the instructions found by oneStep.\;
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.\;
+			Set $Q$ to $Q'$.\;
+		}
+	}
+
+}
+}
+\caption{$interpret(input)$: Interpretation and lazy compilation of the NFA
 \on{This looks really horrible monospaced -- please don't use the listings package here!}}
 \end{algorithm*}
 
 \begin{algorithm*}
-% TODO(akarper) maybe change environment for better pseudocode formatting.
-\begin{lstlisting}[mathescape,tabsize=2]
-Name: $findMapping(Q, DFA)$
-Input: $Q=\{(q_i, h_i)\}_{i=1\dots n}$ is a DFA state.
-Output: 
-	A state $Q'$ that $Q$ is \emph{mappable} to
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{$Q=\{(q_i, h_i)\}_{i=1\dots n}$ is a DFA state.}
+\Output{A state $Q'$ that $Q$ is \emph{mappable} to.\\
 	The ordered instructions $m$ that reorder the memory 
-		locations of $Q$ to $Q'$ and don't interfere with each other.
+		locations of $Q$ to $Q'$ and don't interfere with each other.}
+\Begin{
     
-For all $Q'$ such that $\{q_i\} = \{q'_i\}$
-	Initialize empty map $m$
-  
-	// Invariant: For each history $H$ there is at most one $H'$
-	//   so that $H\leftarrow H'$ is part of the mapping.
-  
-	For all $q_i=q'_i$ with histories $H$ and $H'$ respectively
-		For $i=0\dots length(H)-1$
+\ForEach{ $Q'$ such that $\{q_i\} = \{q'_i\}$}{
+
+	\tcc{Invariant: For each history $H$ there is at most one $H'$\\ so that $H\leftarrow H'$ is part of the mapping.}
+	Initialize empty map $m$\;
+	
+	\ForEach{$q_i=q'_i$ with histories $H$ and $H'$ respectively}{
+		\For{$i=0\dots length(H)-1$}{
     
-			Hypothesize that  is a valid map
-			if $H(i)$ is in $m$ as a key already and does not map to $H'(i)$
-				Fail
-			else
-				Add $H'(i)\leftarrow H(i)$ to $m$
-        
-	// The mapping was found and is in $m$ if we didn't fail.
+			
+			\eIf{$H(i)$ is in $m$ as a key already and does not map to $H'(i)$}{
+				Fail\;
+			}{
+			
+				Add $H'(i)\leftarrow H(i)$ to $m$ \tcp*{Hypothesize that this is part of a valid map}
+				}
+			}
+		}
+    }
+	\tcp{The mapping was found and is in $m$ if we didn't fail.}
   
-	sort $m$ in reverse topological order so that no values are overwritten.
+	sort $m$ in reverse topological order so that no values are overwritten. \;
   
-	return $Q'$ and $m$
-\end{lstlisting}
+	\Return{$Q'$ and $m$}
+}
+\caption{$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
 \end{algorithm*}
 
 \begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
@@ -621,6 +635,45 @@ This is the execution of $findMapping(Q', DFA)$:
 Note that by construction at most one candidate fulfils the requirement that the same states are present.
 \end{example}
 \section{TDFA with commits\label{sec:TNFA-with-hierarchical}}
+DEPRECATED
+
+The overall idea is simple: whenever the TDFA is reading in a run
+of characters that belong to a capture group, we push the previous
+one into our history and the work on current one. To implement this,
+we introduce ``commits'' into the TDFA. On the level on the TNFA
+the commits correspond to tags at the end of capture groups. Since
+capture groups are nested, they form a tree. We will call this three
+the match tree and will prove that we can reconstruct it. In it, we
+store all runs that this capture group matches. The subnodes of a
+hierarchy nodes correspond to the submatches of its capture group.We
+will shortly discuss how to construct a TDFA that includes instructions
+that \emph{commit} submatches into the hierarchy nodes.. Once we have
+the instructions, during interpretation of the TDFA, whenever we encounter
+an input character that closes a capture group, the TDFA will \emph{commit}
+that capture group. To commit a substring into a hierarchy node has
+the following semantics.
+
+A hierarchy node, as a tree node, has a corresponding subtree. The
+data in this subtree represents precisely the subtree of the AST that
+is currently being matched. Upon commit of the hierarchy node, it
+constructs this AST subtree, and stores it as a previous match. Iteratively,
+this produces all matches of all capture groups.
+
+\begin{comment}
+if the current set of characters compare the current reading with
+the previously longest read, keeping the longer one. n order to get
+some more control over the overwriting of the tags, a separate \texttt{commit}
+step can be introduced. Each nesting then would need a separate copy
+of the temporary ``best'' match for a given group. For example \texttt{(((a+)b)+c)+}
+would need two additional copies of the innermost group, to handle
+conflicts. 
+
+The intuition is to notice that two tags -- the opening and the corresponding
+end tag -- always appear in order and the inner groups should not
+spill over the end of the outer group. After each closing tag then
+a commit is made, which handles whether the new or the old match is
+longer. 
+\end{comment}
 
 \begin{figure}
 \begin{centering}
@@ -722,7 +775,18 @@ The current commit of the top layer is returned: $c_{1}=(2,4)$.
 
 \caption{\label{fig:lazy-dfa}The DFA of \texttt{(?:(?:(a+)b)+c)+} matching
 ``abaababc''}
+
+
 \end{figure}
+\begin{comment}
+This technique allows for programmers to extract parts of text with
+great performance and flexibility regarding the extracted match. One
+could imagine, that a programmer needs to extract a ideally complete
+sample of formated text with optional parameters. Here, \texttt{\textsc{posix}}
+regex would fail to deliver the best match in most cases. Such cases
+can occur in data mining, in bioinformatics, both of which are handling
+massive data, so that efficiency can be a problem.
+\end{comment}
 
 
 \section{Benchmark}
