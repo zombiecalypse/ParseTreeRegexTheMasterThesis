@@ -351,16 +351,15 @@ is already running. Not only is an explosion of threads bad for
 performance, it would also lead to ambiguity: if the two threads
 disagree on the histories, which one is correct?
 
-
-
-Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
+Algorithm~\ref{onestep} takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of threads
 running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
 follows greedy matching will survive.
 
-\begin{algorithm*}[H]
+\begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
+Name: oneStep
 Input: Graph of transitions for an NFA,
 	   Input character $a$,
 	   Input position $pos$,
@@ -380,10 +379,10 @@ end for
 // 2. Follow $\varepsilon$-transitions
 While $high$ and $low$ are not both empty
 	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
-	if $(q', H) \in R$ for some $H$, continue while
+	if $(q', H') \in R$ for some array of histories $H'$, continue while
 	add $(q', [h_{1},\dots,h_{n}])$ to $R$
 	for all transitions $t$ from $q'$ to $q''$
-		if $(q'', H) \in R$ for some $H$, continue for loop.
+		if $(q'', H'') \in R$ for some $H''$, continue for loop.
 		if $t$ is tagged with an open or close tag:
 			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
 			Make a new history $h'$.
@@ -408,7 +407,7 @@ While $high$ and $low$ are not both empty
 end while
 \end{lstlisting}
 
-\caption{\label{onestep} Compute the follow-up state for DFA state $Q$}
+\caption{\label{onestep} Algorithm oneStep. Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
 
@@ -622,45 +621,6 @@ This is the execution of $findMapping(Q', DFA)$:
 Note that by construction at most one candidate fulfils the requirement that the same states are present.
 \end{example}
 \section{TDFA with commits\label{sec:TNFA-with-hierarchical}}
-DEPRECATED
-
-The overall idea is simple: whenever the TDFA is reading in a run
-of characters that belong to a capture group, we push the previous
-one into our history and the work on current one. To implement this,
-we introduce ``commits'' into the TDFA. On the level on the TNFA
-the commits correspond to tags at the end of capture groups. Since
-capture groups are nested, they form a tree. We will call this three
-the match tree and will prove that we can reconstruct it. In it, we
-store all runs that this capture group matches. The subnodes of a
-hierarchy nodes correspond to the submatches of its capture group.We
-will shortly discuss how to construct a TDFA that includes instructions
-that \emph{commit} submatches into the hierarchy nodes.. Once we have
-the instructions, during interpretation of the TDFA, whenever we encounter
-an input character that closes a capture group, the TDFA will \emph{commit}
-that capture group. To commit a substring into a hierarchy node has
-the following semantics.
-
-A hierarchy node, as a tree node, has a corresponding subtree. The
-data in this subtree represents precisely the subtree of the AST that
-is currently being matched. Upon commit of the hierarchy node, it
-constructs this AST subtree, and stores it as a previous match. Iteratively,
-this produces all matches of all capture groups.
-
-\begin{comment}
-if the current set of characters compare the current reading with
-the previously longest read, keeping the longer one. n order to get
-some more control over the overwriting of the tags, a separate \texttt{commit}
-step can be introduced. Each nesting then would need a separate copy
-of the temporary ``best'' match for a given group. For example \texttt{(((a+)b)+c)+}
-would need two additional copies of the innermost group, to handle
-conflicts. 
-
-The intuition is to notice that two tags -- the opening and the corresponding
-end tag -- always appear in order and the inner groups should not
-spill over the end of the outer group. After each closing tag then
-a commit is made, which handles whether the new or the old match is
-longer. 
-\end{comment}
 
 \begin{figure}
 \begin{centering}
@@ -762,18 +722,7 @@ The current commit of the top layer is returned: $c_{1}=(2,4)$.
 
 \caption{\label{fig:lazy-dfa}The DFA of \texttt{(?:(?:(a+)b)+c)+} matching
 ``abaababc''}
-
-
 \end{figure}
-\begin{comment}
-This technique allows for programmers to extract parts of text with
-great performance and flexibility regarding the extracted match. One
-could imagine, that a programmer needs to extract a ideally complete
-sample of formated text with optional parameters. Here, \texttt{\textsc{posix}}
-regex would fail to deliver the best match in most cases. Such cases
-can occur in data mining, in bioinformatics, both of which are handling
-massive data, so that efficiency can be a problem.
-\end{comment}
 
 
 \section{Benchmark}
