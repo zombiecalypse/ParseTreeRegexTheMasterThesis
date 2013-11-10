@@ -109,7 +109,7 @@
 
 \frenchspacing
 
-\title{Efficient regexp implementation for finding parse trees}
+\title{Efficient regular expressions that produce parse trees}
 
 \authorinfo{John}
 
@@ -217,16 +217,18 @@ Conceptually, our approach is the following pipeline of four stages.
   \item Compactify the DFA.
 \end{enumerate}
 
-In reality, things are a little more involved, since the
-transformation to DFA is lazy, and the compactification only happens
-after no lazy compilation has occurred in a while. \chg{Worse,}{Furthermore,} compactification
-can be undone if needed. We'll get back to these details in TODO
-LATER. Let's discuss the stages in turn, starting with step 2, since
-parsing the regex grammar is reasonably straightforward.
+In reality, things are a little more involved, since the transformation
+to DFA is lazy, and the compactification only happens after no lazy
+compilation occurred in a while. Worse, compactification can be
+undone if needed. We'll get back to these details in TODO LATER.
+Let's discuss the stages in turn, starting with 2, since step 1,
+the parsing of the regular expression grammar, is reasonably
+straightforward.
+
 
 \subsection{Thompson's construction} 
 
-In step 2, we transform the AST of the regular expression into an NFA,
+We transform the AST of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
 control greedines, or discern capture groups, our approach adds
 $\epsilon$ transitions to the transition graph. An
@@ -284,9 +286,33 @@ transition graph. The transition into a capture group is tagged by a
 commit, the transition to leave a capture group is tagged by a another
 commit. We distinguish opening and closing commits. The NFA keeps a
 history for every transition with a commit. Each time the transition
-is walked, the current position is added to its history. It is easy to
-see that the entire match tree can be reconstructed from the list of
-histories.
+is walked, the current position is added to its history. 
+
+We model histories as linked list, where the payload of each node
+is a position.  Only the payload of \emph{head}, the first node,
+is mutable, the \emph{rest}, all other nodes, are immutable.  Because
+the rests are immutable, they may be shared between histories.  This
+is an application of the flyweight pattern, and ensures that all
+of the following instructions on histories can be performed in
+constant time. Here, the \emph{position} is the current position
+of the matcher.  It is well-defined at all times since all threads
+are executed in lock-step, such that at any point in time, all
+threads are at the same position.
+
+\global\long\def\naturals{\mathbb{N}}
+\global\long\def\integers{\mathbb{Z}}
+\global\long\def\pos{\mathbf{\mathbf{p}}}
+
+\begin{description}
+\item [$h\leftarrow\mathbf{p}$] Stores the current position into the head of the linked list $h$.
+\item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
+\item [$h\leftarrow h'$] Sets head->next of $h$ to be head->next of $h'$. 
+	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
+\item [$c\uparrow(h)$] $c\downarrow(h)$ Prepends linked list $h$ with an extra node, which becomes the new head.
+This effectively \emph{commits} the old head, which is henceforth considered immutable.
+\end{description}
+
+It is easy to see that, after matching, given the history of every tag, the entire match tree can be reconstructed.
 
 \begin{figure}
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
@@ -322,39 +348,70 @@ all threads, kill the ones that have no legal transition for the input
 character, and fork more threads as needed.
 
 Trouble starts when we want to fork a thread for an NFA state that
-is already running. Not is an explosion of threads bad for performance,
-it would also lead to ambiguity: if the two threads disagree on the
-histories, which one is correct?
+is already running. Not only is an explosion of threads bad for
+performance, it would also lead to ambiguity: if the two threads
+disagree on the histories, which one is correct?
 
-The following algorithm takes as an input a set of threads, an NFA
+
+
+Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of threads
 running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
 follows greedy matching will survive.
 
+\begin{algorithm*}[H]
+\begin{lstlisting}[mathescape,tabsize=2]
+Input: Graph of transitions for an NFA,
+	   Input character $a$,
+	   Input position $pos$,
+	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
+	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.
+Output: Set of threads $R$.
 
-\section{The TDFA powerset construction algorithm\label{sec:The-TNFA-algorithm}}
+$R\leftarrow\{\}$
+Initialize empty stack $low$
+Initialize empty stack $high$
 
-\on{Somewhere here remind us that "T" stands for "tagged". What are the tags for?}
+// 1. push follow states with old histories.
+For any $a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$.
+	if $t$ has low priority push $(q', H)$ to $low$, else to $high$.
+end for
 
-\global\long\def\naturals{\mathbb{N}}
-\global\long\def\integers{\mathbb{Z}}
-\global\long\def\pos{\mathbf{\mathbf{p}}}
-Our algorithm is a modification of Laurikari's algorithm \cite{Lauri00a},
-which is itself a modified powerset construction algorithm \cite[p. 55]{Sips05a}.
-However instead of compiling the TNFA to a TDFA before matching, we
-create the TDFA lazily as we match the string. For clarity, and because
-the original description contains a few errors, we outline his algorithm
-here, omitting his proof for correctness and termination.%
-\begin{comment}
- In the TNFA algorithm, the state of the machine is not only determined
-by the position in the state graph, but also by a number of positions
-in the string that is read, that can later be used to construct the
-subgroups of the match. 
-\end{comment}
-Our description adapts the thread metaphor of \cite{Cox07a}, where
-each (T)NFA state describes the state of a single thread in a virtual
-machine and the (T)DFA state is a collection of such threads.
+// 2. Follow $\varepsilon$-transitions
+While $high$ and $low$ are not both empty
+	pop $(q', [h_{1},\dots,h_{n}]$ from $high$ if possible, else from $low$
+	if $(q', H) \in R$ for some $H$, continue while
+	add $(q', [h_{1},\dots,h_{n}])$ to $R$
+	for all transitions $t$ from $q'$ to $q''$
+		if $(q'', H) \in R$ for some $H$, continue for loop.
+		if $t$ is tagged with an open or close tag:
+			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag.
+			Make a new history $h'$.
+			$h_{i} \rightarrow h'$ (*)
+			if $t$ has a open tag:
+				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$
+				$h' \leftarrow pos+1$ (*)
+			else, $t$ has a close tag:
+				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag
+				Make a new history $h''$
+				$h_{i'} \rightarrow h''$ (*)
+				$h'' \leftarrow pos$ (*)
+				Commit $h'$
+				Commit $h''$
+				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
+			end if
+		end if				
+				
+		// Push according to priority of transition:
+		if $t$ has low priority, push $(q'', newHistories)$ to $low$, else to $high$
+	end for
+end while
+\end{lstlisting}
+
+\caption{\label{onestep} Compute the follow-up state for DFA state $Q$}
+\end{algorithm*}
+
 
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
@@ -432,6 +489,32 @@ For all $Q'$ such that $\{q_i\} = \{q'_i\}$
 	return $Q'$ and $m$
 \end{lstlisting}
 \end{algorithm*}
+
+For $I\subset\naturals$ and $n\in\naturals$, DFA state$\{(q_{i},(a_{ij})_{j=1..n}):i\in I\}$
+is \emph{mappable} to another DFA state $\{(q_{i},(b_{ij})_{j=1..n}):i\in I\}$
+iff there is a bijection $\nu$ such that $\forall i\in I,\, j=1..n:\,(a_{ij})=(\nu(b_{ij}))$.
+Bijection $\nu$ is called the \emph{mapping}.\\
+For example, $\{(q_{0},[4,3]),\,(q_{1},[2,1]),\,(q_{3},[2,3])\}$
+is mappable to $\{(q_{0},[0,-2]),\,(q_{1},[2,1]),\,(q_{3},[2,-2])\}$
+using mapping $1\mapsto1,\,3\mapsto-2,\,4\mapsto0$.
+
+Let us first consider the caase where $N$ has no $\epsilon$ arrows
+and no tags. Then we can construct the new transition function $\delta'$
+as follows:
+
+\[
+\delta'(R,a)=\bigcup_{r\in R}\delta(r,a)\mbox{.}
+\]
+
+Now we need to consider the $\epsilon$ arrows, some of which contain
+tags. We use the following notation:
+
+For any state $R$ of $M$ we define $E(R)=\bigcup_{(r,t)\in R}e(q,t)$
+to be a set of pairs. The first elements of the pairs are the states
+that can be reached from $R$ by going along only $\epsilon$-arrows,
+including the members of $R$ themselves. The second element of each
+pair denotes the histories of all tags for their corresponding
+NFA state.
 
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
@@ -775,11 +858,12 @@ massive data, so that efficiency can be a problem.
 \end{comment}
 
 
-
 \section{Benchmark}
 
 
 \section{Related work}
+Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
+which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
 
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
