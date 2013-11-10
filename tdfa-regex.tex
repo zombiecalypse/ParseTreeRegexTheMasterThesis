@@ -319,8 +319,7 @@ It is easy to see that, after matching, given the history of every tag, the enti
 
 \caption{\label{fig:example-automaton}
 Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} 
-\on{What are the up and down arrows for? I assume "+" and "$-$" are high and low priority ...  What about the $\tau$s? Are they tags? Why is there a $\tau_3\downarrow$ but no $\tau_3\uparrow$?}
-}
+In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing tag for capture group $n$.}
 \end{figure}
 
 \subsection{DFAs}
