@@ -490,32 +490,6 @@ For all $Q'$ such that $\{q_i\} = \{q'_i\}$
 \end{lstlisting}
 \end{algorithm*}
 
-For $I\subset\naturals$ and $n\in\naturals$, DFA state$\{(q_{i},(a_{ij})_{j=1..n}):i\in I\}$
-is \emph{mappable} to another DFA state $\{(q_{i},(b_{ij})_{j=1..n}):i\in I\}$
-iff there is a bijection $\nu$ such that $\forall i\in I,\, j=1..n:\,(a_{ij})=(\nu(b_{ij}))$.
-Bijection $\nu$ is called the \emph{mapping}.\\
-For example, $\{(q_{0},[4,3]),\,(q_{1},[2,1]),\,(q_{3},[2,3])\}$
-is mappable to $\{(q_{0},[0,-2]),\,(q_{1},[2,1]),\,(q_{3},[2,-2])\}$
-using mapping $1\mapsto1,\,3\mapsto-2,\,4\mapsto0$.
-
-Let us first consider the caase where $N$ has no $\epsilon$ arrows
-and no tags. Then we can construct the new transition function $\delta'$
-as follows:
-
-\[
-\delta'(R,a)=\bigcup_{r\in R}\delta(r,a)\mbox{.}
-\]
-
-Now we need to consider the $\epsilon$ arrows, some of which contain
-tags. We use the following notation:
-
-For any state $R$ of $M$ we define $E(R)=\bigcup_{(r,t)\in R}e(q,t)$
-to be a set of pairs. The first elements of the pairs are the states
-that can be reached from $R$ by going along only $\epsilon$-arrows,
-including the members of $R$ themselves. The second element of each
-pair denotes the histories of all tags for their corresponding
-NFA state.
-
 \begin{algorithm*}[tb]
 \begin{lstlisting}[mathescape,tabsize=2]
 Name: $epsilonClosure$
