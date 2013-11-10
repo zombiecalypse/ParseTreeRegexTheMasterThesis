@@ -412,7 +412,7 @@ Initialize empty stack $high$\;
 }
 }
 
-\caption{\label{onestep} Compute the follow-up state for DFA state $Q$}
+\caption{\label{onestep}$oneStep(NFA, a, pos, Q)$: Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
 
@@ -461,7 +461,7 @@ Set $T$ to an empty map from state and input to new state and instructions.
 
 }
 }
-\caption{Interpretation and lazy compilation of the NFA
+\caption{$interpret(input)$: Interpretation and lazy compilation of the NFA
 \on{This looks really horrible monospaced -- please don't use the listings package here!}}
 \end{algorithm*}
 
@@ -499,6 +499,7 @@ Set $T$ to an empty map from state and input to new state and instructions.
   
 	\Return{$Q'$ and $m$}
 }
+\caption{$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
 \end{algorithm*}
 
 \begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
