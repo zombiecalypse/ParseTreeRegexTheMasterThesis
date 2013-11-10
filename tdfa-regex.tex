@@ -20,6 +20,83 @@
 
 \lstdefinestyle{sharpc}{language=mathescape, frame=lr, rulecolor=\color{blue!80!black}}
 
+% ============================================================
+%% Uncomment the next few lines to get sf url links:
+%\usepackage{url}            
+%\makeatletter
+%\def\url@leostyle{%
+%  \@ifundefined{selectfont}{\def\UrlFont{\sf}}{\def\UrlFont{\small\sffamily}}}
+%\makeatother
+%\urlstyle{leo} % Now actually use the newly defined style.
+%% Choose coloured or b/w links:
+\usepackage[pdftex,colorlinks=true,pdfstartview=FitV,
+ linkcolor=black,citecolor=black,urlcolor=black]{hyperref}
+% \usepackage{hyperref}
+\usepackage{needspace}
+\newcommand{\needlines}[1]{\Needspace{#1\baselineskip}}
+% ============================================================
+% Markup macros for proof-reading
+\usepackage{ifthen}
+\usepackage[normalem]{ulem} % for \sout
+\usepackage{xcolor}
+\newcommand{\ra}{$\rightarrow$}
+\newboolean{showedits}
+\setboolean{showedits}{true} % toggle to show or hide edits
+\ifthenelse{\boolean{showedits}}
+{
+	\newcommand{\ugh}[1]{\textcolor{red}{\uwave{#1}}} % please rephrase
+	\newcommand{\ins}[1]{\textcolor{blue}{\uline{#1}}} % please insert
+	\newcommand{\del}[1]{\textcolor{red}{\sout{#1}}} % please delete
+	\newcommand{\chg}[2]{\textcolor{red}{\sout{#1}}{\ra}\textcolor{blue}{\uline{#2}}} % please change
+}{
+	\newcommand{\ugh}[1]{#1} % please rephrase
+	\newcommand{\ins}[1]{#1} % please insert
+	\newcommand{\del}[1]{} % please delete
+	\newcommand{\chg}[2]{#2}
+}
+% ============================================================
+% Put edit comments in a really ugly standout display
+%\usepackage{ifthen}
+\usepackage{amssymb}
+\newboolean{showcomments}
+\setboolean{showcomments}{true}
+%\setboolean{showcomments}{false}
+\newcommand{\id}[1]{$-$Id: scgPaper.tex 32478 2010-04-29 09:11:32Z oscar $-$}
+\newcommand{\yellowbox}[1]{\fcolorbox{gray}{yellow}{\bfseries\sffamily\scriptsize#1}}
+\newcommand{\triangles}[1]{{\sf\small$\blacktriangleright$\textit{#1}$\blacktriangleleft$}}
+\ifthenelse{\boolean{showcomments}}
+%{\newcommand{\nb}[2]{{\yellowbox{#1}\triangles{#2}}}
+{\newcommand{\nbc}[3]{
+ {\colorbox{#3}{\bfseries\sffamily\scriptsize\textcolor{white}{#1}}}
+ {\textcolor{#3}{\sf\small$\blacktriangleright$\textit{#2}$\blacktriangleleft$}}}
+ \newcommand{\version}{\emph{\scriptsize\id}}}
+{\newcommand{\nbc}[3]{}
+ \renewcommand{\ugh}[1]{#1} % please rephrase
+ \renewcommand{\ins}[1]{#1} % please insert
+ \renewcommand{\del}[1]{} % please delete
+ \renewcommand{\chg}[2]{#2} % please change
+ \newcommand{\version}{}}
+\newcommand{\nb}[2]{\nbc{#1}{#2}{orange}}
+\newcommand{\here}{\yellowbox{$\Rightarrow$ CONTINUE HERE $\Leftarrow$}}
+\newcommand\rev[2]{\nb{TODO (rev #1)}{#2}} % reviewer comments
+\newcommand\fix[1]{\nb{FIX}{#1}}
+\newcommand\todo[1]{\nb{TO DO}{#1}}
+\newcommand\on[1]{\nbc{ON}{#1}{red}} % add more author macros here
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{blue}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{brown}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{cyan}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{darkgray}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{gray}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{magenta}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{olive}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{orange}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{purple}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{red}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{teal}}
+%\newcommand\XXX[1]{\nbc{XXX}{#1}{violet}}
+% ============================================================
+
+
 \begin{document}
 \special{papersize=8.5in,11in}
 \setlength{\pdfpageheight}{\paperheight}
@@ -44,7 +121,9 @@
 
 \begin{abstract}
 Regular expressions naturally and intuitively define ASTs that describe
-the text that they're parsing. We describe a technique for building
+the text that they're parsing.
+\on{But existing approaches fail to keep track of all regex matches within the AST.}
+We describe a technique for building
 up the complete parse tree resulting from matching a text against
 a regular expression.
 
@@ -94,7 +173,7 @@ that don't extract parse trees.
 \subsection{Motivation}
 
 This is the age of big data, and the first step of processing big
-data is often to parse strings. As an example, consider log files..
+data is often to parse strings. As an example, consider log files.
 What makes data huge is typically repetition. As Jacobs\cite{Jacobs2009}
 noted, ``What makes most big data big is repeated observations over
 time and/ or space,'' and thus log files grow large frequently. At
@@ -103,11 +182,11 @@ they are logging, so their parsing and understanding is important.
 
 Regular expressions make for scalable and efficient lightweight parsers.\cite{Karttunen1996} 
 
-Regular expression's parsing abilities have evoked Meiners to declare
+The parsing abilities of regular expression have evoked Meiners to declare
 that for intrusion detection, ``fast and scalable RE matching is
 now a core network security issue.'' \cite{Meiners2010}
 
-For example, Arasu et al.\cite{Arasu2012} demonstrate how regular
+For example, Arasu et al. \cite{Arasu2012} demonstrate how regular
 expressions are used in Bing to validate data, by checking whether
 the names of digital cameras in their database are valid.
 
@@ -121,8 +200,8 @@ character. The choice of transition is limited by the transition's
 character range. A transition can only be followed if the current
 input character is inside transition's character range. NFAs differ
 from DFAs in that for some input character and some state, there may
-be more than applicable transition. If there is, an NFA will magically
-guess the correct one. \figref{example-automaton} shows an example of
+be more than \ins{one} applicable transition. If there is, an NFA will magically
+guess the correct one. \autoref{fig:example-automaton} shows an example of
 an NFA's transition graph. For the moment, let us discuss regular
 expression matching on NFAs. Assuming that the NFA just magicly knows
 the right transition lets us focus on the important things, greediness control
@@ -140,9 +219,9 @@ Conceptually, our approach is the following pipeline of four stages.
 
 In reality, things are a little more involved, since the
 transformation to DFA is lazy, and the compactification only happens
-after no lazy compilation occurred in a while. Worse, compactification
+after no lazy compilation has occurred in a while. \chg{Worse,}{Furthermore,} compactification
 can be undone if needed. We'll get back to these details in TODO
-LATER. Let's discuss the stages in turn, starting with 2, since
+LATER. Let's discuss the stages in turn, starting with step 2, since
 parsing the regex grammar is reasonably straightforward.
 
 \subsection{Thompson's construction} 
@@ -156,7 +235,7 @@ be used. It does not consume an input character.
 The additions are needed for greediness control and capture groups.
 Let's look at both, in turn.
 
-To see the importance of greediness control, consider again regular
+To see the importance of greediness control, consider again the regular
 expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question
 mark sets the \texttt{.*} part of the regular expression to
 \emph{non-greedy}, which means that it will match as little as
@@ -175,7 +254,7 @@ an expression as follows.  First, we construct an NFA graph for the
 expression, without any repetition.  We can see how this plays out
 in our running example, which contains the expression \texttt{.*?}.
 First, an automaton for \texttt{.} is constructed.  As we can see
-in \figref{example-automaton}, expression \texttt{.} is modeled as
+in \autoref{fig:example-automaton}, expression \texttt{.} is modeled as
 just two nodes labeled 3 and 4, and a transition labeled ``any''
 between them.  Repeating is achieved by adding two $\varepsilon$
 transitions: one from 4 back to 3, to match more than one time any
@@ -190,7 +269,7 @@ to match any character repeatedly.
 
 More generally, the NFA will prefer to follow transitions of normal
 priority over those of low priority. Rather than formalize this
-notion of preference on NFAs, we come back to priorized edges when
+notion of preference on NFAs, we come back to prioritized edges when
 discussing the transformation from NFA states to DFA states.
 
 
@@ -213,7 +292,9 @@ histories.
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
 \caption{\label{fig:example-automaton}
-Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} }
+Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} 
+\on{What are the up and down arrows for? I assume "+" and "$-$" are high and low priority ...  What about the $\tau$s? Are they tags? Why is there a $\tau_3\downarrow$ but no $\tau_3\uparrow$?}
+}
 \end{figure}
 
 \subsection{DFAs}
@@ -234,8 +315,8 @@ The key insight is that we keep all ``threads'' in lock-step. To
 achieve this, we must be very specific about what constitutes the
 state of a thread. Since every thread effectively simulates a different
 NFA, the state inside of a thread contains exactly two items: the
-NFA state it simulates, and the history for every tag. Now, the following
-would be correct, although slow, implementation of a non-magic NFA
+NFA state it simulates and the history for every tag. Now, the following
+would be a correct, although slow, implementation of a non-magic NFA
 interpreter: whenever an input character is read, we can iterate over
 all threads, kill the ones that have no legal transition for the input
 character, and fork more threads as needed.
@@ -253,6 +334,8 @@ follows greedy matching will survive.
 
 
 \section{The TDFA powerset construction algorithm\label{sec:The-TNFA-algorithm}}
+
+\on{Somewhere here remind us that "T" stands for "tagged". What are the tags for?}
 
 \global\long\def\naturals{\mathbb{N}}
 \global\long\def\integers{\mathbb{Z}}
@@ -313,7 +396,8 @@ For all positions $pos$ in $input$
 			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.
 			Set $Q$ to $Q'$.
 \end{lstlisting}
-\caption{Interpretation and lazy compilation of the NFA}
+\caption{Interpretation and lazy compilation of the NFA
+\on{This looks really horrible monospaced -- please don't use the listings package here!}}
 \end{algorithm*}
 
 \begin{algorithm*}
@@ -414,25 +498,26 @@ Q=\{
 	&h_4=[0], h_5=[0], h_6=[0])), \\
 	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0], \\
 	&h_8=[0,0], h_5=[0], h_6=[0]))\}
-	\end{align*}. 
+	\end{align*}
+\on{I don't know how to read this.  What does this mean?}
 This is the case after initialization or before any commas are read.
 
 This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 
 \begin{enumerate}
-\item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$
-\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$.
+\item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$ \on{What's $high$? What are $h_1$ etc?}
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$. \on{What does it mean to push/pop?}
 \item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
 \item $4\rightarrow 3$ is visited. \begin{enumerate}
 	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
 \end{enumerate}
 \item $4\rightarrow 5$ is visited. \begin{enumerate}
 	\item A new history $h_9$ is created.
-	\item $h_3\rightarrow h_9$ is executed.
+	\item $h_3\rightarrow h_9$ is executed. \on{huh?}
 	\item A new history $h_{10}$ is created.
 	\item $h_4\rightarrow h_{10}$ is executed.
-	\item $h_{10} \leftarrow 1$ is executed.
-	\item Commit $h_9$. It is now $h_9=[0,0]$.
+	\item $h_{10} \leftarrow 1$ is executed. \on{huh?}
+	\item Commit $h_9$. It is now $h_9=[0,0]$. \on{Still don't know what this means}
 	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
 	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
 \end{enumerate}
@@ -459,7 +544,7 @@ Q=\{
 	&h_4=[0], h_5=[0], h_6=[0])),\\
 	(q_5, (&h_1=[0], h_2=[0], h_7=[1,1],\\ 
 	&h_8=[1,1], h_5=[0], h_6=[0]))\}
-\end{align*}.
+\end{align*}
 
 This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \begin{enumerate}
@@ -518,7 +603,7 @@ Q=\{(q_3, (&h_1=[0], h_2=[0], h_3=[0],\\
 	&h_4=[0], h_5=[0], h_6=[0])),\\
 	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0],\\
 	&h_8=[0,0], h_5=[0], h_6=[0]))\}
-\end{align*}.
+\end{align*}
 
 This is the execution of $findMapping(Q', DFA)$: 
 \begin{enumerate}
