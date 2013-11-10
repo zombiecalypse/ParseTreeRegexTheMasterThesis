@@ -1,0 +1,63 @@
+\begin{thebibliography}{10}
+
+\bibitem{Aras12a}
+Arvind Arasu, Surajit Chaudhuri, Zhimin Chen, Kris Ganjam, Raghav Kaushik, and
+  Vivek~R. Narasayya.
+\newblock Experiences with using data cleaning technology for bing services.
+\newblock {\em IEEE Data Eng. Bull.}, 35(2):14--23, 2012.
+
+\bibitem{Cox07a}
+R.~Cox.
+\newblock Regular expression matching can be simple and fast (but is slow in
+  java, perl, php, python, ruby,...).
+\newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp1.html}, 2007.
+
+\bibitem{Jaco09a}
+Adam Jacobs.
+\newblock The pathologies of big data.
+\newblock {\em Commun. ACM}, 52(8):36--44, August 2009.
+
+\bibitem{Kart96a}
+L.~Karttunen, J.~P. Chanod, G.~Grefenstette, A.~Schiller, and Received
+  February.
+\newblock Regular expressions for language engineering.
+\newblock In {\em Natural Language Engineering}, pages 305--328, 1996.
+
+\bibitem{Kukl07a}
+Chris Kuklewicz.
+\newblock Regular expressions/bounded space proposal, February 2007.
+
+\bibitem{Mein10a}
+Chad~R. Meiners, Jignesh Patel, Eric Norige, Eric Torng, and Alex~X. Liu.
+\newblock Fast regular expression matching using small {TCAMs} for network
+  intrusion detection and prevention systems.
+\newblock In {\em Proceedings of the 19th USENIX conference on Security},
+  USENIX Security'10, page~8, Berkeley, CA, USA, 2010. USENIX Association.
+
+\bibitem{Pike87a}
+R.~Pike.
+\newblock The text editor sam.
+\newblock {\em Software: Practice and Experience}, 17(11):813--845, 1987.
+
+\bibitem{Sedg90a}
+Robert Sedgewick.
+\newblock {\em Algorithms in C (paperback)}.
+\newblock Addison-Wesley Professional, 1 edition, January 1990.
+
+\bibitem{Sips05a}
+Michael Sipser.
+\newblock {\em Introduction to the Theory of Computation}.
+\newblock Course Technology, 2 edition, February 2005.
+
+\bibitem{Sulz12a}
+M.~Sulzmann and K.Z.M. Lu.
+\newblock Regular expression sub-matching using partial derivatives.
+\newblock In {\em Proceedings of the 14th symposium on Principles and practice
+  of declarative programming}, pages 79--90. ACM, 2012.
+
+\bibitem{Thom68a}
+Ken Thompson.
+\newblock Programming techniques: Regular expression search algorithm.
+\newblock {\em Commun. ACM}, 11(6):419--422, June 1968.
+
+\end{thebibliography}

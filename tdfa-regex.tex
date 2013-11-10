@@ -174,19 +174,19 @@ that don't extract parse trees.
 
 This is the age of big data, and the first step of processing big
 data is often to parse strings. As an example, consider log files.
-What makes data huge is typically repetition. As Jacobs\cite{Jacobs2009}
+What makes data huge is typically repetition. As Jacobs\cite{Jaco09a}
 noted, ``What makes most big data big is repeated observations over
 time and/ or space,'' and thus log files grow large frequently. At
 the same time, they provide important insight into the process that
 they are logging, so their parsing and understanding is important. 
 
-Regular expressions make for scalable and efficient lightweight parsers.\cite{Karttunen1996} 
+Regular expressions make for scalable and efficient lightweight parsers.\cite{Kart96a} 
 
 The parsing abilities of regular expression have evoked Meiners to declare
 that for intrusion detection, ``fast and scalable RE matching is
-now a core network security issue.'' \cite{Meiners2010}
+now a core network security issue.'' \cite{Mein10a}
 
-For example, Arasu et al. \cite{Arasu2012} demonstrate how regular
+For example, Arasu et al. \cite{Aras12a} demonstrate how regular
 expressions are used in Bing to validate data, by checking whether
 the names of digital cameras in their database are valid.
 
@@ -305,7 +305,7 @@ expression matching without supernatural intervention, we lazily transform
 the NFA to a DFA. 
 
 A useful metaphor for regular expression matching is that of threads
-\cite{Cox2007}. Whenever we aren't sure which transition to take,
+\cite{Cox07a}. Whenever we aren't sure which transition to take,
 we ``fork'' a thread for every option that we have. This way, when
 the input is over, there must be at least one thread that guessed
 correctly at all times. We use the word ``thread'' here to guide
@@ -340,8 +340,8 @@ follows greedy matching will survive.
 \global\long\def\naturals{\mathbb{N}}
 \global\long\def\integers{\mathbb{Z}}
 \global\long\def\pos{\mathbf{\mathbf{p}}}
-Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
-which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
+Our algorithm is a modification of Laurikari's algorithm \cite{Lauri00a},
+which is itself a modified powerset construction algorithm \cite[p. 55]{Sips05a}.
 However instead of compiling the TNFA to a TDFA before matching, we
 create the TDFA lazily as we match the string. For clarity, and because
 the original description contains a few errors, we outline his algorithm
@@ -352,7 +352,7 @@ by the position in the state graph, but also by a number of positions
 in the string that is read, that can later be used to construct the
 subgroups of the match. 
 \end{comment}
-Our description adapts the thread metaphor of \cite{Cox2007}, where
+Our description adapts the thread metaphor of \cite{Cox07a}, where
 each (T)NFA state describes the state of a single thread in a virtual
 machine and the (T)DFA state is a collection of such threads.
 
@@ -784,27 +784,27 @@ massive data, so that efficiency can be a problem.
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
 been so lucky. Cox is spot-on when he argues that innovations have
-repeatedly been ignored and later reinvented \cite{Cox2007}. 
+repeatedly been ignored and later reinvented \cite{Cox07a}. 
 
 This paper is no exception. The authors of this paper had set out
-to implement Laurikari's TDFA algorithm \cite{laurikari2000nfas},
+to implement Laurikari's TDFA algorithm \cite{Lauri00a},
 only to discover that Laurikari's description of a TDFA is so far
 from complete that it can rightfully only be called the sketch for
 an algorithm. Only late in the process did we discover that the blanks
 had already been filled by Kuklewicz in the course of his implementation
-of TDFAs in Haskell \cite{Kuklewicz2007}. Kuklewicz enshrined his
+of TDFAs in Haskell \cite{Kukl07a}. Kuklewicz enshrined his
 added insight into Haskell library, but never published the algorithm
 as a whole. If the history of regular expressions is evidence of one
 thing, it is that source code is a terrible medium to convey algorithms. 
 
 The situation dramatically improved with Cox's simple and concise
-explanation of regular expression matching \cite{Cox2007}. It seems
+explanation of regular expression matching \cite{Cox07a}. It seems
 ironic that this well-versed author published his influential work
 on his website. Although the joke may be on Academia's side.
 
 When the taciturn practioners acknowledge each other's work, we can't
 help but disagree almost universally with the characterizations they
-produce. Sulzmann and Lu \cite{sulzmann2012regular} call Kuklewicz's
+produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
 work an ``implementation'' of Laurikari's algorithm, although Laurikari's
 algorithm is far too incomplete for that statement to be fair. Laurikari's
 algorithm is referred to as a POSIX-style automaton. In truth, Laurikari
@@ -812,19 +812,19 @@ leaves the matching strategy entirely open. It was Kuklewicz that
 found out how to get POSIX-style matching out of Laurikari's TDFA. 
 
 Cox says that Laurikari's TDFA is a reinvention Pike's published only
-in code algorithm \cite{Pike1987}, which is Thompson's NFA with submatch
+in code algorithm \cite{Pike87a}, which is Thompson's NFA with submatch
 tracking. This seems unfair in that Laurikari's allows for far more
 aggressive reusing of old states than what Thompson allows. This should
 lead to Laurikari's TDFA having fewer states, and therefore better
 performance, than even Google's RE2, which uses Pike's algorithm.
-This is not confirmed by the benchmarks by Sulzmann and Lu \cite{sulzmann2012regular},
+This is not confirmed by the benchmarks by Sulzmann and Lu \cite{Sulz12a},
 but they offer an explanation: in their profiling, they see that all
 Haskell implementations spend considerable time decoding the input
 strings. In other words, the measured performance is more of an artifact
 of the programming environment used. 
 
 Another mistake that permeates the scarce literature is to call regular
-expression matching linear. As Sedgewick points out correctly \cite{Sedgewick1990},
+expression matching linear. As Sedgewick points out correctly \cite{Sedg90a},
 Thompson's NFA matching is of complexity $O(mn)$, where $m$ is the
 size of the input NFA, and $n$ is the size of the input string. To
 call this linear requires to assume $m$ to be fix, which we cannot
@@ -841,7 +841,7 @@ is probably not true.
 
 Sulzmann and Lu add to the table a new matching strategy that yields
 good practical performance, although the theoretical bounds are considerably
-worse than the state of the art, at $O(n^{2}m)$ \cite{sulzmann2012regular}.
+worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
 
 \bibliographystyle{plain}
 \bibliography{bib/scg}
