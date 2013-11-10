@@ -64,13 +64,27 @@ the end of parsing.
 \global\long\def\regex{\text{\text{regular expression}}}
 A regular expression can easily describe that a text matches a comma
 separated values file, but it is unable to extract all the values.
-Instead it will only give a single instance of values: \texttt{(({[}a-zA-Z
-{]}+),(\textbackslash{}d+);)+} might describe a dataset of ASCII names
+Instead it will only give a single instance of values: \texttt{((.*?),(\textbackslash d+);)+} might describe a dataset of ASCII names
 with their numeric label. Matching the regular expression on \texttt{``Tom
 Lehrer,1;Alan Turing,2;''} will confirm that the list is well formed,
 but the match will only contain \texttt{``Tom Lehrer''} for the
 second capture group and \texttt{``1''} for the third. That is,
-the full parse tree is: 
+the parse tree found by the \textsc{posix} is: 
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.75\linewidth]{graphs/posix_parse}
+\caption{Parse tree produced by \textsc{posix} compatible matching.}
+\end{figure}
+
+With our algorithm we are able to reconstruct the full parse
+tree after the matching phase is done:
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=.75\linewidth]{graphs/full_parse}
+\caption{Parse tree produced by our approach.}
+\end{figure}
 
 The amortized run time of our approach is $O(m\: n)$, where $m$
 is the length of the regular expression and $n$ is the length of
