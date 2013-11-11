@@ -690,6 +690,21 @@ This is the execution of $findMapping(Q', DFA)$:
 \end{enumerate}
 Note that by construction at most one candidate fulfils the requirement that the same states are present.
 \end{example}
+
+\subsection{Compactification}
+Compactification describes a further optimization we take based on the
+observation that when matching a long input string, we will typically
+only visit a small number of DFA states. This can be seen for example in the
+regular expression \texttt{(ab)+} over a long string like ``ababababab''.
+After a few steps, we will notice that we oscillate between two DFA
+states without using their internal structure -- the NFA states and
+their histories.
+
+The compactification step avoids using this wasteful representation
+by representing the NFA states as a bit-array. Since no histories
+are produced unless new DFA states occur, the instructions attached to
+the DFA transitions alone are enough to describe the matching process.
+
 \section{Benchmark}
 
 
