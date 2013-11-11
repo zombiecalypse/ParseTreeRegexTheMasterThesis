@@ -302,8 +302,10 @@ threads are at the same position.
 \global\long\def\integers{\mathbb{Z}}
 \global\long\def\pos{\mathbf{\mathbf{p}}}
 
+\subsection{Instructions of the virtual machine}
+\label{instructions}
 \begin{description}
-\item [$h\leftarrow\mathbf{p}$] Stores the current position into the head of the linked list $h$.
+\item [$h\leftarrow\pos$] Stores the current position into the head of the linked list $h$.
 \item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
 \item [$h\leftarrow h'$] Sets head->next of $h$ to be head->next of $h'$. 
 	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
@@ -390,6 +392,13 @@ following notation:
 			means a transition from $q_1$ to $q_2$. The meta-data about the 
 			transition is described in the text and can contain consumption
 			of characters, priority or opening and closing commit tags.
+	\item	The algorithm uses $high$ and $low$ as stacks and \emph{push} means
+			to put an element at the topmost position. \emph{Popping} 
+			means to remove and retrieve the topmost element of the stack.
+	\item	In the examples we will pretend for clarity that the commands
+			described in \ref{instructions} are executed directly after they
+			are encountered. The actual algorithm collects them and executes 
+			them after the $oneStep$ call to allow further optimizations.
 \end{itemize}
 
 \begin{algorithm*}[tb]
@@ -553,6 +562,8 @@ This is the case after initialization or before any commas are read.
 This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 
 \begin{enumerate}
+\item Initialize $high$ and $low$ as empty stacks.
+\item Initialize $R=\{\}$
 \item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$ \on{What's $high$? What are $h_1$ etc?}
 \item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$. \on{What does it mean to push/pop?}
 \item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
