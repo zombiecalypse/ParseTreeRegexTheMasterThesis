@@ -358,7 +358,7 @@ running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
 follows greedy matching will survive.
 
-\begin{algorithm*}[tbh]
+\begin{algorithm*}[tb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -389,7 +389,7 @@ Initialize empty stack $high$\;
 		\If{$t$ is tagged with an open or close tag}{
 			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
 			Make a new history $h'$\;
-			$h_{i} \rightarrow h'$ \label{algline:old-copy}\tcp*{Copy old history}
+			$h'\leftarrow h_{i}$ \label{algline:old-copy}\tcp*{Copy old history}
 			\eIf{$t$ has a open tag}{
 				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
 				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
@@ -397,7 +397,7 @@ Initialize empty stack $high$\;
 			\tcp{$t$ has a close tag}
 			Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
 			Make a new history $h''$\;
-			$h_{i'} \rightarrow h''$ \label{algline:old-copy2}\tcp*{Copy old history}
+			$h'' \leftarrow h_{i'}$ \label{algline:old-copy2}\tcp*{Copy old history}
 			$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
 			Commit $h'$\;
 			Commit $h''$\;
@@ -416,7 +416,7 @@ Initialize empty stack $high$\;
 \end{algorithm*}
 
 
-\begin{algorithm*}[tb]
+\begin{algorithm*}[h]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -465,7 +465,7 @@ Set $T$ to an empty map from state and input to new state and instructions.
 \on{This looks really horrible monospaced -- please don't use the listings package here!}}
 \end{algorithm*}
 
-\begin{algorithm*}
+\begin{algorithm*}[h]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -527,9 +527,9 @@ This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 \end{enumerate}
 \item $4\rightarrow 5$ is visited. \begin{enumerate}
 	\item A new history $h_9$ is created.
-	\item $h_3\rightarrow h_9$ is executed. \on{huh?}
+	\item $h_9\leftarrow h_3$ is executed -- we copy the head and the tail of $h_3$ into $h_9$, so that they can change independently. \on{huh?}
 	\item A new history $h_{10}$ is created.
-	\item $h_4\rightarrow h_{10}$ is executed.
+	\item $h_{10}\leftarrow h_4$ is executed.
 	\item $h_{10} \leftarrow 1$ is executed. \on{huh?}
 	\item Commit $h_9$. It is now $h_9=[0,0]$. \on{Still don't know what this means}
 	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
