@@ -350,13 +350,47 @@ is already running. Not only is an explosion of threads bad for
 performance, it would also lead to ambiguity: if the two threads
 disagree on the histories, which one is correct?
 
-
-
 Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of threads
 running after the input character has been read. It makes sure that
 if there could be two threads with the same NFA state, the one that
-follows greedy matching will survive.
+follows greedy matching\footnote{Non-greedy operators work the same way, just
+with reversed priorities} will survive. At no point of the algorithm are the
+two states both present in the result and thus in conflict. This is avoided
+by prioritizing the edge with the result that follows the greedy match and
+not considering states visited before, ensuring the greedy thread 
+``wins the race''.
+
+The following examples will illustrate the algorithm~\ref{onestep} and use the
+following notation:
+
+\begin{itemize}
+	\item 	A NFA state is denoted as $q_i$.
+	\item 	A history is denoted $h_i$. Since a history is actually a
+			list of positions in the matched string, we will write it
+			as $h_i=[x_1, \dots, x_n]$ to describe that past matches occurred
+			at the positions $x_1, \dots, x_n$.
+	\item	Each NFA state has an array of $2n$ histories, where 
+			$n$ is the number of capture groups in the original 
+			regular expression. This is written as 
+			$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. The $2i$th 
+			position is the history of the opening positions of
+			the capture group $i$, the $2i+i$th is the closing position.
+			A NFA state of the regular expression \texttt{(.+)} therefore
+			has the histories $(h_1, h_2)$ and when matching ``ab''
+			$h_1=[0]$ and $h_2=[2]$.
+	\item	Each DFA state is denoted by $Q$ and contains multiple NFA 
+			states with their current histories. 
+			\[Q=\{(q_1, (h_1, h_2, h_3, h_4)), (q_2, (h_1, h_2, h_5, h_6))\}\] for
+			example means that the current DFA state has one thread in $q_1$ with 
+			histories $(h_1, h_2, h_3, h_4)$ and another in $q_2$ with the histories
+			$(h_1, h_2, h_5, h_6)$. Note that histories can be shared across threads
+			if they have the same matches.
+	\item	A transition is understood to be between NFA states, $1\rightarrow 2$
+			means a transition from $q_1$ to $q_2$. The meta-data about the 
+			transition is described in the text and can contain consumption
+			of characters, priority or opening and closing commit tags.
+\end{itemize}
 
 \begin{algorithm*}[tb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
@@ -502,7 +536,7 @@ Set $T$ to an empty map from state and input to new state and instructions.
 \caption{$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
 \end{algorithm*}
 
-\begin{example} Execution of algorithm \ref{alg:epsilonClosure}:
+\begin{example} Execution of algorithm \ref{onestep}:
 \label{ex:oneStep1}
 
 Assume as an example the automaton in figure \ref{fig:example-automaton} is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} 
@@ -549,7 +583,7 @@ This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 \end{example}
 
 
-\begin{example} Execution of algorithm \ref{alg:epsilonClosure} with an ambiguous consumption:
+\begin{example} Execution of algorithm \ref{onestep} with an ambiguous consumption:
 
 Take the NFA as above and 
 \begin{align*}
