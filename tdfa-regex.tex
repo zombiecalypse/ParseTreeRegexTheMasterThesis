@@ -542,7 +542,7 @@ Set $T$ to an empty map from state and input to new state and instructions.
   
 	\Return{$Q'$ and $m$}
 }
-\caption{$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
+\caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
 \end{algorithm*}
 
 \begin{example} Execution of algorithm \ref{onestep}:
@@ -649,8 +649,9 @@ This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \label{ex:oneStep2}
 \end{example}
 
-Our algorithm ensures that the compilation of the regular expression 
-terminates by implementing the mapping scheme from \cite{Laur00a}. 
+Our algorithm ensures with algorithm~\ref{findmapping} that the 
+compilation of the regular expression terminates by implementing 
+the mapping scheme from \cite{Laur00a}. 
 Mappings are best understood as an optimization that allows reuse
 of DFA states, that are ``similar enough''. DFA states that have the 
 same structure can be reused. For example the DFA state 
