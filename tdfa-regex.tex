@@ -649,6 +649,16 @@ This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \label{ex:oneStep2}
 \end{example}
 
+Our algorithm ensures that the compilation of the regular expression 
+terminates by implementing the mapping scheme from \cite{Laur00a}. 
+Mappings are best understood as an optimization that allows reuse
+of DFA states, that are ``similar enough''. DFA states that have the 
+same structure can be reused. For example the DFA state 
+$Q=\{(q_1, (h_1, h_2))\}$ is structurally no different from 
+$Q'=\{(q_1, (h_3, h_4))\}$. Instead of creating a new DFA state $Q'$ 
+in the automaton, we can simulate it by a transition to $Q$ with the
+added instructions $h_1\leftarrow h_3$ and $h_2 \leftarrow h_4$.
+
 \begin{example} Executing $findMapping$:
 
 After the execution seen in example~\ref{ex:oneStep1} the new proposed state is 
