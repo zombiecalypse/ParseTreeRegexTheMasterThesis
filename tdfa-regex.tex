@@ -202,7 +202,7 @@ from DFAs in that for some input character and some state, there may
 be more than \ins{one} applicable transition. If there is, an NFA will magically
 guess the correct one. \autoref{fig:example-automaton} shows an example of
 an NFA's transition graph. For the moment, let us discuss regular
-expression matching on NFAs. Assuming that the NFA just magicly knows
+expression matching on NFAs. Assuming that the NFA just magically knows
 the right transition lets us focus on the important things, greediness control
 and capture groups.
 
@@ -230,8 +230,8 @@ straightforward.
 We transform the AST of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
 control greedines, or discern capture groups, our approach adds
-$\epsilon$ transitions to the transition graph. An
-$\epsilon$-transition has no input range assigned, and can thus always
+$\varepsilon$ transitions to the transition graph. An
+$\varepsilon$-transition has no input range assigned, and can thus always
 be used. It does not consume an input character.
 The additions are needed for greediness control and capture groups.
 Let's look at both, in turn.
@@ -302,7 +302,7 @@ threads are at the same position.
 \global\long\def\integers{\mathbb{Z}}
 \global\long\def\pos{\mathbf{\mathbf{p}}}
 
-\subsection{Instructions of the virtual machine}
+\subsubsection{Instructions of the virtual machine}
 \label{instructions}
 \begin{description}
 \item [$h\leftarrow\pos$] Stores the current position into the head of the linked list $h$.
