@@ -705,6 +705,29 @@ by representing the NFA states as a bit-array. Since no histories
 are produced unless new DFA states occur, the instructions attached to
 the DFA transitions alone are enough to describe the matching process.
 
+\subsection{Intertwining of the pipeline stages}
+The lazy compilation of the DFA when matching a string enables us
+to avoid compiling states of it that might never be necessary. This
+allows us to avoid the full powerset construction, which has 
+time complexity of $O(2^m)$ in the length of the regular
+expression, but poses some conceptual difficulties. It is not possible 
+to say that the compilation of the DFA is \emph{finished} so much as
+that the compilation of the DFA seems to have \emph{converged}.
+This notion is however purely heuristic, it is possible at any point
+that a repetitive pattern ends and that our algorithm will need to 
+compile another DFA state.
+
+Instead of admitting defeat, we propose a simple heuristic: We allow
+the DFA to be compactified after a small number of steps in which
+no new DFA state was discovered, but if our compactified automaton
+fails to match, we check back on the uncompactified automaton. If this
+fails as well, the whole match fails.
+
+The overhead of compactifying and falling back to the uncompactified
+automaton dwindles in the face of the gained performance on a long
+input string. It allows the algorithm to only take $O(\log m)$ steps
+on average for each character read.
+
 \section{Benchmark}
 
 
