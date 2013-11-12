@@ -12,6 +12,16 @@ R.~Cox.
   java, perl, php, python, ruby,...).
 \newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp1.html}, 2007.
 
+\bibitem{Cox09a}
+R.~Cox.
+\newblock Regular expression matching: the virtual machine approach.
+\newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp2.html}, 2009.
+
+\bibitem{Cox10a}
+R.~Cox.
+\newblock Regular expression matching in the wild.
+\newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp3.html}, 2010.
+
 \bibitem{Jaco09a}
 Adam Jacobs.
 \newblock The pathologies of big data.
@@ -26,6 +36,14 @@ L.~Karttunen, J.~P. Chanod, G.~Grefenstette, A.~Schiller, and Received
 \bibitem{Kukl07a}
 Chris Kuklewicz.
 \newblock Regular expressions/bounded space proposal, February 2007.
+
+\bibitem{Laur00a}
+V.~Laurikari.
+\newblock Nfas with tagged transitions, their conversion to deterministic
+  automata and application to regular expressions.
+\newblock In {\em String Processing and Information Retrieval, 2000. SPIRE
+  2000. Proceedings. Seventh International Symposium on}, pages 181--187. IEEE,
+  2000.
 
 \bibitem{Mein10a}
 Chad~R. Meiners, Jignesh Patel, Eric Norige, Eric Torng, and Alex~X. Liu.
