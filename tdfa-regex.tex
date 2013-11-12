@@ -287,11 +287,11 @@ commit. We distinguish opening and closing commits. The NFA keeps a
 history for every transition with a commit. Each time the transition
 is walked, the current position is added to its history. 
 
-We model histories as linked list, where the payload of each node
-is a position.  Only the payload of \emph{head}, the first node,
+We model histories as a linked list, where the payload of each node
+is a position.  Only the payload of the \emph{head}, the first node,
 is mutable, the \emph{rest}, all other nodes, are immutable.  Because
-the rests are immutable, they may be shared between histories.  This
-is an application of the flyweight pattern, and ensures that all
+the rest are immutable, they may be shared between histories.  This
+is an application of the flyweight pattern, which ensures that all
 of the following instructions on histories can be performed in
 constant time. Here, the \emph{position} is the current position
 of the matcher.  It is well-defined at all times since all threads
@@ -309,11 +309,16 @@ threads are at the same position.
 \item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
 \item [$h\leftarrow h'$] Sets head->next of $h$ to be head->next of $h'$. 
 	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
-\item [$c\uparrow(h)$] $c\downarrow(h)$ Prepends linked list $h$ with an extra node, which becomes the new head.
+	\on{It seems you should use a different kind of arrow since it does something different from the previous two ops.}
+\item [$c\uparrow(h)$] $c\downarrow(h)$ Prepends linked list $h$ with \chg{an extra}{a new} node, which becomes the new head.
 This effectively \emph{commits} the old head, which is henceforth considered immutable.
+\on{I don't understand the syntax. Why does $h$ occur twice? What is the new node? Is $c$ a literal? Why are there both up and down arrows? Do they represent the open/close tags? Why do you need them here?}
 \end{description}
 
-It is easy to see that, after matching, given the history of every tag, the entire match tree can be reconstructed.
+\on{It is hard to see what is going on without an example.}
+
+\ugh{It is easy to see that}, after matching, given the history of every tag, the entire match tree can be reconstructed.
+\on{I don't see that at all! Show me an example, and then it will perhaps be obvious.}
 
 \begin{figure}
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
@@ -363,7 +368,7 @@ by prioritizing the edge with the result that follows the greedy match and
 not considering states visited before, ensuring the greedy thread 
 ``wins the race''.
 
-The following examples will illustrate the algorithm~\ref{onestep} and use the
+The following examples will illustrate algorithm~\ref{onestep} and use the
 following notation:
 
 \begin{itemize}
@@ -372,15 +377,18 @@ following notation:
 			list of positions in the matched string, we will write it
 			as $h_i=[x_1, \dots, x_n]$ to describe that past matches occurred
 			at the positions $x_1, \dots, x_n$.
+			\on{Oh. Before $h$ was just the head of a history.}
 	\item	Each NFA state has an array of $2n$ histories, where 
 			$n$ is the number of capture groups in the original 
 			regular expression. This is written as 
-			$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. The $2i$th 
-			position is the history of the opening positions of
-			the capture group $i$, the $2i+i$th is the closing position.
-			A NFA state of the regular expression \texttt{(.+)} therefore
+			$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ 
+			is the history of the opening positions of
+			the capture group $i$, and at position $2i+i$ is the closing history.
+				\on{Shouldn't it be $2i+1$?}
+			An NFA state of the regular expression \texttt{(.+)} therefore
 			has the histories $(h_1, h_2)$ and when matching ``ab''
 			$h_1=[0]$ and $h_2=[2]$.
+			\on{OK, got it.}
 	\item	Each DFA state is denoted by $Q$ and contains multiple NFA 
 			states with their current histories. 
 			\[Q=\{(q_1, (h_1, h_2, h_3, h_4)), (q_2, (h_1, h_2, h_5, h_6))\}\] for
@@ -388,17 +396,24 @@ following notation:
 			histories $(h_1, h_2, h_3, h_4)$ and another in $q_2$ with the histories
 			$(h_1, h_2, h_5, h_6)$. Note that histories can be shared across threads
 			if they have the same matches.
+			\on{Why are there only 4 histories? Aren't there 3 capture groups in \autoref{fig:example-automaton}? Or is this example unrelated to the other examples? (Confusing.)}
 	\item	A transition is understood to be between NFA states, $1\rightarrow 2$
-			means a transition from $q_1$ to $q_2$. The meta-data about the 
+			means a transition from $q_1$ to $q_2$.
+			\on{So why don't you write $q_1 \rightarrow q_2$?}
+			The meta-data about the 
 			transition is described in the text and can contain consumption
 			of characters, priority or opening and closing commit tags.
-	\item	The algorithm uses $high$ and $low$ as stacks and \emph{push} means
+	\item	\chg{The algorithm uses $high$ and $low$ as stacks and \emph{push} means
 			to put an element at the topmost position. \emph{Popping} 
-			means to remove and retrieve the topmost element of the stack.
+			means to remove and retrieve the topmost element of the stack.}
+			{The algorithm uses two stacks, called \emph{high} and \emph{low}.}
+			\on{Don't explain what push and pop mean. Instead please tell us what these two stacks are for!}
+			\on{NB: don't use math mode for words, use emph, or the spacing will be wrong. Within math mode use the textit macro.}
 	\item	In the examples we will pretend for clarity that the commands
 			described in \ref{instructions} are executed directly after they
 			are encountered. The actual algorithm collects them and executes 
 			them after the $oneStep$ call to allow further optimizations.
+			\on{It would make more sense to introduce the commands here, so we see how they work on the representation.}
 \end{itemize}
 
 \begin{algorithm*}[tb]
@@ -559,25 +574,32 @@ Q=\{
 \on{I don't know how to read this.  What does this mean?}
 This is the case after initialization or before any commas are read.
 
-This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
+\chg{This is the execution of $oneStep(NFA, ``a'', 1, Q)$:}
+{This is the execution of \emph{oneStep}(\emph{NFA}, ``a'', $1$, $Q$):}
 
 \begin{enumerate}
 \item Initialize $high$ and $low$ as empty stacks.
+\on{What are they for?}
 \item Initialize $R=\{\}$
-\item The only transition that consumes ``a'' is $3\rightarrow 4$. $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$ \on{What's $high$? What are $h_1$ etc?}
-\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$. \on{What does it mean to push/pop?}
+\on{What is this for?}
+\item The only transition that consumes ``a'' is $3\rightarrow 4$.\\
+$(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$
+\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$.
+\on{Why push? Why pop? What do the high and low stacks represent?}
 \item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
 \item $4\rightarrow 3$ is visited. \begin{enumerate}
 	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
 \end{enumerate}
-\item $4\rightarrow 5$ is visited. \begin{enumerate}
-	\item A new history $h_9$ is created.
-	\item $h_9\leftarrow h_3$ is executed -- we copy the head and the tail of $h_3$ into $h_9$, so that they can change independently. \on{huh?}
+\item $4\rightarrow 5$ is visited.
+\on{So, is this a new thread? How do we see this in the representation?}
+\begin{enumerate}
+	\item A new history $h_9$ is created. \on{Because ...?}
+	\item $h_9\leftarrow h_3$ \del{is executed} -- we copy the head and the tail of $h_3$ into $h_9$, so that they can change independently. \on{huh?}
 	\item A new history $h_{10}$ is created.
-	\item $h_{10}\leftarrow h_4$ is executed.
-	\item $h_{10} \leftarrow 1$ is executed. \on{huh?}
+	\item $h_{10}\leftarrow h_4$ \del{is executed}.
+	\item $h_{10} \leftarrow 1$ \del{is executed}. \on{Why now?}
 	\item Commit $h_9$. It is now $h_9=[0,0]$. \on{Still don't know what this means}
-	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
+	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$. \on{Not clear why. Isn't the tail the same as that of $h_4$, and only the head can change?}
 	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
 \end{enumerate}
 \item No further transitions are visited from $4$.
@@ -592,9 +614,10 @@ This is the execution of $oneStep(NFA, ``a'', 1, Q)$:
 \item Both stacks are empty, $R$ is returned.
 \end{enumerate}
 \end{example}
-
+\on{I don't really understand what is going on. You tell us what happens, but the explanation is missing. I don't know what $R$, and the two stacks represent. I don't understand how the histories operations work.}
 
 \begin{example} Execution of algorithm \ref{onestep} with an ambiguous consumption:
+\on{TODO: I did not yet try to follow this example.}
 
 Take the NFA as above and 
 \begin{align*}
@@ -605,7 +628,7 @@ Q=\{
 	&h_8=[1,1], h_5=[0], h_6=[0]))\}
 \end{align*}
 
-This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
+This is the execution of \emph{oneStep}(\emph{NFA}, ``,'', $2$, $Q$):
 \begin{enumerate}
 \item The character ``,'' can be consumed by the transition $5\rightarrow 6$ and the transition $3\rightarrow 4$.
 \item $(6, (h_1, h_2, h_7, h_8, h_5, h_6))$ is pushed to the stack $high$
@@ -617,10 +640,10 @@ This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \end{enumerate}
 \item $4\rightarrow 5$ is visited. \begin{enumerate}
 	\item A new history $h_9$ is created.
-	\item $h_3\rightarrow h_9$ is executed.
+	\item $h_3\rightarrow h_9$ \del{is executed}.
 	\item A new history $h_{10}$ is created.
-	\item $h_4\rightarrow h_{10}$ is executed.
-	\item $h_{10} \leftarrow 1$ is executed.
+	\item $h_4\rightarrow h_{10}$ \del{is executed}.
+	\item $h_{10} \leftarrow 1$ \del{is executed}.
 	\item Commit $h_9$. It is now $h_9=[0,0]$.
 	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
 	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
@@ -633,7 +656,7 @@ This is the execution of $oneStep(NFA, ``,'', 2, Q)$:
 \item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)),\allowbreak (5, (h_1, h_2, h_9, h_{10}, h_5, h_6)),\allowbreak (6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))\}$
 \item $6\rightarrow 7$ is visited.\begin{enumerate}
 	\item A new history $h_{11}$ is created.
-	\item $h_5\rightarrow h_{11}$ is executed.
+	\item $h_5\rightarrow h_{11}$ \del{is executed}.
 	\item $(7, (h_1, h_2, h_7, h_8, h_{11}, h_6))$ is pushed to $high$.
 \end{enumerate}
 \item No further transitions are visited from $6$.
@@ -742,6 +765,7 @@ repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}.
 
 This paper is no exception. The authors of this paper had set out
 to implement Laurikari's TDFA algorithm \cite{Lauri00a},
+\on{MISSING REF}
 only to discover that Laurikari's description of a TDFA is so far
 from complete that it can rightfully only be called the sketch for
 an algorithm. Only late in the process did we discover that the blanks
@@ -756,7 +780,7 @@ explanation of regular expression matching \cite{Cox07a}. It seems
 ironic that this well-versed author published his influential work
 on his website. Although the joke may be on Academia's side.
 
-When the taciturn practioners acknowledge each other's work, we can't
+When \del{the taciturn} practioners acknowledge each other's work, we can't
 help but disagree almost universally with the characterizations they
 produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
 work an ``implementation'' of Laurikari's algorithm, although Laurikari's
@@ -768,7 +792,7 @@ found out how to get POSIX-style matching out of Laurikari's TDFA.
 Cox says that Laurikari's TDFA is a reinvention Pike's published only
 in code algorithm \cite{Pike87a}, which is Thompson's NFA with submatch
 tracking. This seems unfair in that Laurikari's allows for far more
-aggressive reusing of old states than what Thompson allows. This should
+aggressive \chg{reusing}{reuse} of old states than \del{what} Thompson allows. This should
 lead to Laurikari's TDFA having fewer states, and therefore better
 performance, than even Google's RE2, which uses Pike's algorithm.
 This is not confirmed by the benchmarks by Sulzmann and Lu \cite{Sulz12a},
@@ -781,8 +805,7 @@ Another mistake that permeates the scarce literature is to call regular
 expression matching linear. As Sedgewick points out correctly \cite{Sedg90a},
 Thompson's NFA matching is of complexity $O(mn)$, where $m$ is the
 size of the input NFA, and $n$ is the size of the input string. To
-call this linear requires to assume $m$ to be fix, which we cannot
-bring ourselves to justify. It may well be true that, at present,
+call this linear means to assume that $m$ is fixed, which is not justified. It may well be true that, at present,
 $m$ tends to be small. But that is a natural consequence of the algorithms
 not scaling very well with $m$. If they did, that would allow for
 fast feature extracting from text. Therefore, in this paper, we consider
@@ -798,5 +821,5 @@ good practical performance, although the theoretical bounds are considerably
 worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
 
 \bibliographystyle{plain}
-\bibliography{bib/scg}
+\bibliography{biblio,bib/scg}
 \end{document}
