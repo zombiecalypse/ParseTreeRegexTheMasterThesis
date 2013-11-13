@@ -423,27 +423,43 @@ following notation:
 \Input{Graph of transitions for an NFA,\\
 	   Input character $a$,\\
 	   Input position $pos$,\\
-	   a set of threads $Q = {(q, [h_{1},\dots,h_{n}])}$,
+	   a list of threads $Q = [(q, [h_{1},\dots,h_{n}])]$,
 	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
 \Output{ Set of threads $R$.}
 \Begin{
 
-$R\leftarrow\{\}$\;
+$R\leftarrow []$\;
+
+Initialize empty stack $buffer$\;
 Initialize empty stack $low$\;
 Initialize empty stack $high$\;
 
-\tcp{1. push follow states with old histories.}
-\ForEach{$a$-consuming transition $t$ from any NFA state $q$ to $q'$ such that $(q, H) \in Q$}{
-	\lIf{$t$ has low priority}{push $(q', H)$ to $low$ \lElse to $high$}
+\ForEach{$(q, h) \in Q$}{
+	push $(q, h, \mathtt{hungry})$ to $low$.\;
 }
 
-\tcp{2. Follow $\varepsilon$-transitions}
+\tcp{Follow transitions greedily}
 \While{$high$ and $low$ are not both empty}{
-	\lIf{possible}{pop $(q', [h_{1},\dots,h_{n}]$ from $high$ \lElse else from $low$\;}
-	\lIf{$(q', H) \in R$ for some $H$}{ continue while \;}
-	add $(q', [h_{1},\dots,h_{n}])$ to $R$\;
+	\eIf{$high$ not empty}{
+		pop $(q', [h_{1},\dots,h_{n}], hungry?)$ from $high$\;
+	}{
+		pop $(q', [h_{1},\dots,h_{n}], hungry?)$ from $low$\;
+		
+		\lWhile{$buffer$ is not empty}{ 
+			pop $(q, H)$ from $buffer$ and add it to $R$\;
+		}
+	}
+	\If{$hungry?$ is \texttt{hungry}}{
+		\ForEach{$a$-consuming transition $e=q'\rightarrow q''$}{
+			push $(q'', H, \mathtt{fed})$ to $high$.\;
+		}
+		jump to top of while loop.\;
+	}
+	\lIf{$q'$ is marked as seen}{ jump to top of while loop \;}
+	mark $q'$ as seen\;
+	add $(q', H)$ to $buffer$\;
 	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
-		\lIf{$(q'', H) \in R$ for some $H$}{continue for loop\;}
+		\lIf{$q''$ is marked as seen}{continue for loop\;}
 		\If{$t$ is tagged with an open or close tag}{
 			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
 			Make a new history $h'$\;
@@ -452,20 +468,23 @@ Initialize empty stack $high$\;
 				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
 				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
 			}{
-			\tcp{$t$ has a close tag}
-			Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
-			Make a new history $h''$\;
-			$h'' \leftarrow h_{i'}$ \label{algline:old-copy2}\tcp*{Copy old history}
-			$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
-			Commit $h'$\;
-			Commit $h''$\;
-			Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
+				\tcp{$t$ has a close tag}
+				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
+				Make a new history $h''$\;
+				$h'' \leftarrow h_{i'}$ \label{algline:old-copy2}\tcp*{Copy old history}
+				$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
+				Commit $h'$\;
+				Commit $h''$\;
+				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
 			}
-		}
-					
+		}					
 				
 		\tcp{Push according to priority of transition:}
-		\lIf{$t$ has low priority}{push $(q'', newHistories)$ to $low$, \lElse to $high$}
+		\eIf{$t$ has low priority}{
+			push $(q'', newHistories, \mathtt{fed})$ to $low$\;
+		}{
+			push $(q'', newHistories, \mathtt{fed})$ to $high$\;
+		}
 	}
 }
 }
@@ -496,7 +515,7 @@ Set $T$ to an empty map from state and input to new state and instructions.
 	Let $a$ be the character at position $pos$ in $input$.
 	
 	\eIf{$T$ has an entry for $Q$ and $a$}{
-		// Let the DFA handle $a$
+		\tcp{Let the DFA handle $a$}
 		Read the instructions and new state $Q'$ out of $T$\;
 		execute the instructions\;
 		$Q\leftarrow Q'$\;
