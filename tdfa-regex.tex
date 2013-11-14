@@ -399,7 +399,6 @@ not considering states visited before, ensuring the greedy thread
 			histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another in $q_2$ with the histories
 			$(h_1, h_2, h_3, h_4, h_7, h_8)$. Note that histories can be shared across threads
 			if they have the same matches.
-			\on{[Why are there only 4 histories? Aren't there 3 capture groups in \autoref{fig:example-automaton}? Or is this example unrelated to the other examples? (Confusing.)]}
 	\item	A transition is understood to be between NFA states, $q_1\rightarrow q_2$
 			means a transition from $q_1$ to $q_2$.
 			\on{So why don't you write $q_1 \rightarrow q_2$?}
@@ -426,20 +425,15 @@ not considering states visited before, ensuring the greedy thread
 \item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
 \item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
 	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
-	\on{[It seems you should use a different kind of arrow since it does something different from the previous two ops.]}
 \item [$c\uparrow(h)$ and $c\downarrow(h)$] Prepends linked list $h$ with a new node, which becomes the new head.
 This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
 describes the opening position of the capture group and is therefore called the opening commit. 
 Conversely $c\downarrow(h)$ is the closing commit that marks the end of the capture group. 
 This distinction is only for clarity, the semantic is the same for opening and closing commits.
-\on{[I don't understand the syntax. Why does $h$ occur twice? What is the new node? Is $c$ a literal? Why are there both up and down arrows? Do they represent the open/close tags? Why do you need them here?]}
 \end{description}
-
-\on{[It is hard to see what is going on without an example.]}
 
 After matching, given the history of every tag, the entire match tree can be reconstructed.
 
-\on{I don't see that at all! Show me an example, and then it will perhaps be obvious.}
 \begin{example}
 Say the match produces $[h_1=[0,7],h_2=[6,8], h_3=[1,3,7], h_4=[2,3,7]]$ we can transform it into capture group beginning and end position pairs: $g_1 = [(0,6),(7,8)]$ and $g_2=[(1,2), (3,3),(7,7)]$. From this we can see that $g_1^1=(0,6)$ contains $g_2^1=(1,2)$ and $g_2^2=(3,3)$, because it encloses them. By construction a match for a capture group 
 inside another capture group can't leave the outer group 
@@ -447,84 +441,7 @@ without leaving the inner first.
 \end{example}
 
 
-\begin{algorithm*}[tb]
-\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-\DontPrintSemicolon
-\SetAlgoLined
-\Input{Graph of transitions for an NFA,\\
-	   Input character $a$,\\
-	   Input position $pos$,\\
-	   a list of threads $Q = [(q, [h_{1},\dots,h_{n}])]$,
-	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
-\Output{ Set of threads $R$.}
-\Begin{
-
-$R\leftarrow []$\;
-
-Initialize empty stack $buffer$\;
-Initialize empty stack $low$\;
-Initialize empty stack $high$\;
-
-\ForEach{$(q, h) \in Q$}{
-	push $(q, h, \mathtt{hungry})$ to $low$.\;
-}
-
-\tcp{Follow transitions greedily}
-\While{$high$ and $low$ are not both empty}{
-	\eIf{$high$ not empty}{
-		pop $(q', [h_{1},\dots,h_{n}], hungry?)$ from $high$\;
-	}{
-		pop $(q', [h_{1},\dots,h_{n}], hungry?)$ from $low$\;
-		
-		\lWhile{$buffer$ is not empty}{ 
-			pop $(q, H)$ from $buffer$ and add it to $R$\;
-		}
-	}
-	\If{$hungry?$ is \texttt{hungry}}{
-		\ForEach{$a$-consuming transition $e=q'\rightarrow q''$}{
-			push $(q'', H, \mathtt{fed})$ to $high$.\;
-		}
-		jump to top of while loop.\;
-	}
-	\lIf{$q'$ is marked as seen}{ jump to top of while loop \;}
-	mark $q'$ as seen\;
-	add $(q', H)$ to $buffer$\;
-	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
-		\lIf{$q''$ is marked as seen}{continue for loop\;}
-		\If{$t$ is tagged with an open or close tag}{
-			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
-			Make a new history $h'$\;
-			$h'\leftarrow h_{i}$ \label{algline:old-copy}\tcp*{Copy old history}
-			\eIf{$t$ has a open tag}{
-				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
-				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
-			}{
-				\tcp{$t$ has a close tag}
-				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
-				Make a new history $h''$\;
-				$h'' \leftarrow h_{i'}$ \label{algline:old-copy2}\tcp*{Copy old history}
-				$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
-				Commit $h'$\;
-				Commit $h''$\;
-				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
-			}
-		}					
-				
-		\tcp{Push according to priority of transition:}
-		\eIf{$t$ has low priority}{
-			push $(q'', newHistories, \mathtt{fed})$ to $low$\;
-		}{
-			push $(q'', newHistories, \mathtt{fed})$ to $high$\;
-		}
-	}
-}
-}
-
-\caption{\label{onestep}$oneStep(NFA, a, pos, Q)$: Compute the follow-up state for DFA state $Q$}
-\end{algorithm*}
-
-
-\begin{algorithm*}[h]
+\begin{algorithm*}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -569,11 +486,85 @@ Set $T$ to an empty map from state and input to new state and instructions.
 
 }
 }
-\caption{$interpret(input)$: Interpretation and lazy compilation of the NFA
-\on{This looks really horrible monospaced -- please don't use the listings package here!}}
+\caption{$interpret(input)$: Interpretation and lazy compilation of the NFA}
 \end{algorithm*}
 
-\begin{algorithm*}[h]
+\begin{algorithm*}[htb]
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{Graph of transitions for an NFA,\\
+	   Input character $a$,\\
+	   Input position $pos$,\\
+	   a list of threads $Q = [(q, [h_{1},\dots,h_{n}])]$,
+	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
+\Output{ Set of threads $R$.}
+\Begin{
+
+$R\leftarrow []$\;
+
+Initialize empty stack $buffer$\;
+Initialize empty stack $high$\;
+Initialize stack $low$ so that $(q, h)\in Q$ are retrieved front to back of $Q$.\;
+Mark all threads in \emph{low} as hungry.
+
+\tcp{Follow transitions greedily}
+\While{$high$ and $low$ are not both empty}{
+	\eIf{$high$ not empty}{
+		pop $(q', [h_{1},\dots,h_{n}])$ from $high$\;
+	}{
+		pop $(q', [h_{1},\dots,h_{n}])$ from $low$\;
+		
+		\lWhile{$buffer$ is not empty}{ 
+			pop $(q, H)$ from $buffer$ and add it to $R$\;
+		}
+	}
+	\If{current thread is marked hungry}{
+		\ForEach{$a$-consuming transition $e=q'\rightarrow q''$}{
+			push $(q'', H)$ to $high$.\;
+		}
+		jump to top of while.\;
+	}
+	\lIf{$q'$ is marked as seen}{ jump to top of while loop \;}
+	mark $q'$ as seen\;
+	add $(q', H)$ to $buffer$\;
+	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
+		\lIf{$q''$ is marked as seen}{continue for loop\;}
+		\If{$t$ is tagged with an open or close tag}{
+			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
+			Make a new history $h'$\;
+			$h_{i} \mapsto h'$ \label{algline:old-copy}\tcp*{Copy old history}
+			\eIf{$t$ has a open tag}{
+				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
+				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
+			}{
+				\tcp{$t$ has a close tag}
+				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
+				Make a new history $h''$\;
+				$h'_{i'} \mapsto h''$ \label{algline:old-copy2}\tcp*{Copy old history}
+				$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
+				Commit $h'$\;
+				Commit $h''$\;
+				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
+			}
+		}					
+				
+		\tcp{Push according to priority of transition:}
+		\eIf{$t$ has low priority}{
+			push $(q'', newHistories)$ to $low$\;
+		}{
+			push $(q'', newHistories)$ to $high$\;
+		}
+	}
+}
+}
+
+\caption{\label{onestep}$oneStep(NFA, a, pos, Q)$: Compute the follow-up state for DFA state $Q$}
+\end{algorithm*}
+
+\clearpage
+
+\begin{algorithm}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -595,8 +586,8 @@ Set $T$ to an empty map from state and input to new state and instructions.
 			\eIf{$H(i)$ is in $m$ as a key already and does not map to $H'(i)$}{
 				Fail\;
 			}{
-			
-				Add $H'(i)\leftarrow H(i)$ to $m$ \tcp*{Hypothesize that this is part of a valid map}
+				 \tcp{Hypothesize that this is part of a valid map}
+				Add $H'(i)\leftarrow H(i)$ to $m$;
 				}
 			}
 		}
@@ -608,7 +599,7 @@ Set $T$ to an empty map from state and input to new state and instructions.
 	\Return{$Q'$ and $m$}
 }
 \caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
-\end{algorithm*}
+\end{algorithm}
 
 \begin{example} Execution of algorithm \ref{onestep}:
 \label{ex:oneStep1}
@@ -621,17 +612,29 @@ Q=\{
 	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0], \\
 	&h_8=[0,0], h_5=[0], h_6=[0]))\}
 	\end{align*}
-\on{I don't know how to read this.  What does this mean?}
+\on{[I don't know how to read this.  What does this mean?]}
 This is the case after initialization or before any commas are read.
 
 \chg{This is the execution of $oneStep(NFA, ``a'', 1, Q)$:}
 {This is the execution of \emph{oneStep}(\emph{NFA}, ``a'', $1$, $Q$):}
 
 \begin{enumerate}
-\item Initialize $high$ and $low$ as empty stacks.
-\on{What are they for?}
-\item Initialize $R=\{\}$
-\on{What is this for?}
+\item Initialize \emph{high} as empty stack and fill \emph{low} with hungry threads of all states of $Q$. The stacks are used for
+thread scheduling and low priority transitions will be processed only after all 
+high priority transitions have had their chance to mark the NFA states.
+This is necessary because at most one thread for each NFA state survives 
+and is therefore essential that the first thread to arrive at the 
+state is the one that has the correct greediness.
+
+We put all threads from $Q$ onto the \emph{low} stack so that every
+thread can process all it's results before the next element of $Q$ 
+can run. In the execution this means that the greedy threads
+can reach their destinations first.
+\item Initialize \emph{buffer} as an empty stack. This needs to 
+be done in order to put the most greedy thread into the front position
+of our return value. It could well be that the thread is found only after
+less greedy threads. \on{What does it mean for a thread to be greedy?}
+\item Initialize $R=[]$, the DFA state under construction. We will now proceed to add threads to this list in the order in which they need to be run in the next run of \emph{oneStep} in order to obey greediness.
 \item The only transition that consumes ``a'' is $3\rightarrow 4$.\\
 $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$
 \item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$.
