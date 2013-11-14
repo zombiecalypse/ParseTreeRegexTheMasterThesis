@@ -778,7 +778,7 @@ increase in performance, was the use of a compactified representation
 of DFA transition tables whenever possible.  Compactified, here,
 means to store the transition table as a struct of arrays, rather
 than as an array of structs, as recommended by the Intel optimization
-handbook \cite[section 6.5.1]{Inte13}.  The transition table is a
+handbook \cite[section 6.5.1]{Inte13a}.  The transition table is a
 map from source state and input range to target state and instructions.
 Following Intel's recommendation, we store it as an object of five
 arrays: \texttt{int[] states; char[] froms;  char[] tos; Instruction[][]
@@ -832,8 +832,7 @@ been so lucky. Cox is spot-on when he argues that innovations have
 repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}. 
 
 This paper is no exception. The authors of this paper had set out
-to implement Laurikari's TDFA algorithm \cite{Lauri00a},
-\on{MISSING REF}
+to implement Laurikari's TDFA algorithm \cite{Laur00a},
 only to discover that Laurikari's description of a TDFA is so far
 from complete that it can rightfully only be called the sketch for
 an algorithm. Only late in the process did we discover that the blanks

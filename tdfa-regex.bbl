@@ -6,6 +6,12 @@ Arvind Arasu, Surajit Chaudhuri, Zhimin Chen, Kris Ganjam, Raghav Kaushik, and
 \newblock Experiences with using data cleaning technology for bing services.
 \newblock {\em IEEE Data Eng. Bull.}, 35(2):14--23, 2012.
 
+\bibitem{Inte13a}
+Intel Corporation.
+\newblock {\em Intel\textsuperscript{\textregistered} 64 and IA-32
+  Architectures Software Developer's Manual}.
+\newblock Intel, 248966-028 edition, July 2013.
+
 \bibitem{Cox07a}
 R.~Cox.
 \newblock Regular expression matching can be simple and fast (but is slow in
@@ -69,6 +75,11 @@ R.~Pike.
 Robert Sedgewick.
 \newblock {\em Algorithms in C (paperback)}.
 \newblock Addison-Wesley Professional, 1 edition, January 1990.
+
+\bibitem{Sips05a}
+Michael Sipser.
+\newblock {\em Introduction to the Theory of Computation}.
+\newblock Course Technology, 2 edition, February 2005.
 
 \bibitem{Sipser2005}
 Michael Sipser.
