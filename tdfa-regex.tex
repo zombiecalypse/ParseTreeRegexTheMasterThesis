@@ -789,13 +789,53 @@ to avoid compiling states of it that might never be necessary. This
 allows us to avoid the full powerset construction\cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
+\subsection{Alternatives}
+A programmer taxed to parse a regular grammar and extract the parse tree needs to choose, 
+if he cannot use our approach, between a general-purpose parser framework and writing a
+parser by hand. As we will see in \Secref{benchmarks}, the performance of general-purpose 
+parser frameworks on regular grammars is astonishingly poor. At the same time, it is 
+surprisingly difficult to express a regular grammar most frameworks, such as JParsec,
+since they come without support for greediness control.
+
 \section{Benchmark}
+\seclabel{benchmarks}
+While measuring the performance of our tool is easy, it is not trivial to find a base-line to compare it against.
+As we will see in \Secref{related}, there is a surprising dearth of non-backtracking regular expression engine that can extract nested capture groups -- nevermind extracting entire parse trees! 
+
+If a Java programmer wants to extract the parse tree described by a regular expression without using our framework,
+ the pragmatic choice is between some parser framework, perhaps a combinatorial parser such as JParsec, and writing the parser by hand.
+
+
+
+Compared to a back-tracking implementation, 
+
+
+  regular expression engines that allow extracting capture groups, nevermind the entire matching trees,
+are back-tracking
+
 \begin{figure}[h]
 \includegraphics[width=0.75\linewidth]{graphs/pathological}
-\caption{\figlabel{patho} Matching $\textit{a?}^n\textit{a}^n$. Bottom line is our approach, top line is java.util.regex.Pattern.}
+\caption{\figlabel{patho} Matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom line is our approach, top line is java.util.regex.Pattern.}
 \end{figure}
+\figlabel{patho}
+\begin{table}
+
+\begin{tabular}{ccccccccc|}
+\hline 
+$n$ & 13 & 14 & 15 & 16 & 17 & 18 & 19 & 20\tabularnewline
+\hline 
+\hline 
+Oracle & 241 & 484 & 1003 & 1874 & 3555 & 7381 & 14561 & 30116\tabularnewline
+\hline 
+Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
+\hline 
+\end{tabular}
+\caption{Matching times, in microseconds, for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$}
+\tablabel{patho}
+\end{table}
 
 \section{Related work}
+\seclabel{related}
 Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
 which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
 
