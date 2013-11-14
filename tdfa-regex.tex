@@ -174,20 +174,30 @@ that don't extract parse trees.
 
 \subsection{More powerful than standard regular expressions}
 \seclabel{power}
-It may at first seem as if all capture groups can always, equivalently, be
-extracted by splitting the input, and then applying sub-regular expressions on the splits.
-This is, for example, an entirely valid strategy to extract the parse tree in \Figref{lehrer-tree}.
-However, this can quickly become an exercise of writing an entire parser, using 
-no regular expression engine at all, even if the underlying grammar is entirely regular. 
-The following grammar is hard to parse using a regular expression engine, even though it is regular.
+It may at first seem as if all capture groups can always, equivalently,
+be extracted by splitting the input, and then applying sub-regular
+expressions on the splits.  This is, for example, an entirely valid
+strategy to extract the parse tree in \Figref{lehrer-tree}.  However,
+this can quickly become an exercise of writing an entire parser,
+using no regular expression engine at all, even if the underlying
+grammar is entirely regular.  The following grammar is hard to parse
+using a regular expression engine, even though it is regular.
 
-Consider a file of semicolon-terminated records, each record consists of a comma-separated
-pair of entries, and each entry can be escaped to contain semicolons, as in the regular expression \texttt{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}. Here, expression \texttt{.*?} is a non-greedy match
-which will be discussed in more detail in \Secref{algo}.
-This language contains, for example, the string: ``"h;i",there;"h;,i",Paul;''.
-It is easy to see that, in order to extract all four capture group matches, it is insufficient 
-to split the input at the semicolon, as that would split the field ``h;i'' in half.
-More involved examples, where hand-written parsers become harder to make, are easily constructed. 
+
+Consider a file of semicolon-terminated records, each record consists
+of a comma-separated pair of entries, and each entry can be escaped
+to contain semicolons, as in the regular expression
+\texttt{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}. Here, expression
+\texttt{.*?} is a non-greedy match which will be discussed in more
+detail in \Secref{algo}.  This language contains, for example, the
+string: ``"h;i",there;"h;,i",Paul;''.  It is easy to see that, in
+order to extract all four capture group matches, it is insufficient
+to split the input at the semicolon, as that would split the field
+``h;i'' in half.  More involved examples, where hand-written parsers
+become harder to make, are easily constructed.  In contrast, our
+approach yields the entire parse tree, simply from specifying the
+above regular expression.
+
 
 \subsection{Motivation}
 
