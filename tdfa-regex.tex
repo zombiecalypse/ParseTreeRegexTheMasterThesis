@@ -411,25 +411,19 @@ not considering states visited before, ensuring the greedy thread
 			if they have the same matches.
 	\item	A transition is understood to be between NFA states, $q_1\rightarrow q_2$
 			means a transition from $q_1$ to $q_2$.
-			\on{So why don't you write $q_1 \rightarrow q_2$?}
 			The meta-data about the 
 			transition is described in the text and can contain consumption
 			of characters, priority or opening and closing commit tags.
 	\item	The algorithm uses two stacks, called \emph{high} and \emph{low}. The algorithm uses these two stacks to handle the scheduling
 	of the threads. The LIFO\footnote{last-in-first-out} property ensures that threads preferably are run until they can't follow further $\varepsilon$-edges. The \emph{high} stack takes strict priority
 	over the \emph{low} stack.
-			\on{Don't explain what push and pop mean. Instead please tell us what these two stacks are for!}
 			\on{NB: don't use math mode for words, use emph, or the spacing will be wrong. Within math mode use the textit macro.}
 	\item	In the examples we will pretend for clarity that the commands
 			described below are executed directly after they
 			are encountered. The actual algorithm collects them and executes 
 			them after the \emph{oneStep} call to allow further optimizations.
-			\on{It would make more sense to introduce the commands here, so we see how they work on the representation.}
 \end{itemize}
-\end{notation}
 
-\subsubsection{Instructions of the virtual machine}
-\label{instructions}
 \begin{description}
 \item [$h\leftarrow\pos$] Stores the current position into the head of the linked list $h$.
 \item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
@@ -441,15 +435,7 @@ describes the opening position of the capture group and is therefore called the 
 Conversely $c\downarrow(h)$ is the closing commit that marks the end of the capture group. 
 This distinction is only for clarity, the semantic is the same for opening and closing commits.
 \end{description}
-
-After matching, given the history of every tag, the entire match tree can be reconstructed.
-
-\begin{example}
-Say the match produces $[h_1=[0,7],h_2=[6,8], h_3=[1,3,7], h_4=[2,3,7]]$ we can transform it into capture group beginning and end position pairs: $g_1 = [(0,6),(7,8)]$ and $g_2=[(1,2), (3,3),(7,7)]$. From this we can see that $g_1^1=(0,6)$ contains $g_2^1=(1,2)$ and $g_2^2=(3,3)$, because it encloses them. By construction a match for a capture group 
-inside another capture group can't leave the outer group 
-without leaving the inner first.
-\end{example}
-
+\end{notation}
 
 \begin{algorithm*}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
@@ -526,18 +512,18 @@ Mark all threads in \emph{low} as hungry.
 		pop $(q', [h_{1},\dots,h_{n}])$ from $low$\;
 		
 		\lWhile{$buffer$ is not empty}{ 
-			pop $(q, H)$ from $buffer$ and add it to $R$\;
+			pop $(q, [h_{1},\dots,h_{n}])$ from $buffer$ and add it to $R$\;
 		}
 	}
 	\If{current thread is marked hungry}{
 		\ForEach{$a$-consuming transition $e=q'\rightarrow q''$}{
-			push $(q'', H)$ to $high$.\;
+			push $(q'', [h_{1},\dots,h_{n}])$ to $high$.\;
 		}
 		jump to top of while.\;
 	}
 	\lIf{$q'$ is marked as seen}{ jump to top of while loop \;}
 	mark $q'$ as seen\;
-	add $(q', H)$ to $buffer$\;
+	add $(q', [h_{1},\dots,h_{n}])$ to $buffer$\;
 	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
 		\lIf{$q''$ is marked as seen}{continue for loop\;}
 		\If{$t$ is tagged with an open or close tag}{
@@ -574,7 +560,7 @@ Mark all threads in \emph{low} as hungry.
 
 \clearpage
 
-\begin{algorithm}[htb]
+\begin{algorithm*}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -596,8 +582,8 @@ Mark all threads in \emph{low} as hungry.
 			\eIf{$H(i)$ is in $m$ as a key already and does not map to $H'(i)$}{
 				Fail\;
 			}{
-				 \tcp{Hypothesize that this is part of a valid map}
-				Add $H'(i)\leftarrow H(i)$ to $m$;
+				 \tcc{Hypothesize that this is part of a valid map}
+				Add $H(i) \mapsto H'(i)$ to $m$;
 				}
 			}
 		}
@@ -609,24 +595,22 @@ Mark all threads in \emph{low} as hungry.
 	\Return{$Q'$ and $m$}
 }
 \caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
-\end{algorithm}
+\end{algorithm*}
 
 \begin{example} Execution of algorithm \ref{onestep}:
 \label{ex:oneStep1}
 
 Assume as an example the automaton in figure \ref{fig:example-automaton} is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} 
 \begin{align*}
-Q=\{
-	(q_3, (&h_1=[0], h_2=[0], h_3=[0], \\
-	&h_4=[0], h_5=[0], h_6=[0])), \\
-	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0], \\
-	&h_8=[0,0], h_5=[0], h_6=[0]))\}
+Q=[
+	(q_6, H_2=(&h_1=[0], h_2=[0], h_7=[0,0], \\
+	&h_8=[0,0], h_5=[0], h_6=[0]))
+	(q_3, H_1=(&h_1=[0], h_2=[0], h_3=[0], \\
+	&h_4=[0], h_5=[0], h_6=[0]))]
 	\end{align*}
-\on{[I don't know how to read this.  What does this mean?]}
 This is the case after initialization or before any commas are read.
 
-\chg{This is the execution of $oneStep(NFA, ``a'', 1, Q)$:}
-{This is the execution of \emph{oneStep}(\emph{NFA}, ``a'', $1$, $Q$):}
+This is the execution of \emph{oneStep}(\emph{NFA}, ``,'', $1$, $Q$):
 
 \begin{enumerate}
 \item Initialize \emph{high} as empty stack and fill \emph{low} with hungry threads of all states of $Q$. The stacks are used for
@@ -639,100 +623,74 @@ state is the one that has the correct greediness.
 We put all threads from $Q$ onto the \emph{low} stack so that every
 thread can process all it's results before the next element of $Q$ 
 can run. In the execution this means that the greedy threads
-can reach their destinations first.
+can reach their destinations first. $\mathit{low}=[(q_6, H_2), (q_3,H_1))]$.
 \item Initialize \emph{buffer} as an empty stack. This needs to 
 be done in order to put the most greedy thread into the front position
 of our return value. It could well be that the thread is found only after
 less greedy threads. \on{What does it mean for a thread to be greedy?}
-\item Initialize $R=[]$, the DFA state under construction. We will now proceed to add threads to this list in the order in which they need to be run in the next run of \emph{oneStep} in order to obey greediness.
-\item The only transition that consumes ``a'' is $3\rightarrow 4$.\\
-$(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $high$
-\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$.
-\on{Why push? Why pop? What do the high and low stacks represent?}
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
-\item $4\rightarrow 3$ is visited. \begin{enumerate}
-	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
+\item Initialize $R=[]$, the DFA state under construction. We will now proceed to add threads to 
+this list in the order in which they need to be run in the next run of \emph{oneStep} in order to obey greediness.
+\item The algorithm now begins to push its threads 
+forward. Hungry threads that can't consume an transition
+starve. If hungry threads consume an edge, they become fed. Fed threads can only follow $\varepsilon$-transitions. 
+\item $(q_6,H_2)$ is taken from the \emph{low} stack.
+\item $q_6\rightarrow q_7$ can consume ``,''.
+\item $(q_7, H_2)$ is pushed to \emph{high}. This means it will be followed right away.
+\item $(q_7, H_2)$ is taken from the \emph{high} stack. 
+\item It is put on the \emph{buffer} for later processing.
+\item Since it it fed, it follows $\varepsilon$-edges.
+\item The available transition $q_7\rightarrow q_8$ is evaluated:\begin{enumerate}
+	\item 	Before any actions that change the value of a history, the history is copied to avoid
+			corruption. The fly-weight pattern allows us to do this in constant time.
+	\item	A new history $h$ is created to put the new match for the opening of the group into.
+	\item 	$H_2(4) mapsto h$.
+	\item 	$h\leftarrow\pos+1$. This is the position after the ``,'', because this is not part of the capture
+			group.
+	\item	$H_3$ is a copy of $H_2$ with $h$ on position 4. Since $h$ is pointing to the old history, it
+			still knows about matches from the past. It can diverge here however.
+	\item $(q_8, H_3)$ is put on the \emph{high} stack.
 \end{enumerate}
-\item $4\rightarrow 5$ is visited.
-\on{So, is this a new thread? How do we see this in the representation?}
-\begin{enumerate}
-	\item A new history $h_9$ is created. \on{Because ...?}
-	\item $h_9\leftarrow h_3$ \del{is executed} -- we copy the head and the tail of $h_3$ into $h_9$, so that they can change independently. \on{huh?}
-	\item A new history $h_{10}$ is created.
-	\item $h_{10}\leftarrow h_4$ \del{is executed}.
-	\item $h_{10} \leftarrow 1$ \del{is executed}. \on{Why now?}
-	\item Commit $h_9$. It is now $h_9=[0,0]$. \on{Still don't know what this means}
-	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$. \on{Not clear why. Isn't the tail the same as that of $h_4$, and only the head can change?}
-	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
+\item $(q_8, H_3)$ is taken from the \emph{high} stack.
+\item It is put on the \emph{buffer}. \emph{buffer}$=[(q_8, H_3), (q_7, H_2)]$
+\item It can follow no further transitions and dies.
+\item $(q_3, H_1)$ is taken from \emph{low}. It is hungry.
+\item We now flush our \emph{buffer}: $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[]$.
+\item The only transition that consumes ``,'' is $q_3\rightarrow q_4$:\begin{enumerate}
+	\item $(q_4, H_1)$ is pushed to $high$ as a fed thread.
 \end{enumerate}
-\item No further transitions are visited from $4$.
-\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is popped from $high$.
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)),\allowbreak (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
-\item No transitions are visited from $5$.
-\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $low$.
-\item $3\rightarrow 4$ is visited \begin{enumerate}
-	\item $4$ is in $R$, so no further steps are taken.
+\item $(q_4, H_1)$ is popped from $high$.
+\item It is pushed to the \emph{buffer}. \emph{buffer}$=(q_4, H_2)$
+\item $q_4\rightarrow q_3$ is visited. \begin{enumerate}
+	\item $(q_3, H_2))$ is pushed to \emph{low}. This means it will be processed after all high-priority 
+	transitions this thread can visit, but it would be visited before any other start threads.
 \end{enumerate}
-\item No further transitions are visited from $3$.
-\item Both stacks are empty, $R$ is returned.
+\item We flush the \emph{buffer} again: $R=[(q_8, H_3), (q_7, H_2), (q_4, H_1)]$
+\item $(q_3, H_1)$ is taken from the \emph{low} stack.
+\item It is added to \emph{buffer}.
+\item $q_3\rightarrow q_5$ is visited:\begin{enumerate}
+	\item $(q_5, H_1)$ is pushed to \emph{high}.
 \end{enumerate}
-\end{example}
-\on{I don't really understand what is going on. You tell us what happens, but the explanation is missing. I don't know what $R$, and the two stacks represent. I don't understand how the histories operations work.}
-
-\begin{example} Execution of algorithm \ref{onestep} with an ambiguous consumption:
-\on{TODO: I did not yet try to follow this example.}
-
-Take the NFA as above and 
+\item $(q_5, H_1)$ is taken from the \emph{high} stack.
+\item It is added to \emph{buffer}.
+\item $q_5\rightarrow q_6$ is visited and contains the closing commit of the second capture group:\begin{enumerate}
+	\item Two histories are created to store the new positions of both the start and the end of the capture group. This ensures that other threads will not corrupt the memory.
+	\item A new history $h$ is created to put the previous match for the opening of the group into.
+	\item A new history $h'$ is created for the closing position.
+	\item $H_1(2) \mapsto h$. 
+	\item $H_1(3) \mapsto h'$.
+	\item $h'\leftarrow\pos$. This is the position of the ``,''.
+	\item $H_4$ is a copy of $H_1$ with $h$ on position 2 and $h'$ on position 3.
+	\item $(q_6, H_4)$ is pushed to \emph{high}.
+\end{enumerate}
+\item $(q_6, H_4)$ is taken from the \emph{high} stack.
+\item It is added to the \emph{buffer}.
+\item Both stacks are empty:
+\item We flush our \emph{buffer}: 
 \begin{align*}
-Q=\{
-	(q_3, (&h_1=[0], h_2=[0], h_3=[0], \\
-	&h_4=[0], h_5=[0], h_6=[0])),\\
-	(q_5, (&h_1=[0], h_2=[0], h_7=[1,1],\\ 
-	&h_8=[1,1], h_5=[0], h_6=[0]))\}
+R=[&(q_8, H_3), (q_7, H_2), (q_4, H_1),\\ &(q_6, H_4), (q_5, H_1)]
 \end{align*}
-
-This is the execution of \emph{oneStep}(\emph{NFA}, ``,'', $2$, $Q$):
-\begin{enumerate}
-\item The character ``,'' can be consumed by the transition $5\rightarrow 6$ and the transition $3\rightarrow 4$.
-\item $(6, (h_1, h_2, h_7, h_8, h_5, h_6))$ is pushed to the stack $high$
-\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to the stack $high$
-\item $(4, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $high$.
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6))\}$
-\item $4\rightarrow 3$ is visited. \begin{enumerate}
-	\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is pushed to $low$.
+\item $R$ is returned.
 \end{enumerate}
-\item $4\rightarrow 5$ is visited. \begin{enumerate}
-	\item A new history $h_9$ is created.
-	\item $h_3\rightarrow h_9$ \del{is executed}.
-	\item A new history $h_{10}$ is created.
-	\item $h_4\rightarrow h_{10}$ \del{is executed}.
-	\item $h_{10} \leftarrow 1$ \del{is executed}.
-	\item Commit $h_9$. It is now $h_9=[0,0]$.
-	\item Commit $h_{10}$. It is now $h_{10}=[1,1]$.
-	\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is pushed to $high$.
-\end{enumerate}
-\item No further transitions are visited from $4$.
-\item $(5, (h_1, h_2, h_9, h_{10}, h_5, h_6))$ is popped from $high$.
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)),\allowbreak (5, (h_1, h_2, h_9, h_{10}, h_5, h_6))\}$
-\item No transitions are visited from $5$.
-\item $(6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))$ is popped from $high$.
-\item $R=\{(4, (h_1, h_2, h_3, h_4, h_5, h_6)),\allowbreak (5, (h_1, h_2, h_9, h_{10}, h_5, h_6)),\allowbreak (6, (h_1, h_2, h_3, h_7, h_8, h_5, h_6))\}$
-\item $6\rightarrow 7$ is visited.\begin{enumerate}
-	\item A new history $h_{11}$ is created.
-	\item $h_5\rightarrow h_{11}$ \del{is executed}.
-	\item $(7, (h_1, h_2, h_7, h_8, h_{11}, h_6))$ is pushed to $high$.
-\end{enumerate}
-\item No further transitions are visited from $6$.
-\item $(7, (h_1, h_2, h_7, h_8, h_{11}, h_6))$ is popped from $high$.
-\item No transitions are visited from $7$.
-\item $(3, (h_1, h_2, h_3, h_4, h_5, h_6))$ is popped from $low$.
-\item $3\rightarrow 4$ is visited \begin{enumerate}
-	\item $4$ is in $R$, so no further steps are taken.
-\end{enumerate}
-\item No further transitions are visited from $3$.
-\item Both stacks are empty, $R$ is returned.
-\end{enumerate}
-\label{ex:oneStep2}
 \end{example}
 
 Our algorithm ensures with algorithm~\ref{findmapping} that the 
