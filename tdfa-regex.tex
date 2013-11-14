@@ -876,10 +876,12 @@ Ours & 5,332\tabularnewline
 \end{table}
 
 Finally, as a more realistic example, neither chosen to favor
-back-tracking nor to avoid it,  extracts all class names from the
-project sources itself.  As seen in \Tabref{real}, our approach
-outperforms java.util.regex by 40\%, even though our approach
-constructs the entire parse tree, and java.util.regex doesn't.
+back-tracking nor to avoid it,  extracts all class names, with their
+package names, from the project sources itself.  As seen in
+\Tabref{real}, our approach outperforms java.util.regex by 40\%,
+even though our approach constructs the entire parse tree, and thus
+all class names, while java.util.regex outputs only the last matched
+class name.
 
 \begin{table}
 \begin{tabular}{cc}
@@ -892,7 +894,9 @@ java.util.regex & 11,319\tabularnewline
 Ours & 8,047\tabularnewline
 \hline 
 \end{tabular}
-\caption{Runtime in microseconds}
+\caption{Runtimes, in microseconds, for finding all java class names in all .java files in the project itself. The regular expression used is 
+\texttt{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
+Runtime in microseconds}
 \tablabel{real}
 \end{table}
 
