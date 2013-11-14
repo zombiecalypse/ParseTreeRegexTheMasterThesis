@@ -813,10 +813,11 @@ As we will see in \Secref{related}, there is a surprising dearth
 of regular expression engine that can extract nested capture groups
 -- nevermind extracting entire parse trees -- that do not backtrack.
 Back-tracking implementations are exponential in their run-time,
-and so we see in \Figref{patho} how the run-time of ``java.util.regex''
-quickly explodes, even for tiny input, for a pathological regular
-expression, while our approach slows down only linearly. The raw
-data is seen in \Tabref{raw}.
+and so we see in \Figref{patho} (note the log plot) how the run-time
+of ``java.util.regex'' quickly explodes, even for tiny input, for
+a pathological regular expression, while our approach slows down
+only linearly. The raw data is seen in \Tabref{raw}.
+
 
 \begin{figure}[h]
 \includegraphics[width=0.75\linewidth]{graphs/pathological}
