@@ -173,6 +173,7 @@ the parsed string. This is asymptotically as fast as the best matchers
 that don't extract parse trees. 
 
 \subsection{More powerful than standard regular expressions}
+\seclabel{power}
 It may at first seem as if all capture groups can always, equivalently, be
 extracted by splitting the input, and then applying sub-regular expressions on the splits.
 This is, for example, an entirely valid strategy to extract the parse tree in \Figref{lehrer-tree}.
@@ -181,14 +182,12 @@ no regular expression engine at all, even if the underlying grammar is entirely 
 The following grammar is hard to parse using a regular expression engine, even though it is regular.
 
 Consider a file of semicolon-terminated records, each record consists of a comma-separated
-pair of entries, and each entry can be escaped to contain semicolons, as in the regular expression \texttt{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}.
+pair of entries, and each entry can be escaped to contain semicolons, as in the regular expression \texttt{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}. Here, expression \texttt{.*?} is a non-greedy match
+which will be discussed in more detail in \Secref{algo}.
 This language contains, for example, the string: ``"h;i",there;"h;,i",Paul;''.
 It is easy to see that, in order to extract all four capture group matches, it is insufficient 
 to split the input at the semicolon, as that would split the field ``h;i'' in half.
-
 More involved examples, where hand-written parsers become harder to make, are easily constructed. 
-The power of our approach comes from the fact that matching a large chunk of text at once,
-all greediness restrictions are applied globally. 
 
 \subsection{Motivation}
 
@@ -228,7 +227,7 @@ the right transition lets us focus on the important things, greediness control
 and capture groups.
 
 \section{Algorithm}
-
+\seclabel{algo}
 Conceptually, our approach is the following pipeline of four stages.
 \begin{enumerate}
   \item Parse the regular expression string into an AST.
@@ -240,7 +239,7 @@ Conceptually, our approach is the following pipeline of four stages.
 In reality, things are a little more involved, since the transformation
 to DFA is lazy, and the compactification only happens after no lazy
 compilation occurred in a while. Worse, compactification can be
-undone if needed. We'll get back to these details in TODO LATER.
+undone if needed. We'll get back to these details in \secref{implementation}.
 Let's discuss the stages in turn, starting with 2, since step 1,
 the parsing of the regular expression grammar, is reasonably
 straightforward.
@@ -801,6 +800,9 @@ The overhead of compactifying and falling back to the uncompactified
 automaton dwindles in the face of the gained performance on a long
 input string. It allows the algorithm to only take $O(\log m)$ steps
 on average for each character read.
+
+\section{Implementation}
+\seclabel{implementation}
 
 \section{Benchmark}
 
