@@ -153,7 +153,8 @@ the parse tree found by the \textsc{posix} is:
 \begin{figure}[h]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/posix_parse}
-\caption{Parse tree produced by \textsc{posix} compatible matching.}
+\caption{\figlabel{lehrer-posix} Parse tree produced by \textsc{posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
+Lehrer,1;Alan Turing,2;''.}
 \end{figure}
 
 With our algorithm we are able to reconstruct the full parse
@@ -162,13 +163,32 @@ tree after the matching phase is done:
 \begin{figure}[h]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/full_parse}
-\caption{Parse tree produced by our approach.}
+\caption{\figlabel{lehrer-tree} Parse tree produced by our approach matching regular expression \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
+Lehrer,1;Alan Turing,2;''}
 \end{figure}
 
 The amortized run time of our approach is $O(m\: n)$, where $m$
 is the length of the regular expression and $n$ is the length of
 the parsed string. This is asymptotically as fast as the best matchers
 that don't extract parse trees. 
+
+\subsection{More powerful than standard regular expressions}
+It may at first seem as if all capture groups can always, equivalently, be
+extracted by splitting the input, and then applying sub-regular expressions on the splits.
+This is, for example, an entirely valid strategy to extract the parse tree in \Figref{lehrer-tree}.
+However, this can quickly become an exercise of writing an entire parser, using 
+no regular expression engine at all, even if the underlying grammar is entirely regular. 
+The following grammar is hard to parse using a regular expression engine, even though it is regular.
+
+Consider a file of semicolon-terminated records, each record consists of a comma-separated
+pair of entries, and each entry can be escaped to contain semicolons, as in the regular expression \texttt{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}.
+This language contains, for example, the string: ``"h;i",there;"h;,i",Paul;''.
+It is easy to see that, in order to extract all four capture group matches, it is insufficient 
+to split the input at the semicolon, as that would split the field ``h;i'' in half.
+
+More involved examples, where hand-written parsers become harder to make, are easily constructed. 
+The power of our approach comes from the fact that matching a large chunk of text at once,
+all greediness restrictions are applied globally. 
 
 \subsection{Motivation}
 
