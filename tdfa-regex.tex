@@ -751,12 +751,14 @@ than as an array of structs, as recommended by the Intel optimization
 handbook \cite[section 6.5.1]{Inte13a}.  The transition table is a
 map from source state and input range to target state and instructions.
 Following Intel's recommendation, we store it as an object of five
-arrays: \texttt{int[] states; char[] froms;  char[] tos; Instruction[][]
-instructions; int[] newStates;}, all of the same length, and ordered
-primarily by \texttt{states}, then by \texttt{froms}, which is
-lowest character in an input range.  To read a character, the engine
-now merely searches in the transition table, using binary search,
-for the current state and the current input character.
+arrays: \texttt{int[] oldStates, char[] froms,  char[] tos,
+Instruction[][] instructions, int[] newStates}, all of the same
+length, such that the $i$th entry in the table maps from oldStates[i],
+for a character greater than from[i], but smaller than to[i], to
+newStates[i], by executing instructions[i].  To read a character,
+the engine now searches in the transition table, using binary search,
+for the current state and the current input character, executes the
+instructions it finds, and transitions to the new state.
 
 However, the above structure isn't a great fit with lazy compilation, 
 as new transitions might have to be added into the middle of the table
@@ -810,7 +812,7 @@ on a 2.3 GHz, i7 Macbook Pro.
 
 
 As we will see in \Secref{related}, there is a surprising dearth
-of regular expression engine that can extract nested capture groups
+of regular expression engines that can extract nested capture groups
 -- nevermind extracting entire parse trees -- that do not backtrack.
 Back-tracking implementations are exponential in their run-time,
 and so we see in \Figref{patho} (note the log plot) how the run-time
