@@ -788,7 +788,10 @@ allows us to avoid the full powerset construction\cite{Sips05a}, which has
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
 \section{Benchmark}
-
+\begin{figure}[h]
+\includegraphics[width=0.75\linewidth]{graphs/pathological}
+\caption{\figlabel{patho} Matching $\textit{a?}^n\textit{a}^n$. Bottom line is our approach, top line is java.util.regex.Pattern.}
+\end{figure}
 
 \section{Related work}
 Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
