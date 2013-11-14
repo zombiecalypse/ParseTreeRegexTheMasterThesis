@@ -764,45 +764,57 @@ This is the execution of $findMapping(Q', DFA)$:
 Note that by construction at most one candidate fulfils the requirement that the same states are present.
 \end{example}
 
-\subsection{Compactification}
-Compactification describes a further optimization we take based on the
-observation that when matching a long input string, we will typically
-only visit a small number of DFA states. This can be seen for example in the
-regular expression \texttt{(ab)+} over a long string like ``ababababab''.
-After a few steps, we will notice that we oscillate between two DFA
-states without using their internal structure -- the NFA states and
-their histories.
 
-The compactification step avoids using this wasteful representation
-by representing the NFA states as a bit-array. Since no histories
-are produced unless new DFA states occur, the instructions attached to
-the DFA transitions alone are enough to describe the matching process.
+
+\section{Discussion}
+
+\subsection{Compactification}
+\seclabel{Implementation}
+The most important implementation detail, it brought a factor 10
+increase in performance, was the use of a compactified representation
+of DFA transition tables whenever possible.  Compactified, here,
+means to store the transition table as a struct of arrays, rather
+than as an array of structs, as recommended by the Intel optimization
+handbook \cite[section 6.5.1]{Inte13}.  The transition table is a
+map from source state and input range to target state and instructions.
+Following Intel's recommendation, we store it as an object of five
+arrays: \texttt{int[] states; char[] froms;  char[] tos; Instruction[][]
+instructions; int[] newStates;}, all of the same length, and ordered
+primarily by \texttt{states}, then by \texttt{froms}, which is
+lowest character in an input range.  To read a character, the engine
+now merely searches in the transition table, using binary search,
+for the current state and the current input character.
+
+However, the above structure isn't a great fit with lazy compilation, 
+as new transitions might have to be added into the middle of the table
+at any time. 
+Another problem is that, above, the state is represented as an integer.
+However, as described in the algorithm, a DFA state is really a list of NFA states and their 
+arrays of histories. If we need to lazily compile another DFA state, all of these need to be examined.
+
+The compromise we found is the following: The canonical representation
+of the transition table is a red-black tree of transitions, each
+transition containing source and target DFA state (both as the full
+list of their NFA states, and histories), an input range, and a
+list of instructions. This structure allows for quick inserting of
+new DFA states once they are lazily compiled.  At the same time,
+lookups in a red-black tree are logarithmic.  Then, whenever we
+read a fixed number of input characters without lazily compiling,
+we transform the transition table to the struct of arrays described
+above, and switch to using it as our new transition table.
+If, however, we read a character for which there is no transition, we need to
+de-optimize, throw away the compactified representation, 
+generate the missing DFA state, and add it to the red-black tree.
+
+The above algorithm chimes well with the observation that usually,
+regular expression matching needs only a handful of DFA states, and thus,
+compactifying can be done early, and only seldom need to be undone.
 
 \subsection{Intertwining of the pipeline stages}
 The lazy compilation of the DFA when matching a string enables us
 to avoid compiling states of it that might never be necessary. This
-allows us to avoid the full powerset construction, which has 
-time complexity of $O(2^m)$ in the length of the regular
-expression, but poses some conceptual difficulties. It is not possible 
-to say that the compilation of the DFA is \emph{finished} so much as
-that the compilation of the DFA seems to have \emph{converged}.
-This notion is however purely heuristic, it is possible at any point
-that a repetitive pattern ends and that our algorithm will need to 
-compile another DFA state.
-
-Instead of admitting defeat, we propose a simple heuristic: We allow
-the DFA to be compactified after a small number of steps in which
-no new DFA state was discovered, but if our compactified automaton
-fails to match, we check back on the uncompactified automaton. If this
-fails as well, the whole match fails.
-
-The overhead of compactifying and falling back to the uncompactified
-automaton dwindles in the face of the gained performance on a long
-input string. It allows the algorithm to only take $O(\log m)$ steps
-on average for each character read.
-
-\section{Implementation}
-\seclabel{implementation}
+allows us to avoid the full powerset construction\cite{Sips05a}, which has 
+time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
 \section{Benchmark}
 
