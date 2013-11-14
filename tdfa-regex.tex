@@ -799,27 +799,32 @@ since they come without support for greediness control.
 
 \section{Benchmark}
 \seclabel{benchmarks}
-While measuring the performance of our tool is easy, it is not trivial to find a base-line to compare it against.
-As we will see in \Secref{related}, there is a surprising dearth of non-backtracking regular expression engine that can extract nested capture groups -- nevermind extracting entire parse trees! 
+All benchmarks were obtained using Google's caliper, which takes
+care of the most obvious benchmarking blunders.  It runs a warm-up
+before measuring, runs all experiments in separate VMs, helps
+circumvent dead-code detection by accepting the output of dummy
+variables as input, and fails if compilation occurs during experiment
+evaluation.  The source code of all benchmarks is available, together
+with the sources of the project, on Github. We ran all benchmarks
+on a 2.3 GHz, i7 Macbook Pro.
 
-If a Java programmer wants to extract the parse tree described by a regular expression without using our framework,
- the pragmatic choice is between some parser framework, perhaps a combinatorial parser such as JParsec, and writing the parser by hand.
 
-
-
-Compared to a back-tracking implementation, 
-
-
-  regular expression engines that allow extracting capture groups, nevermind the entire matching trees,
-are back-tracking
+As we will see in \Secref{related}, there is a surprising dearth
+of regular expression engine that can extract nested capture groups
+-- nevermind extracting entire parse trees -- that do not backtrack.
+Back-tracking implementations are exponential in their run-time,
+and so we see in \Figref{patho} how the run-time of ``java.util.regex''
+quickly explodes, even for tiny input, for a pathological regular
+expression, while our approach slows down only linearly. The raw
+data is seen in \Tabref{raw}.
 
 \begin{figure}[h]
 \includegraphics[width=0.75\linewidth]{graphs/pathological}
-\caption{\figlabel{patho} Matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom line is our approach, top line is java.util.regex.Pattern.}
-\end{figure}
+\caption{\figlabel{patho} Matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is java.util.regex.}
 \figlabel{patho}
-\begin{table}
+\end{figure}
 
+\begin{table}
 \begin{tabular}{ccccccccc|}
 \hline 
 $n$ & 13 & 14 & 15 & 16 & 17 & 18 & 19 & 20\tabularnewline
@@ -830,14 +835,69 @@ Oracle & 241 & 484 & 1003 & 1874 & 3555 & 7381 & 14561 & 30116\tabularnewline
 Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
 \hline 
 \end{tabular}
-\caption{Matching times, in microseconds, for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$}
+\caption{Matching times, in microseconds, for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.}
 \tablabel{patho}
 \end{table}
 
+In the opposite case, in the case of a regular expression that's
+crafted to prevent any back-tracking, java.util.regex outperforms
+our approach by more than factor 2, as seen in \Figref{abc} -- but
+bear in mind that java.util.regex does not extract parse trees, but
+only the last match of all capture groups.  A backtracking
+implementation that actually does produce complete parse trees is
+JParsec, which, as also seen in \Figref{abc}, performs on par with
+our approach, even though for JParsec never needs to back-track for
+the input. That may be because JParsec is a general-purpose parser
+with much bigger machinery than java.util.regex, and so, to parse
+regular expressions, it follows the same overall algorithm as
+java.util.regex, but always with a bigger constant attached.  For
+this reason, and because non-greedy matching cannot be expressed
+directly in JParsec, we did not implement any further JParsec
+benchmarks.
+
+\begin{table}
+\begin{tabular}{cc}
+\hline 
+Tool & time\tabularnewline
+\hline 
+\hline 
+JParsec & 4,498\tabularnewline
+\hline 
+java.util.regex & 1,992\tabularnewline
+\hline 
+Ours & 5,332\tabularnewline
+\hline 
+\end{tabular}
+\caption{Matching regular expression \texttt{((a+b)+c)+} against input (a\^{}200bc)\^{}2000, where a\^{}200 denotes 200 times character `a'. Time in microseconds.}
+\tablabel{abc}
+\end{table}
+
+Finally, as a more realistic example, neither chosen to favor
+back-tracking nor to avoid it,  extracts all class names from the
+project sources itself.  As seen in \Tabref{real}, our approach
+outperforms java.util.regex by 40\%, even though our approach
+constructs the entire parse tree, and java.util.regex doesn't.
+
+\begin{table}
+\begin{tabular}{cc}
+\hline 
+Tool & time\tabularnewline
+\hline 
+\hline 
+java.util.regex & 11,319\tabularnewline
+\hline 
+Ours & 8,047\tabularnewline
+\hline 
+\end{tabular}
+\caption{Runtime in microseconds}
+\tablabel{real}
+\end{table}
+
+
 \section{Related work}
 \seclabel{related}
-Our algorithm is a modification of Laurikari's algorithm \cite{laurikari2000nfas},
-which is itself a modified powerset construction algorithm \cite[p. 55]{Sipser2005}.
+Our algorithm is a modification of Laurikari's algorithm \cite{Laur00a},
+which is itself a modified powerset construction algorithm \cite[p. 55]{Sips05a}.
 
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
