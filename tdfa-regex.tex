@@ -16,6 +16,7 @@
 \usepackage[lined,linesnumbered,commentsnumbered]{algorithm2e}
 \theoremstyle{definition}
 \newtheorem{example}{Example}[section]
+\newtheorem*{notation}{Notation}
 
 \lstdefinestyle{sharpc}{language=mathescape, frame=lr, rulecolor=\color{blue!80!black}}
 
@@ -298,6 +299,25 @@ of the matcher.  It is well-defined at all times since all threads
 are executed in lock-step, such that at any point in time, all
 threads are at the same position.
 
+\begin{notation}
+We denote NFA states with $q_i$ and their array of histories 
+$(h_1, \dots, h_n)$. Since a history is actually a
+list of positions in the matched string, we will write it
+as $h_i=[x_1, \dots, x_n]$ to describe that past matches occurred
+at the positions $x_1, \dots, x_n$. 
+
+Each NFA state has an array of $2n$ histories, where 
+$n$ is the number of capture groups in the original 
+regular expression. This is written as 
+$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ 
+is the history of the opening positions of
+the capture group $i$, and at position $2i+1$ is the closing history.
+
+Take for example the regular expression \texttt{(..)+} matching 
+pairs of characters on the string ``abcd'', then the history array describing this would be
+$[h_1=[2,0], h_2=[3,1]]$.
+\end{notation}
+
 \global\long\def\naturals{\mathbb{N}}
 \global\long\def\integers{\mathbb{Z}}
 \global\long\def\pos{\mathbf{\mathbf{p}}}
@@ -307,17 +327,26 @@ threads are at the same position.
 \begin{description}
 \item [$h\leftarrow\pos$] Stores the current position into the head of the linked list $h$.
 \item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
-\item [$h\leftarrow h'$] Sets head->next of $h$ to be head->next of $h'$. 
+\item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
 	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
-	\on{It seems you should use a different kind of arrow since it does something different from the previous two ops.}
-\item [$c\uparrow(h)$] $c\downarrow(h)$ Prepends linked list $h$ with \chg{an extra}{a new} node, which becomes the new head.
-This effectively \emph{commits} the old head, which is henceforth considered immutable.
-\on{I don't understand the syntax. Why does $h$ occur twice? What is the new node? Is $c$ a literal? Why are there both up and down arrows? Do they represent the open/close tags? Why do you need them here?}
+	\on{[It seems you should use a different kind of arrow since it does something different from the previous two ops.]}
+\item [$c\uparrow(h)$ and $c\downarrow(h)$] Prepends linked list $h$ with a new node, which becomes the new head.
+This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
+describes the opening position of the capture group and is therefore called the opening commit. 
+Conversely $c\downarrow(h)$ is the closing commit that marks the end of the capture group. 
+This distinction is only for clarity, the semantic is the same for opening and closing commits.
+\on{[I don't understand the syntax. Why does $h$ occur twice? What is the new node? Is $c$ a literal? Why are there both up and down arrows? Do they represent the open/close tags? Why do you need them here?]}
 \end{description}
 
-\on{It is hard to see what is going on without an example.}
+\on{[It is hard to see what is going on without an example.]}
 
-\ugh{It is easy to see that}, after matching, given the history of every tag, the entire match tree can be reconstructed.
+After matching, given the history of every tag, the entire match tree can be reconstructed.
+
+\begin{example}
+Say the match produces $[h_1=[0,7],h_2=[6,8], h_3=[1,3,7], h_4=[2,3,7]]$ we can transform it into capture group beginning and end position pairs: $g_1 = [(0,6),(7,8)]$ and $g_2=[(1,2), (3,3),(7,7)]$. From this we can see that $g_1^1=(0,6)$ contains $g_2^1=(1,2)$ and $g_2^2=(3,3)$, because it encloses them. By construction a match for a capture group 
+inside another capture group can't leave the outer group 
+without leaving the inner first.
+\end{example}
 \on{I don't see that at all! Show me an example, and then it will perhaps be obvious.}
 
 \begin{figure}
@@ -368,45 +397,26 @@ by prioritizing the edge with the result that follows the greedy match and
 not considering states visited before, ensuring the greedy thread 
 ``wins the race''.
 
-The following examples will illustrate algorithm~\ref{onestep} and use the
-following notation:
+\begin{notation} In the following examples, we will use the following:
 
 \begin{itemize}
-	\item 	A NFA state is denoted as $q_i$.
-	\item 	A history is denoted $h_i$. Since a history is actually a
-			list of positions in the matched string, we will write it
-			as $h_i=[x_1, \dots, x_n]$ to describe that past matches occurred
-			at the positions $x_1, \dots, x_n$.
-			\on{Oh. Before $h$ was just the head of a history.}
-	\item	Each NFA state has an array of $2n$ histories, where 
-			$n$ is the number of capture groups in the original 
-			regular expression. This is written as 
-			$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ 
-			is the history of the opening positions of
-			the capture group $i$, and at position $2i+i$ is the closing history.
-				\on{Shouldn't it be $2i+1$?}
-			An NFA state of the regular expression \texttt{(.+)} therefore
-			has the histories $(h_1, h_2)$ and when matching ``ab''
-			$h_1=[0]$ and $h_2=[2]$.
-			\on{OK, got it.}
-	\item	Each DFA state is denoted by $Q$ and contains multiple NFA 
-			states with their current histories. 
-			\[Q=\{(q_1, (h_1, h_2, h_3, h_4)), (q_2, (h_1, h_2, h_5, h_6))\}\] for
+	\item	Each DFA state is denoted by a capital letter, e.g. $Q$, and contains multiple NFA 
+			threads with their current histories in the order in which they are scheduled. 
+			\[Q=[(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)), (q_2, (h_1, h_2, h_3, h_4, h_7, h_8))]\] for
 			example means that the current DFA state has one thread in $q_1$ with 
-			histories $(h_1, h_2, h_3, h_4)$ and another in $q_2$ with the histories
-			$(h_1, h_2, h_5, h_6)$. Note that histories can be shared across threads
+			histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another in $q_2$ with the histories
+			$(h_1, h_2, h_3, h_4, h_7, h_8)$. Note that histories can be shared across threads
 			if they have the same matches.
-			\on{Why are there only 4 histories? Aren't there 3 capture groups in \autoref{fig:example-automaton}? Or is this example unrelated to the other examples? (Confusing.)}
-	\item	A transition is understood to be between NFA states, $1\rightarrow 2$
+			\on{[Why are there only 4 histories? Aren't there 3 capture groups in \autoref{fig:example-automaton}? Or is this example unrelated to the other examples? (Confusing.)]}
+	\item	A transition is understood to be between NFA states, $q_1\rightarrow q_2$
 			means a transition from $q_1$ to $q_2$.
 			\on{So why don't you write $q_1 \rightarrow q_2$?}
 			The meta-data about the 
 			transition is described in the text and can contain consumption
 			of characters, priority or opening and closing commit tags.
-	\item	\chg{The algorithm uses $high$ and $low$ as stacks and \emph{push} means
-			to put an element at the topmost position. \emph{Popping} 
-			means to remove and retrieve the topmost element of the stack.}
-			{The algorithm uses two stacks, called \emph{high} and \emph{low}.}
+	\item	The algorithm uses two stacks, called \emph{high} and \emph{low}. The algorithm uses these two stacks to handle the scheduling
+	of the threads. The LIFO\footnote{last-in-first-out} property ensures that threads preferably are run until they can't follow further $\varepsilon$-edges. The \emph{high} stack takes strict priority
+	over the \emph{low} stack.
 			\on{Don't explain what push and pop mean. Instead please tell us what these two stacks are for!}
 			\on{NB: don't use math mode for words, use emph, or the spacing will be wrong. Within math mode use the textit macro.}
 	\item	In the examples we will pretend for clarity that the commands
@@ -415,6 +425,7 @@ following notation:
 			them after the $oneStep$ call to allow further optimizations.
 			\on{It would make more sense to introduce the commands here, so we see how they work on the representation.}
 \end{itemize}
+\end{notation}
 
 \begin{algorithm*}[tb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
