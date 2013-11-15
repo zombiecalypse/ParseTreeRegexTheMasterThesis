@@ -198,6 +198,8 @@ become harder to make, are easily constructed.  In contrast, our
 approach yields the entire parse tree, simply from the regular
 expression.
 
+
+
 \subsection{Motivation}
 
 This is the age of big data, and the first step of processing big
@@ -222,22 +224,22 @@ Parsers that can return abstract syntax trees are more useful than
 ones that only give a flat list of matches. Of course only regular
 grammars can be matched by our approach.
 
-\ml{This next paragraph falls out of the sky a bit :)}
+\section{Algorithm}
+\seclabel{algo}
+
 Let us recall what NFAs and DFAs are. A DFA is a state machine that
 will walk over the transition graph, one step for every input
 character. The choice of transition is limited by the transition's
 character range. A transition can only be followed if the current
 input character is inside transition's character range. NFAs differ
-from DFAs in that for some input character and some state, there may
-be more than \ins{one} applicable transition. If there is, an NFA will magically
-guess the correct one. \autoref{fig:example-automaton} shows an example of
-an NFA's transition graph. For the moment, let us discuss regular
-expression matching on NFAs. Assuming that the NFA just magically knows
-the right transition lets us focus on the important things, greediness control
-and capture groups.
+from DFAs in that for some input character and some state, there
+may be more than one applicable transition. If there is, an
+NFA will magically guess the correct one. \autoref{fig:example-automaton}
+shows an example of an NFA's transition graph. For the moment, let
+us discuss regular expression matching on NFAs. Assuming that the
+NFA just magically knows the right transition lets us focus on the
+important things, greediness control and capture groups.
 
-\section{Algorithm}
-\seclabel{algo}
 Conceptually, our approach is the following pipeline of four stages.
 \begin{enumerate}
   \item Parse the regular expression string into an AST.
@@ -563,7 +565,7 @@ If they are, then there is a set of instructions that move the histories from $Q
 such that, afterwards, $Q'$ behaves precisely as $Q$ would have. Algorithm \ref{findmapping}
 shows how we can find a mappable state, and the needed instructions.
 
-\begin{algorithm*}[htb]
+\begin{algorithm}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -591,14 +593,14 @@ shows how we can find a mappable state, and the needed instructions.
 			}
 		}
     }
-	\tcp{The mapping was found and is in $m$ if we didn't fail.}
+	\tcc{The mapping was found and is in $m$.}
   
 	sort $m$ in reverse topological order so that no values are overwritten. \;
   
 	\Return{$Q'$ and $m$}
 }
 \caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
-\end{algorithm*}
+\end{algorithm}
 
 \subsection{DFA execution}
 With these ingredients in place, the entire matching algorithm is straightforward. 
@@ -857,14 +859,6 @@ The lazy compilation of the DFA when matching a string enables us
 to avoid compiling states of it that might never be necessary. This
 allows us to avoid the full powerset construction\cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
-
-\subsection{Alternatives}
-A programmer taxed to parse a regular grammar and extract the parse tree needs to choose, 
-if he cannot use our approach, between a general-purpose parser framework and writing a
-parser by hand. As we will see in \Secref{benchmarks}, the performance of general-purpose 
-parser frameworks on regular grammars is astonishingly poor. At the same time, it is 
-surprisingly difficult to express a regular grammar most frameworks, such as JParsec,
-since they come without support for greediness control.
 
 \section{Benchmark}
 \seclabel{benchmarks}
