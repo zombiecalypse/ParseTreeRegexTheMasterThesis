@@ -570,7 +570,7 @@ Anything that will be pushed on the high stack or the low stack will be dealt wi
 first.
 Now, $\mathit{low}=[(q_6, H_2), (q_3,H_1))]$, where the first element is the head of the stack.
 \item Initialize \emph{buffer} as an empty stack. 
-The \emph{buffer} stack exists, because while following high priority edges, states are discovered
+The \emph{buffer} stack exists because while following high priority edges, states are discovered
 in an order that is reversed to the order in which we would like to output them. TODO: move.
 
 \item Initialize $R=[]$, the DFA state under construction.
@@ -589,27 +589,28 @@ in an order that is reversed to the order in which we would like to output them.
 	\item 	$h\leftarrow\pos+1$. This is the position after the ``,'', because the comma was eaten before the capture
 			group starts.
 	\item	Create $H_3$ as a copy of $H_2$ with $h$ on position 4 (indices are 0-based).
-	\item $(q_8, H_3)$ is put on the \emph{high} stack.
+	\item $(q_8, H_3)$ is pushed on the \emph{high} stack.
 \end{enumerate}
 \item $(q_8, H_3)$ is taken from the \emph{high} stack.
-\item It is put on the \emph{buffer}. \emph{buffer}$=[(q_8, H_3), (q_7, H_2)]$
+\item It is pushed on \emph{buffer}. \emph{buffer}$=[(q_8, H_3), (q_7, H_2)]$
 \item It can follow no further transitions and dies.
 \item We discover that the \emph{high} stack is empty.
-\item We now flush our \emph{buffer}: $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[]$.
+\item We now flush \emph{buffer}: $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[]$.
 	Note that now, $R$ contains two threads in the reverse order in which they were discovered.
 \item $(q_3, H_1)$ is taken from \emph{low}. It is hungry.
 \item The only transition that consumes ``,'' is $q_3\rightarrow q_4$:\begin{enumerate}
-	\item $(q_4, H_1)$ is pushed to $high$ as a fed.
+	\item $(q_4, H_1)$ is pushed to \emph{high} as a fed.
 \end{enumerate}
 \item $(q_4, H_1)$ is popped from \emph{high}
-\item It is pushed to the \emph{buffer}. \emph{buffer}$=(q_4, H_2)$
-\item $q_4\rightarrow q_3$ is visited. \begin{enumerate}
-	\item $(q_3, H_2))$ is pushed to \emph{low}. This means it will be processed after all high-priority 
-	transitions this thread can visit, but it would be visited before any other start threads.
+\item It is pushed to the \emph{buffer}. \emph{buffer}$=(q_4, H_1)$
+\item $q_4\rightarrow q_3$ is visited. Note that $q_3$ has not yet been seen.\begin{enumerate}
+	\item Thread $(q_3, H_1)$ is pushed to 
+	$ \mbox{low} = (q_3, H_1)$, 
+	because $q_4\rightarrow q_3$ has low priority.
 \end{enumerate}
 \item We flush the \emph{buffer} again: $R=[(q_8, H_3), (q_7, H_2), (q_4, H_1)]$
 	Note how $(q_4, H_1)$ appears \emph{last} in $R$.
-\item $(q_3, H_1)$ is taken from the \emph{low} stack.
+\item $(q_3, H_1)$ is taken from the \emph{low} stack, because \emph{high} is empty.
 \item It is added to \emph{buffer}.
 \item $q_3\rightarrow q_5$ is visited:\begin{enumerate}
 	\item $(q_5, H_1)$ is pushed to \emph{high}.
@@ -617,13 +618,15 @@ in an order that is reversed to the order in which we would like to output them.
 \item $(q_5, H_1)$ is taken from the \emph{high} stack.
 \item It is added to \emph{buffer}.
 \item $q_5\rightarrow q_6$ is visited and contains the closing commit of the second capture group:\begin{enumerate}
-	\item Two histories are created to store the new positions of both the start and the end of the capture group. This ensures that other threads will not corrupt the memory.
-	\item A new history $h$ is created to put the previous match for the opening of the group into.
+	\item Two histories are created to store the new positions of both the start and the end of the capture group. 
+	This ensures that other threads will not corrupt the memory.
+	\item A new history $h$ is for the opening of the capture group.
 	\item A new history $h'$ is created for the closing position.
-	\item $H_1(2) \mapsto h$. 
-	\item $H_1(3) \mapsto h'$.
+	\item $h_3 \mapsto h$. See the definition of $Q$ above, to see that $h3$ is the opening capture group position of $H_1$.
+	\item $h_4 \mapsto h'$.
 	\item $h'\leftarrow\pos$. This is the position of the ``,''.
-	\item $H_4$ is a copy of $H_1$ with $h$ on position 2 and $h'$ on position 3.
+	\item Create a new history array, with $h$ and $h'$ in place. 
+		$H_4 = [h_1, h_2, h, h', h_5, h_6]$
 	\item $(q_6, H_4)$ is pushed to \emph{high}.
 \end{enumerate}
 \item $(q_6, H_4)$ is taken from the \emph{high} stack.
@@ -636,49 +639,6 @@ R=[&(q_8, H_3), (q_7, H_2), (q_4, H_1),\\ &(q_6, H_4), (q_5, H_1)]
 \item $R$ is returned.
 \end{enumerate}
 \end{example}
-
-Our algorithm ensures with algorithm~\ref{findmapping} that the 
-compilation of the regular expression terminates by implementing 
-the mapping scheme from \cite{Laur00a}. 
-Mappings are best understood as an optimization that allows reuse
-of DFA states, that are ``similar enough''. DFA states that have the 
-same structure can be reused. For example the DFA state 
-$Q=\{(q_1, (h_1, h_2))\}$ is structurally no different from 
-$Q'=\{(q_1, (h_3, h_4))\}$. Instead of creating a new DFA state $Q'$ 
-in the automaton, we can simulate it by a transition to $Q$ with the
-added instructions $h_1\leftarrow h_3$ and $h_2 \leftarrow h_4$.
-
-\begin{example} Executing $findMapping$:
-
-After the execution seen in example~\ref{ex:oneStep1} the new proposed state is 
-\begin{align*}
-Q'=\{(q_4, (&h_1=[0], h_2=[0], h_3=[0], \\
-	&h_4=[0], h_5=[0], h_6=[0])), \\
-	(q_5, (&h_1=[0], h_2=[0], h_9=[0,0],\\
-	& h_{10}=[1,1], h_5=[0], h_6=[0]))\}
-\intertext{and the previous DFA state was}
-Q=\{(q_3, (&h_1=[0], h_2=[0], h_3=[0],\\
-	&h_4=[0], h_5=[0], h_6=[0])),\\
-	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0],\\
-	&h_8=[0,0], h_5=[0], h_6=[0]))\}
-\end{align*}
-
-This is the execution of $findMapping(Q', DFA)$: 
-\begin{enumerate}
-\item $Q$ is considered as a candidate
-\item $q_3$ is checked \begin{enumerate}
-	\item All histories can be mapped with the identity.
-\end{enumerate}
-\item $q_5$ is checked \begin{enumerate}
-	\item $h_1, h_2, h_5, h_6$ can be mapped with the identity.
-	\item $h_9$ can be mapped to $h_7$.
-	\item $h_{10}$ can be mapped to $h_8$.
-\end{enumerate}
-\item The mapping is successful and the instructions $h_8 \leftarrow h_{10}$ and $h_7 \leftarrow h_9$ are returned.
-\end{enumerate}
-Note that by construction at most one candidate fulfils the requirement that the same states are present.
-\end{example}
-
 
 
 \section{Implementation}
@@ -755,6 +715,38 @@ shows how we can find a mappable state, and the needed instructions.
 }
 \caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
 \end{algorithm}
+
+%
+%\begin{example} Executing \texttt{findMapping}.
+%
+%After the execution seen in example~\ref{ex:oneStep1} the new state is 
+%\begin{align*}
+%Q'=\{(q_4, (&h_1=[0], h_2=[0], h_3=[0], \\
+%	&h_4=[0], h_5=[0], h_6=[0])), \\
+%	(q_5, (&h_1=[0], h_2=[0], h_9=[0,0],\\
+%	& h_{10}=[1,1], h_5=[0], h_6=[0]))\}
+%\intertext{and the previous DFA state was}
+%Q=\{(q_3, (&h_1=[0], h_2=[0], h_3=[0],\\
+%	&h_4=[0], h_5=[0], h_6=[0])),\\
+%	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0],\\
+%	&h_8=[0,0], h_5=[0], h_6=[0]))\}
+%\end{align*}
+%
+%This is the execution of $findMapping(Q', DFA)$: 
+%\begin{enumerate}
+%\item $Q$ is considered as a candidate
+%\item $q_3$ is checked \begin{enumerate}
+%	\item All histories can be mapped with the identity.
+%\end{enumerate}
+%\item $q_5$ is checked \begin{enumerate}
+%	\item $h_1, h_2, h_5, h_6$ can be mapped with the identity.
+%	\item $h_9$ can be mapped to $h_7$.
+%	\item $h_{10}$ can be mapped to $h_8$.
+%\end{enumerate}
+%\item The mapping is successful and the instructions $h_8 \leftarrow h_{10}$ and $h_7 \leftarrow h_9$ are returned.
+%\end{enumerate}
+%Note that by construction at most one candidate fulfils the requirement that the same states are present.
+%\end{example}
 
 \subsection{DFA execution}
 With these ingredients in place, the entire matching algorithm is
