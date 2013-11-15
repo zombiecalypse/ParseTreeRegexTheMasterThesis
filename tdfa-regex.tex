@@ -38,7 +38,7 @@
 \usepackage{xcolor}
 \newcommand{\ra}{$\rightarrow$}
 \newboolean{showedits}
-\setboolean{showedits}{true} % toggle to show or hide edits
+\setboolean{showedits}{false} % toggle to show or hide edits
 \ifthenelse{\boolean{showedits}}
 {
 	\newcommand{\ugh}[1]{\textcolor{red}{\uwave{#1}}} % please rephrase
@@ -233,7 +233,7 @@ they are logging, so their parsing and understanding is important.
 
 Regular expressions make for scalable and efficient lightweight parsers.\cite{Kart96a} 
 
-The parsing abilities of regular expression have \chg{evoked}{provoked} Meiners to declare
+The parsing abilities of regular expression have provoked Meiners to declare
 that for intrusion detection, ``fast and scalable RE matching is
 now a core network security issue.'' \cite{Mein10a}
 
@@ -265,14 +265,14 @@ Conceptually, our approach is the following pipeline of four stages.
 \begin{enumerate}
   \item Parse the regular expression string into an AST.
   \item Transform the AST to an NFA.
-  \item Transform the NFA to a DFA.
+  \item Transform the NFA to a DFA. 
   \item Compactify the DFA.
 \end{enumerate}
 
 In reality, things are a little more involved, since the transformation
 to DFA is lazy, and the compactification only happens after no lazy
 compilation occurred in a while. Worse, compactification can be
-undone if needed. We'll get back to these details in \secref{implementation}.
+undone if needed. We'll get back to these details in \secref{compact}.
 Let's discuss the stages in turn, starting with 2, since step 1,
 the parsing of the regular expression grammar, is reasonably
 straightforward.
@@ -315,24 +315,26 @@ In the NFA, we model greedy repetition or non-greedy repetition of
 an expression in two steps:
 
 \begin{enumerate}
-\item We construct an NFA graph for the expression, without any repetition.  
-\autoref{fig:example-automaton} shows how this plays out in our running example, which contains the expression \texttt{.*?}. An automaton for \texttt{.} is constructed. The expression \texttt{.} is modeled as just two nodes labeled 3 and 4, and a transition labeled ``any''
-between them.  
+\item We construct an NFA graph for the expression, without any
+repetition.  \autoref{fig:example-automaton} shows how this plays
+out in our running example, which contains the expression \texttt{.*?}.
+An automaton for expression~\texttt{.} is constructed. The expression
+\texttt{.} is modeled as just two nodes labeled 3 and 4, and a
+transition labeled ``any'' between them.
 
-\item We add prioritized transitions to model repetition. In our example, repeating is achieved by adding two $\varepsilon$
-transitions: one from 4 back to 3, to match more than one time any
-character, and another one from 3 to 4, to enable matching nothing
-at all.  Importantly, the transition from 4 back to 3 is marked as
-low priority (the ``--'' sign) while the transition leaving the automaton, from 4
-to 5, is unmarked, which means normal priority.  This means that
-the NFA will prefer leaving the repeating expression, rather than
-staying in it.  If the expression were greedy, then we would mark
-the transition from 3 to 5 as low-priority, and the NFA would prefer
-to match any character repeatedly. 
+\item We add prioritized transitions to model repetition. In our
+example, repeating is achieved by adding two $\varepsilon$ transitions:
+one from 4 back to 3, to match more than one time any character,
+and another one from 3 to 4, to enable matching nothing at all.
+Importantly, the transition from 4 back to 3 is marked as low
+priority (the ``--'' sign) while the transition leaving the automaton,
+from 4 to 5, is unmarked, which means normal priority.  This means
+that the NFA will prefer leaving the repeating expression, rather
+than staying in it.  If the expression were greedy, then we would
+mark the transition from 3 to 5 as low-priority, and the NFA would
+prefer to match any character repeatedly.
 
 \end{enumerate}
-
-
 
 More generally, the NFA will prefer to follow transitions of normal
 priority over those of low priority. Rather than formalize this
@@ -341,22 +343,24 @@ discussing the transformation from NFA states to DFA states.
 
 \begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
 \caption{Modified Thompson~\cite{Thom68a} construction of the
-automaton: \ugh{Decent} \ins{Descend?} into the abstract syntax tree of the regular
+automaton:Descend into the abstract syntax tree of the regular
 expression and expand the constructs recursively.}
 \label{fig:thompson-construction} 
 \end{figure*}
 
-To model capture groups in the NFA, we add \emph{commit tags} to the
-transition graph. The transition into a capture group is tagged by a
-commit, the transition to leave a capture group is tagged by a another
-commit. We distinguish opening and closing commits. The NFA keeps a
-history for every transition with a commit. Each time the transition
-is walked, the current position \ins{in the input string} is added to its history. 
+To model capture groups in the NFA, we add \emph{commit tags} to
+the transition graph. The transition into a capture group is tagged
+by a commit, the transition to leave a capture group is tagged by
+a another commit. We distinguish opening and closing commits. The
+NFA keeps track of all times that a transition with an attached
+commit was used, thus keeping the \emph{history} of each commit.
+After parsing succeds, the list of all histories can then be used
+to reconstruct all matches of all capture groups.
 
-We model histories as a linked list, where the payload of each node
+We model histories as linked lists, where the payload of each node
 is a position.  Only the payload of the \emph{head}, the first node,
 is mutable, the \emph{rest}, all other nodes, are immutable.  Because
-the rest are immutable, they may be shared between histories.  This
+the rests are immutable, they may be shared between histories.  This
 is an application of the Flyweight pattern, which ensures that all
 of the following instructions on histories can be performed in
 constant time. Here, the \emph{position} is the current position
@@ -366,11 +370,8 @@ of the matcher.
 
 \end{notation}
 
-\global\long\def\naturals{\mathbb{N}}
-\global\long\def\integers{\mathbb{Z}}
+
 \global\long\def\pos{\mathbf{\mathbf{p}}}
-
-
 
 \subsection{DFAs}
 
@@ -424,9 +425,9 @@ $q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
 \item[NFA states] are denoted as $q_i$ and their array of histories
 $(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
 Each NFA state has an array of $2n$ histories. This is written as
-$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ \on{$2i-1$?} is the
-history of the opening positions of the capture group $i$, and at
-position $2i+1$ \on{$2i$?} is the closing history.
+$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. Here, $h_1$ is the history
+of the openings of the first capture group, $h2$ is the history of
+the closings of the first capture group, and so on.
 \end{description}
 
 Take, for example, the regular expression \texttt{(..)+} matching
@@ -453,7 +454,7 @@ step. There are four kinds of instructions:
 
 \end{notation}
 
-\begin{algorithm*}[!htpb]
+\begin{algorithm*}[htpb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -520,7 +521,7 @@ Mark all threads in low as hungry.
 	}
 }
 }
-\caption{\label{onestep}$oneStep(NFA, a, pos, Q)$: Compute the follow-up state for DFA state $Q$}
+\caption{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up state for DFA state $Q$.}
 \end{algorithm*}
 
 
@@ -532,7 +533,7 @@ the one that follows greedy matching\footnote{Non-greedy operators
 work the same way, just with reversed priorities} will survive. At
 no point of the algorithm are the two states both present in the
 result and thus in conflict. In a nutshell, the algorithm works as
-follows: The NFA states are taken, in order, they eat one one input
+follows: The NFA states are taken, in order, they eat one input
 character, and then follow only high-priority edges, saving
 low-priority edges on a stack.  Once we're out of high-priority
 edges, we continue with low priority edges, until all possible
@@ -547,18 +548,19 @@ thread in state 3, via 4, or from the thread in state 6. The two
 threads are `racing' to capture state 7. Since in the starting
 state, the thread of state 6 is listed first, he `wins the race'
 for state 7, and `captures it'. Thus, the new thread of state 7 is
-a fork of the thread of state 6, not 3.
+a fork of the thread of state 6, not 3. This matters, since 6 and
+3 may disagree about their histories.
 
-
-\begin{example} Execution of algorithm \ref{onestep}:
-\label{ex:oneStep1}
-Assume as an example the automaton in figure \ref{fig:example-automaton} is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} 
+\begin{example} Execution of algorithm \ref{onestep}: \label{ex:oneStep1}
+Consider the automaton in figure \ref{fig:example-automaton} is in
+the DFA state \footnote{NFA states that do not have any outgoing
+transitions except for $\varepsilon$ transitions can be omitted,
+since the first step will only consider edges which consume the
+next character of the input.}
 \begin{align*}
 Q=[
-	(q_6, H_2=(&h_1=[0], h_2=[0], h_7=[0,0], \\
-	&h_8=[0,0], h_5=[0], h_6=[0])) \\
-	(q_3, H_1=(&h_1=[0], h_2=[0], h_3=[0], \\
-	&h_4=[0], h_5=[0], h_6=[0]))]
+	(q_6, H_2=(&h_1, h_2, h_7,  h_8, h_5, h_6)), \\
+	(q_3, H_1=(&h_1, h_2, h_3,  h_4, h_5, h_6))]
 	\end{align*}
 This is the case after initialization or before any commas are read.
 
@@ -581,8 +583,7 @@ fed threads can only follow $\varepsilon$ transitions.
 Now, $\mathit{low}=[(q_6, H_2), (q_3, H_1))]$, where the first element is the head of the stack.
 \item Initialize \emph{buffer} as an empty stack. 
 The \emph{buffer} stack exists because while following high priority edges, states are discovered
-in an order that is reversed with respect to the order in which we would like to output them. \todo{move}.
-
+in an order that is reversed with respect to the order in which we would like to output them.
 \item Initialize $R=[\ ]$, the DFA state under construction.
 \item Thread $(q_6,H_2)$ is popped from the \emph{low} stack, since \emph{high} is empty. It is hungry.
 \item We iterate all available transitions in the NFA transition graph, and find only $q_6\rightarrow q_7$, which can consume character ``,''.
@@ -655,8 +656,8 @@ R=[&(q_8, H_3), (q_7, H_2), (q_4, H_1),\\ &(q_6, H_4), (q_5, H_1), (q_3, H_1)]
 \end{enumerate}
 \end{example}
 
-The output contains six threads, but three of them,  $(q_7, H_2),
-(q_4, H_1),  (q_5, H_1)$ will die as soon as they are scheduled in
+The output contains six threads, but three of them,  $(q_7, H_2)$,
+$(q_4, H_1)$,  $(q_5, H_1)$, will die as soon as they are scheduled in
 the next iteration of the algorithm, because there are no outgoing
 non-$\varepsilon$ transitions attached to their NFA states.
 
@@ -680,7 +681,7 @@ that the DFA is \emph{lazily compiled}.
 The DFA transition table is different from the NFA transition table,
 in that the NFA transition table contains $\varepsilon$ edges and
 may have more than one transition from one state to another, for
-the same input range.
+the same input range. DFA transition tables allow no ambiguity.
 
 Our transition tables, both for NFAs and DFAs, assume a transition
 to map a consecutive range of characters. If, instead, we used
@@ -695,14 +696,18 @@ created again.  Doing this step early in the pipeline yields the
 following invariant: it is impossible to ever come across intersecting
 input ranges.
 
-To give us a chance to ever be in a state that is already in the transition table, we 
-check, after executing algorithm \ref{onestep}, \texttt{oneStep}, whether there is a known
-DFA state that is \emph{mappable} to the output of \texttt{oneStep}.
-If \texttt{oneStep} produced a DFA state $Q$, and there is a DFA state $Q'$ that
-contains the same NFA states, in the same order, \on{cost of checking this?} then $Q$ and $Q'$ may be mappable.
-If they are, then there is a set of instructions that move the histories from $Q$ into $Q'$
-such that, afterwards, $Q'$ behaves precisely as $Q$ would have. Algorithm \ref{findmapping}
+To give us a chance to ever be in a state that is already in the
+transition table, we check, after executing algorithm \ref{onestep},
+\texttt{onestep}, whether there is a known DFA state that is
+\emph{mappable} to the output of \texttt{oneStep}.  If \texttt{oneStep}
+produced a DFA state $Q$, and there is a DFA state $Q'$ that contains
+the same NFA states, in the same order then $Q$ and $Q'$ may be
+mappable.  If they are, then there is a set of instructions that
+move the histories from $Q$ into $Q'$ such that, afterwards, $Q'$
+behaves precisely as $Q$ would have. Algorithm \ref{findmapping}
 shows how we can find a mappable state, and the needed instructions.
+The run time of Algorithm~\ref{findmapping} is $O(m)$, where $m$
+is the size of the input NFA.
 
 \begin{algorithm}[htpb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
@@ -778,9 +783,12 @@ With these ingredients in place, the entire matching algorithm is
 straightforward.  In a nutshell, we see if the current input appears
 in the transition table. Otherwise, we run \texttt{oneStep}. If the
 resulting state is mappable, we map.  More formally, we can see
-this in algorithm \ref{interpret}.
+this in algorithm~\ref{interpret}. Here, algorithm~\ref{interpret} 
+assumes that algorithm~\ref{onestep} does not immediately execute 
+its instructions, but returns them back to the interpreter, both for 
+execution and to feed into the transition table.
 
-\begin{algorithm*}[!htpb]
+\begin{algorithm*}[htpb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -792,7 +800,7 @@ this in algorithm \ref{interpret}.
 Set $Q$ to startState.\;
 \tcp{A thread is an NFA state, with an array of histories.}
 Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.\;
-Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.\;
+Execute instructions described in algorithm oneStep, when walking $\varepsilon$ transitions.\;
 
 \tcp{Create the transition map of the DFA.}
 Set $T$ to an empty map from state and input to new state and instructions.
@@ -809,10 +817,10 @@ Set $T$ to an empty map from state and input to new state and instructions.
 		jump back to start of for loop.\;
 	}{ %else
 		\tcp{lazily compile another DFA state.}
-		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions \;
-		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$\;
+		Run $\mbox{oneStep}(Q,a)$ to find new state $Q'$ and instructions \;
+		Run $\mbox{findMapping}(Q', T)$ to see if Q' can be mapped to an existing state $Q''$\;
 		\eIf{$Q''$ was found}{
-			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$\;
+			Append the mapping instructions from findMapping to the instructions found by oneStep\;
 			Execute the instructions.\;
 			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.\;
 			Set $Q$ to $Q''$\;
@@ -825,12 +833,12 @@ Set $T$ to an empty map from state and input to new state and instructions.
 
 }
 }
-\caption{$interpret(input)$: Interpretation and lazy compilation of the NFA}
+\caption{interpret(input): Interpretation and lazy compilation of the NFA.}
 \label{interpret}
 \end{algorithm*}
 
 \subsection{Compactification}
-\seclabel{Implementation}
+\seclabel{compact}
 The most important implementation detail, which brought a factor 10
 improvement in performance, was the use of a compactified representation
 of DFA transition tables whenever possible.  Compactified, here,
@@ -897,13 +905,13 @@ of regular expression engines that can extract nested capture groups
 -- never mind extracting entire parse trees -- that do not backtrack.
 Back-tracking implementations are exponential in their run-time,
 and so we see in \Figref{patho} (note the log plot) how the run-time
-of ``java.util.regex'' quickly explodes, even for tiny input, for
+of ``java.util.regex'' quickly explodes exponentially, even for tiny input, for
 a pathological regular expression, while our approach slows down
 only linearly. The raw data is seen in \Tabref{patho}.
 
 \begin{figure}[h]
 \includegraphics[width=\linewidth]{graphs/pathological-with-axes.pdf}
-\caption{\figlabel{patho} Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is java.util.regex.}
+\caption{Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is java.util.regex.}
 \figlabel{patho}
 \end{figure}
 
@@ -937,6 +945,13 @@ follows the same overall algorithm as java.util.regex, but always
 with a bigger constant attached.  For this reason, and because
 non-greedy matching cannot be expressed directly in JParsec, we did
 not implement any further JParsec benchmarks.
+
+Note because java.util.regex achieves its back-tracking through recursion,
+we had to set the stack size to one Gigabyte for it to parse the input.
+Since default stack size is only a few megabytes, this makes using
+java.util.regex a security risk, even for unproblematic regular expressions
+that cannot backtrack, since an attacker can potentially force the VM to run 
+out of stack space.
 
 \begin{table}
 \begin{tabular}{cc}
@@ -1007,7 +1022,7 @@ explanation of regular expression matching \cite{Cox07a}. It seems
 ironic that this well-versed author published this influential work
 on his website. The joke, however, may be on Academia's side.
 
-When \del{the taciturn} practioners acknowledge each other's work, we can't
+When the practioners acknowledge each other's work, we can't
 help but disagree almost universally with the characterizations they
 produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
 work an ``implementation'' of Laurikari's algorithm, although Laurikari's
@@ -1016,34 +1031,38 @@ algorithm is referred to as a POSIX-style automaton. In truth, Laurikari
 leaves the matching strategy entirely open. It was Kuklewicz that
 found out how to get POSIX-style matching out of Laurikari's TDFA. 
 
-Cox says that Laurikari's TDFA is a reinvention of \ugh{Pike's published
-only in code algorithm} \cite{Pike87a} \on{I can't parse this. Also, there is a publication which is not code, so what do you mean?}, which is Thompson's NFA with
-submatch tracking. This seems unfair in that Laurikari's allows for
-far more aggressive \chg{reusing}{reuse} of old states than \del{what}
-Thompson allows. This should lead to Laurikari's TDFA having fewer
-states, and therefore better performance, than even Google's
-RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses
-Pike's algorithm.  This is not confirmed by the benchmarks by
+Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
+used in the text editor sam~\cite{Pike87a}.  While sam was released
+as free software, the algorithm wasn't published anywhere.  Sam
+uses Thompson's NFA, but adds submatch tracking. This seems unfair
+in that Laurikari's allows for far more aggressive reuse of old
+states than Thompson allows. This should lead to Laurikari's TDFA
+having fewer states, and therefore better performance, than even
+Google's RE2\footnote{\url{https://code.google.com/p/re2/}}, which
+uses Pike's algorithm.  This is not confirmed by the benchmarks by
 Sulzmann and Lu \cite{Sulz12a}, but they offer an explanation: in
 their profiling, they see that all Haskell implementations spend
 considerable time decoding the input strings. In other words, the
 measured performance is more of an artifact of the programming
 environment used.
 
-Another mistake that permeates the scarce literature is to call regular
-expression matching linear. As Sedgewick points out correctly \cite{Sedg90a},
-Thompson's NFA matching is of complexity $O(mn)$, where $m$ is the
-size of the input NFA, and $n$ is the size of the input string. To
-call this linear means to assume that $m$ is fixed, which is not justified. It may well be true that, at present,
-$m$ tends to be small. But that is a natural consequence of the algorithms
+Another mistake that permeates the scarce literature is to call
+regular expression matching linear. As Sedgewick points out correctly
+\cite{Sedg90a}, Thompson's NFA matching is of complexity $O(mn)$,
+where $m$ is the size of the input NFA, and $n$ is the size of the
+input string. To call this linear means to assume that $m$ is fixed,
+which is not justified. It may well be true that, at present, $m$
+tends to be small. But that is a natural consequence of the algorithms
 not scaling very well with $m$. If they did, that would allow for
-fast feature extracting from text. Therefore, in this paper, we consider
-the state of the art algorithms to be quadratic, since both $m$ and
-$n$ are part of the input to a regular expression matcher. We cannot
-rule out that a linear algorithm exists, in fact, we hope for it.
-To insist that regular expression matching is done in linear time
-is to insist that the optimal algorithm has already been found; that
-is probably not true.
+fast feature extracting from text\footnote{To check if a document
+contains features $f_1, f_2, \dots, f_n$, we would match the document
+against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
+Therefore, in this paper, we consider the state of the art algorithms
+to be quadratic, since both $m$ and $n$ are part of the input to a
+regular expression matcher. We cannot rule out that a linear algorithm
+exists, in fact, we hope for it.  To insist that regular expression
+matching is done in linear time is to insist that the optimal
+algorithm has already been found; that is probably not true.
 
 Sulzmann and Lu add to the table a new matching strategy that yields
 good practical performance, although the theoretical bounds are considerably
@@ -1055,7 +1074,8 @@ expressions.  The performance is on par with traditional back-tracking
 solutions if no backtracking ever happens, exponentially outperforms
 back-tracking approaches for pathological input, and in a realistic
 scenario outperforms backtracking by 40\%.  All source code and all
-benchmarks are available under a free license on github.
+benchmarks are available under a free license on
+github\footnote{\url{https://www.dropbox.com/s/p19e4q8u7ci0okv/tree-regex.zip}}.
 
 \bibliographystyle{plain}
 \bibliography{biblio,bib/scg}
