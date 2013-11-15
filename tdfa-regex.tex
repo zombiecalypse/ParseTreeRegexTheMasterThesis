@@ -432,7 +432,9 @@ follows: The NFA states are taken, in order, they eat one one input
 character, and then follow only high-priority edges, saving
 low-priority edges on a stack.  Once we're out of high-priority
 edges, we continue with low priority edges, until all possible
-transitions have been followed.
+transitions have been followed.The starting state is obtained
+from Algorithm~\ref{onestep}, taking the starting NFA state as input,
+with the slight twist that no input character is consumed.
 
 Note that the ordering of threads inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
