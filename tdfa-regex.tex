@@ -631,13 +631,8 @@ Set $T$ to an empty map from state and input to new state and instructions.
 \end{algorithm*}
 
 
-\clearpage
-
-
-
 \begin{example} Execution of algorithm \ref{onestep}:
 \label{ex:oneStep1}
-
 Assume as an example the automaton in figure \ref{fig:example-automaton} is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} 
 \begin{align*}
 Q=[
@@ -1013,6 +1008,10 @@ is probably not true.
 Sulzmann and Lu add to the table a new matching strategy that yields
 good practical performance, although the theoretical bounds are considerably
 worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
+
+\section{Conclusion}
+When a regular expression engine matches input, it can construct the entire parse tree
+of this matching, at no or little additional computational cost.
 
 \bibliographystyle{plain}
 \bibliography{biblio,bib/scg}
