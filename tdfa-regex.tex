@@ -330,19 +330,17 @@ threads are at the same position.
 
 \begin{notation}
 We denote NFA states with $q_i$ and their array of histories 
-$(h_1, \dots, h_n)$. Since a history is actually a
-list of positions in the matched string, we will write it
-as $h_i=[x_1, \dots, x_n]$ to describe that past matches occurred
-at the positions $x_1, \dots, x_n$. 
+$(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
+Since a history is actually a list of positions in the matched string, we will write it
+as $h_i=[x_1, \dots, x_m]$ to describe that past matches occurred
+at the positions $x_1, \dots, x_m$. 
 
-Each NFA state has an array of $2n$ histories, where 
-$n$ is the number of capture groups in the original 
-regular expression. This is written as 
+Each NFA state has an array of $2n$ histories. This is written as 
 $(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ 
 is the history of the opening positions of
 the capture group $i$, and at position $2i+1$ is the closing history.
 
-Take for example the regular expression \texttt{(..)+} matching 
+Take, for example, the regular expression \texttt{(..)+} matching 
 pairs of characters on the string ``abcd'', then the history array describing this would be
 $[h_1=[2,0], h_2=[3,1]]$.
 \end{notation}
@@ -389,15 +387,29 @@ performance, it would also lead to ambiguity: if the two threads
 disagree on the histories, which one is correct?
 
 Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
-transition graph, and an input character, and returns the set of threads
-running after the input character has been read. It makes sure that
-if there could be two threads with the same NFA state, the one that
-follows greedy matching\footnote{Non-greedy operators work the same way, just
-with reversed priorities} will survive. At no point of the algorithm are the
-two states both present in the result and thus in conflict. This is avoided
-by prioritizing the edge with the result that follows the greedy match and
-not considering states visited before, ensuring the greedy thread 
-``wins the race''.
+transition graph, and an input character, and returns the set of
+threads running after the input character has been read. It makes
+sure that if there could be two threads with the same NFA state,
+the one that follows greedy matching\footnote{Non-greedy operators
+work the same way, just with reversed priorities} will survive. At
+no point of the algorithm are the two states both present in the
+result and thus in conflict. In a nutshell, the algorithm works as
+follows: The NFA states are taken, in order, they eat one one input
+character, and then follow only high-priority edges, saving
+low-priority edges on a stack.  Once we're out of high-priority
+edges, we continue with low priority edges, until all possible
+transitions have been followed.
+
+
+Note that the ordering of threads inside of DFA states is relevant.
+In \Figref{example-automaton}, after reading only one comma as an
+input, state 7 can be reached from two threads: either from the
+thread in state 3, via 4, or from the thread in state 6. The two
+threads are `racing' to capture state 7. Since in the starting
+state, the thread of state 6 is listed first, he `wins the race'
+for state 7, and `captures it'. Thus, the new thread of state 7 is
+a fork of the thread of state 6, not 3.
+
 
 \begin{notation} In the following examples, we will use the following:
 
