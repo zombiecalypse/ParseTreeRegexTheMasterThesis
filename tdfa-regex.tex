@@ -410,9 +410,10 @@ position $2i+1$ \on{$2i$?} is the closing history.
 
 Take, for example, the regular expression \texttt{(..)+} matching
 pairs of characters on the string ``abcd'', then the history of the
-finishing NFA state is $[h_1=[2,0], h_2=[3,1]]$.
-\on{Outer square brackets should be parentheses, I think. Pls explain how to interpret $h_1$ and $h_2$. $h_1$ is the opening history of capture group $1$, and $h_2$ is its closing history. The unique capture group opened first at position 0, then closed at position 1, then opened at position 2, and closed again at position 3? Is that right?
-}
+finishing NFA state is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
+Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0 thru 3.
+Histories $h_3$ and $h_4$ contain the positions of all the matches of capture group 1, in reverse. That is:
+one match from 0 thru 1, and another from 2 thru 3.
 
 Our engine executes instructions at the end of every interpretation
 step. There are four kinds of instructions:
@@ -421,23 +422,12 @@ step. There are four kinds of instructions:
 \item [$h\leftarrow\pos$] Stores the current position into the head of history $h$.
 \item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of history $h$.
 \item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
-This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
-
-\item [$c\uparrow(h)$ and $c\downarrow(h)$] \on{still confusing -- make these two separate entries, if that is what you mean. Now it looks like \textbf{and} is part of the syntax.  I suggest the two entries below.}
-Prepends history $h$ with a new node \ins{$c$}, which becomes the new head.
-\on{Is $c$ the new node?}
-This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
-describes the opening position of the capture group and is therefore called the opening commit. 
-Conversely $c\downarrow(h)$ is the closing commit that marks the end of the capture group. 
-This distinction is only for clarity, the semantic is the same for opening and closing commits.
-
-\item [$c\uparrow(h)$] Prepends history $h$ with a new node $c$, which becomes the new head.
-This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
-describes the opening position of the capture group and is therefore called the opening commit. 
-
+	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
+\item [$c\uparrow(h)$] Prepends history $h$ with a new node that becomes the new head.
+	This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
+	describes the opening position of the capture group and is therefore called the opening commit. 
 \item [$c\downarrow(h)$] This is the same as $c\uparrow(h)$ except that it denotes a closing commit marking the end of the capture group. 
-This distinction is only for clarity, the semantics is the same for opening and closing commits.
-
+	This distinction is only for clarity, the semantics is the same for opening and closing commits.
 \end{description}
 
 \end{notation}
