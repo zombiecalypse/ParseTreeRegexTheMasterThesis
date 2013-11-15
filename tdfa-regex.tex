@@ -442,32 +442,7 @@ This distinction is only for clarity, the semantics is the same for opening and 
 
 \end{notation}
 
-Algorithm~\ref{onestep}  takes as input a set of threads, an NFA
-transition graph, and an input character, and returns the set of
-threads running after the input character has been read. It makes
-sure that if there could be two threads with the same NFA state,
-the one that follows greedy matching\footnote{Non-greedy operators
-work the same way, just with reversed priorities} will survive. At
-no point of the algorithm are the two states both present in the
-result and thus in conflict. In a nutshell, the algorithm works as
-follows: The NFA states are taken, in order, they eat one one input
-character, and then follow only high-priority edges, saving
-low-priority edges on a stack.  Once we're out of high-priority
-edges, we continue with low priority edges, until all possible
-transitions have been followed.The starting state is obtained
-from Algorithm~\ref{onestep}, taking the starting NFA state as input,
-with the slight twist that no input character is consumed.
-
-Note that the ordering of threads inside of DFA states is relevant.
-In \Figref{example-automaton}, after reading only one comma as an
-input, state 7 can be reached from two threads: either from the
-thread in state 3, via 4, or from the thread in state 6. The two
-threads are `racing' to capture state 7. Since in the starting
-state, the thread of state 6 is listed first, he `wins the race'
-for state 7, and `captures it'. Thus, the new thread of state 7 is
-a fork of the thread of state 6, not 3.
-
-\begin{algorithm*}[htb]
+\begin{algorithm*}[!htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -537,6 +512,31 @@ Mark all threads in \emph{low} as hungry.
 \caption{\label{onestep}$oneStep(NFA, a, pos, Q)$: Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
+
+Algorithm~\ref{onestep}  takes as input a set of threads, an NFA
+transition graph, and an input character, and returns the set of
+threads running after the input character has been read. It makes
+sure that if there could be two threads with the same NFA state,
+the one that follows greedy matching\footnote{Non-greedy operators
+work the same way, just with reversed priorities} will survive. At
+no point of the algorithm are the two states both present in the
+result and thus in conflict. In a nutshell, the algorithm works as
+follows: The NFA states are taken, in order, they eat one one input
+character, and then follow only high-priority edges, saving
+low-priority edges on a stack.  Once we're out of high-priority
+edges, we continue with low priority edges, until all possible
+transitions have been followed.The starting state is obtained
+from Algorithm~\ref{onestep}, taking the starting NFA state as input,
+with the slight twist that no input character is consumed.
+
+Note that the ordering of threads inside of DFA states is relevant.
+In \Figref{example-automaton}, after reading only one comma as an
+input, state 7 can be reached from two threads: either from the
+thread in state 3, via 4, or from the thread in state 6. The two
+threads are `racing' to capture state 7. Since in the starting
+state, the thread of state 6 is listed first, he `wins the race'
+for state 7, and `captures it'. Thus, the new thread of state 7 is
+a fork of the thread of state 6, not 3.
 
 
 \begin{example} Execution of algorithm \ref{onestep}:
