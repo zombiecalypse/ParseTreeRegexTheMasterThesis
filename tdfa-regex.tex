@@ -123,7 +123,7 @@
 \begin{abstract}
 Regular expressions naturally and intuitively define ASTs that describe
 the text that they're parsing.
-\on{But existing approaches fail to keep track of all regex matches within the AST.}
+\ins{But existing approaches fail to keep track of all regex matches within the AST.}
 We describe a technique for building
 up the complete parse tree resulting from matching a text against
 a regular expression.
@@ -184,7 +184,7 @@ using no regular expression engine at all, even if the underlying
 grammar is entirely regular.  The following grammar is hard to parse
 using a regular expression engine, even though it is regular.
 
-Consider a file of semicolon-terminated records, each record consists
+Consider a file of semicolon-terminated records, each record consisting
 of a comma-separated pair of entries, and each entry can be escaped
 to contain semicolons, as in the regular expression
 \texttt{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}. Here, expression
@@ -212,7 +212,7 @@ they are logging, so their parsing and understanding is important.
 
 Regular expressions make for scalable and efficient lightweight parsers.\cite{Kart96a} 
 
-The parsing abilities of regular expression have evoked Meiners to declare
+The parsing abilities of regular expression have \chg{evoked}{provoked} Meiners to declare
 that for intrusion detection, ``fast and scalable RE matching is
 now a core network security issue.'' \cite{Mein10a}
 
@@ -320,7 +320,7 @@ discussing the transformation from NFA states to DFA states.
 
 \begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
 \caption{Modified Thompson~\cite{Thom68a} construction of the
-automaton: Decent into the abstract syntax tree of the regular
+automaton: \ugh{Decent} \ins{Descend?} into the abstract syntax tree of the regular
 expression and expand the constructs recursively.}
 \label{fig:thompson-construction} 
 \end{figure*}
@@ -405,14 +405,16 @@ $q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
 \item[NFA states] are denoted as $q_i$ and their array of histories
 $(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
 Each NFA state has an array of $2n$ histories. This is written as
-$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$  is the
+$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ \on{$2i-1$?} is the
 history of the opening positions of the capture group $i$, and at
-position $2i+1$ is the closing history.
+position $2i+1$ \on{$2i$?} is the closing history.
 \end{description}
 
 Take, for example, the regular expression \texttt{(..)+} matching
 pairs of characters on the string ``abcd'', then the history of the
 finishing NFA state is $[h_1=[2,0], h_2=[3,1]]$.
+\on{Outer square brackets should be parentheses, I think. Pls explain how to interpret $h_1$ and $h_2$. $h_1$ is the opening history of capture group $1$, and $h_2$ is its closing history. The unique capture group opened first at position 0, then closed at position 1, then opened at position 2, and closed again at position 3? Is that right?
+}
 
 Our engine executes instructions at the end of every interpretation
 step. There are four kinds of instructions:
@@ -422,16 +424,27 @@ step. There are four kinds of instructions:
 \item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of history $h$.
 \item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
 This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
-\item [$c\uparrow(h)$ and $c\downarrow(h)$] Prepends history$h$ with a new node, which becomes the new head.
+
+\item [$c\uparrow(h)$ and $c\downarrow(h)$] \on{still confusing -- make these two separate entries, if that is what you mean. Now it looks like \textbf{and} is part of the syntax.  I suggest the two entries below.}
+Prepends history $h$ with a new node \ins{$c$}, which becomes the new head.
+\on{Is $c$ the new node?}
 This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
 describes the opening position of the capture group and is therefore called the opening commit. 
 Conversely $c\downarrow(h)$ is the closing commit that marks the end of the capture group. 
 This distinction is only for clarity, the semantic is the same for opening and closing commits.
+
+\item [$c\uparrow(h)$] Prepends history $h$ with a new node $c$, which becomes the new head.
+This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
+describes the opening position of the capture group and is therefore called the opening commit. 
+
+\item [$c\downarrow(h)$] This is the same as $c\uparrow(h)$ except that it denotes a closing commit marking the end of the capture group. 
+This distinction is only for clarity, the semantics is the same for opening and closing commits.
+
 \end{description}
 
 \end{notation}
 
-Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
+Algorithm~\ref{onestep}  takes as input a set of threads, an NFA
 transition graph, and an input character, and returns the set of
 threads running after the input character has been read. It makes
 sure that if there could be two threads with the same NFA state,
@@ -467,9 +480,7 @@ a fork of the thread of state 6, not 3.
 	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
 \Output{ Set of threads $R$.}
 \Begin{
-
 $R\leftarrow []$\;
-
 Initialize empty stack $buffer$\;
 Initialize empty stack $high$\;
 Initialize stack $low$ so that $(q, h)\in Q$ are retrieved front to back of $Q$.\;
