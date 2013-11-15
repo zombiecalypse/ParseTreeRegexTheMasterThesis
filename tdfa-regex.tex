@@ -279,23 +279,37 @@ Lehrer,1;Alan Turing''.  This is, of course, not what we expect.
 Non-greediness, here, ensures that we get ``Tom Lehrer'', then
 ``Alan Turing'' as the matches of the first capture group.
 
+\begin{figure}[h]
+\includegraphics[width=\linewidth]{graphs/lehrer_automaton}
+
+\caption{\label{fig:example-automaton}
+Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} 
+In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing tag for capture group $n$.}
+\end{figure}
+
+
 In the NFA, we model greedy repetition or non-greedy repetition of
-an expression as follows.  First, we construct an NFA graph for the
-expression, without any repetition.  We can see how this plays out
-in our running example, which contains the expression \texttt{.*?}.
-First, an automaton for \texttt{.} is constructed.  As we can see
-in \autoref{fig:example-automaton}, expression \texttt{.} is modeled as
-just two nodes labeled 3 and 4, and a transition labeled ``any''
-between them.  Repeating is achieved by adding two $\varepsilon$
+an expression in two steps:
+
+\begin{enumerate}
+\item We construct an NFA graph for the expression, without any repetition.  
+\autoref{fig:example-automaton} shows how this plays out in our running example, which contains the expression \texttt{.*?}. An automaton for \texttt{.} is constructed. The expression \texttt{.} is modeled as just two nodes labeled 3 and 4, and a transition labeled ``any''
+between them.  
+
+\item We add prioritized transitions to model repetition. In our example, repeating is achieved by adding two $\varepsilon$
 transitions: one from 4 back to 3, to match more than one time any
 character, and another one from 3 to 4, to enable matching nothing
 at all.  Importantly, the transition from 4 back to 3 is marked as
-low priority, while the transition leaving the automaton, from 4
+low priority (the ``--'' sign) while the transition leaving the automaton, from 4
 to 5, is unmarked, which means normal priority.  This means that
 the NFA will prefer leaving the repeating expression, rather than
 staying in it.  If the expression were greedy, then we would mark
-the transition from 4 to 5 as low-priority, and the NFA would prefer
-to match any character repeatedly.
+the transition from 3 to 5 as low-priority, and the NFA would prefer
+to match any character repeatedly. 
+
+\end{enumerate}
+
+
 
 More generally, the NFA will prefer to follow transitions of normal
 priority over those of low priority. Rather than formalize this
@@ -314,18 +328,18 @@ transition graph. The transition into a capture group is tagged by a
 commit, the transition to leave a capture group is tagged by a another
 commit. We distinguish opening and closing commits. The NFA keeps a
 history for every transition with a commit. Each time the transition
-is walked, the current position is added to its history. 
+is walked, the current position \ins{in the input string} is added to its history. 
 
 We model histories as a linked list, where the payload of each node
 is a position.  Only the payload of the \emph{head}, the first node,
 is mutable, the \emph{rest}, all other nodes, are immutable.  Because
 the rest are immutable, they may be shared between histories.  This
-is an application of the flyweight pattern, which ensures that all
+is an application of the Flyweight pattern, which ensures that all
 of the following instructions on histories can be performed in
 constant time. Here, the \emph{position} is the current position
-of the matcher.  It is well-defined at all times since all threads
+of the matcher. \del{It is well-defined at all times since all threads
 are executed in lock-step, such that at any point in time, all
-threads are at the same position.
+threads are at the same position.} \ml{by here i have no clue what a thread is. maybe just drop this sentence}
 
 \begin{notation}
 
@@ -335,13 +349,7 @@ threads are at the same position.
 \global\long\def\integers{\mathbb{Z}}
 \global\long\def\pos{\mathbf{\mathbf{p}}}
 
-\begin{figure}
-\includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
-\caption{\label{fig:example-automaton}
-Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} 
-In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing tag for capture group $n$.}
-\end{figure}
 
 \subsection{DFAs}
 
@@ -868,8 +876,8 @@ only linearly. The raw data is seen in \Tabref{raw}.
 
 
 \begin{figure}[h]
-\includegraphics[width=0.75\linewidth]{graphs/pathological}
-\caption{\figlabel{patho} Matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is java.util.regex.}
+\includegraphics[width=\linewidth]{graphs/pathological-with-axes.pdf}
+\caption{\figlabel{patho} Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is java.util.regex.}
 \figlabel{patho}
 \end{figure}
 
