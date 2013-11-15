@@ -184,7 +184,6 @@ using no regular expression engine at all, even if the underlying
 grammar is entirely regular.  The following grammar is hard to parse
 using a regular expression engine, even though it is regular.
 
-
 Consider a file of semicolon-terminated records, each record consists
 of a comma-separated pair of entries, and each entry can be escaped
 to contain semicolons, as in the regular expression
@@ -196,9 +195,8 @@ order to extract all four capture group matches, it is insufficient
 to split the input at the semicolon, as that would split the field
 ``h;i'' in half.  More involved examples, where hand-written parsers
 become harder to make, are easily constructed.  In contrast, our
-approach yields the entire parse tree, simply from specifying the
-above regular expression.
-
+approach yields the entire parse tree, simply from the regular
+expression.
 
 \subsection{Motivation}
 
