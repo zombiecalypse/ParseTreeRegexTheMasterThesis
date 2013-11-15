@@ -339,9 +339,7 @@ the rest are immutable, they may be shared between histories.  This
 is an application of the Flyweight pattern, which ensures that all
 of the following instructions on histories can be performed in
 constant time. Here, the \emph{position} is the current position
-of the matcher. \del{It is well-defined at all times since all threads
-are executed in lock-step, such that at any point in time, all
-threads are at the same position.} \ml{by here i have no clue what a thread is. maybe just drop this sentence}
+of the matcher.
 
 \begin{notation}
 
@@ -992,17 +990,19 @@ algorithm is referred to as a POSIX-style automaton. In truth, Laurikari
 leaves the matching strategy entirely open. It was Kuklewicz that
 found out how to get POSIX-style matching out of Laurikari's TDFA. 
 
-Cox says that Laurikari's TDFA is a reinvention Pike's published only
-in code algorithm \cite{Pike87a}, which is Thompson's NFA with submatch
-tracking. This seems unfair in that Laurikari's allows for far more
-aggressive \chg{reusing}{reuse} of old states than \del{what} Thompson allows. This should
-lead to Laurikari's TDFA having fewer states, and therefore better
-performance, than even Google's RE2, which uses Pike's algorithm.
-This is not confirmed by the benchmarks by Sulzmann and Lu \cite{Sulz12a},
-but they offer an explanation: in their profiling, they see that all
-Haskell implementations spend considerable time decoding the input
-strings. In other words, the measured performance is more of an artifact
-of the programming environment used. 
+Cox says that Laurikari's TDFA is a reinvention Pike's published
+only in code algorithm \cite{Pike87a}, which is Thompson's NFA with
+submatch tracking. This seems unfair in that Laurikari's allows for
+far more aggressive \chg{reusing}{reuse} of old states than \del{what}
+Thompson allows. This should lead to Laurikari's TDFA having fewer
+states, and therefore better performance, than even Google's
+RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses
+Pike's algorithm.  This is not confirmed by the benchmarks by
+Sulzmann and Lu \cite{Sulz12a}, but they offer an explanation: in
+their profiling, they see that all Haskell implementations spend
+considerable time decoding the input strings. In other words, the
+measured performance is more of an artifact of the programming
+environment used.
 
 Another mistake that permeates the scarce literature is to call regular
 expression matching linear. As Sedgewick points out correctly \cite{Sedg90a},
