@@ -525,9 +525,13 @@ to reach the theoretical time bound we claimed, practical performance
 can be dramatically improved by avoiding to construct new states.
 Instead, we build a \emph{transition table} that maps from old DFA
 states and an input range to a new DFA state, and the instructions
-to execute when using the transition. We build the transition table, 
-including instructions, as we go. This is what we mean when we say that the 
-DFA is \emph{lazily compiled}.
+to execute when using the transition. We build the transition table,
+including instructions, as we go. This is what we mean when we say
+that the DFA is \emph{lazily compiled}. Note that the DFA transition
+table is different from the NFA transition table, in that the NFA
+transition table contains $\varepsilon$ edges and may have more
+than one transition from one state to another, for the same input
+range.
 
 To give us a chance to ever be in a state that is already in the transition table, we 
 check, after executing algorithm \ref{onestep}, \texttt{oneStep}, whether there is a known
@@ -1010,8 +1014,10 @@ good practical performance, although the theoretical bounds are considerably
 worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
 
 \section{Conclusion}
-When a regular expression engine matches input, it can construct the entire parse tree
-of this matching, at no or little additional computational cost.
+When a regular expression engine matches input, it can construct
+the entire parse tree of this matching, at no or little additional
+computational cost. All source code and all benchmarks are available
+under a free license on github.
 
 \bibliographystyle{plain}
 \bibliography{biblio,bib/scg}
