@@ -453,7 +453,7 @@ This distinction is only for clarity, the semantics is the same for opening and 
 	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
 \Output{ Set of threads $R$.}
 \Begin{
-$R\leftarrow []$\;
+$R\leftarrow [\ ]$\;
 Initialize empty stack $buffer$\;
 Initialize empty stack $high$\;
 Initialize stack $low$ so that $(q, h)\in Q$ are retrieved front to back of $Q$.\;
@@ -525,7 +525,7 @@ follows: The NFA states are taken, in order, they eat one one input
 character, and then follow only high-priority edges, saving
 low-priority edges on a stack.  Once we're out of high-priority
 edges, we continue with low priority edges, until all possible
-transitions have been followed.The starting state is obtained
+transitions have been followed. The starting state is obtained
 from Algorithm~\ref{onestep}, taking the starting NFA state as input,
 with the slight twist that no input character is consumed.
 
@@ -556,7 +556,7 @@ To find the next transition to follow, we pop one from the \emph{high} stack,
 and only if it is empty do we pop from the \emph{low} stack.
 
 We will pretend for clarity that instructions are executed directly
-after theyare encountered.  The actual algorithm collects them and
+after they are encountered.  The actual algorithm collects them and
 executes them after the \emph{oneStep} call to allow further
 optimizations.  This is the execution of \emph{oneStep}(\emph{NFA},
 ``,'', $1$, $Q$):
@@ -564,17 +564,17 @@ optimizations.  This is the execution of \emph{oneStep}(\emph{NFA},
 \begin{enumerate}
 \item Fill the \emph{low} stack with hungry threads of all states of $Q$.
 Note how pushing the threads into the low stack gives them very low priority.
-Anything that will be pushed on the high stack or the low stack will be dealt with
+Anything that will be pushed on the high stack \ugh{or the low stack} \on{huh?} will be dealt with
 first.
 Now, $\mathit{low}=[(q_6, H_2), (q_3,H_1))]$, where the first element is the head of the stack.
 \item Initialize \emph{buffer} as an empty stack. 
 The \emph{buffer} stack exists because while following high priority edges, states are discovered
-in an order that is reversed to the order in which we would like to output them. TODO: move.
+in an order that is reversed with respect to the order in which we would like to output them. \todo{move}.
 
-\item Initialize $R=[]$, the DFA state under construction.
+\item Initialize $R=[\ ]$, the DFA state under construction.
 \item Thread $(q_6,H_2)$ is taken from the \emph{low} stack, since \emph{high} is empty. It is hungry.
 \item We iterate all available transitions in the NFA transition graph, and find only $q_6\rightarrow q_7$, which can consume character ``,''.
-\item $(q_7, H_2)$ is pushed to \emph{high} as fed, and we continue the main loop.
+\item $(q_7, H_2)$ is pushed to \emph{high} \ugh{as fed} \on{not clear how we see this -- where is this bit of information and what does it mean? Or do you mean that the high stack only cottons fed threads, and low contains hungry ones?}, and we continue the main loop.
 \item $(q_7, H_2)$ is taken from the \emph{high} stack. It is fed.
 \item $(q_7, H_2)$ is pushed on \emph{buffer}.
 \item Since $(q_7, H_2)$ is fed, it follows $\varepsilon$-edges.
@@ -586,22 +586,23 @@ in an order that is reversed to the order in which we would like to output them.
 	\item 	$h_5 \mapsto h$. Note that this is constant time, no matter how many entries $h_5$ already has.
 	\item 	$h\leftarrow\pos+1$. This is the position after the ``,'', because the comma was eaten before the capture
 			group starts.
-	\item	Create $H_3$ as a copy of $H_2$ with $h$ on position 4 (indices are 0-based).
+	\item	Create $H_3$ as a copy of $H_2$ with $h$ on position 4 (indices are 0-based \on{actually you are inconsistent, since you start with $h_1$, not $h_0$}). \on{cost?}
 	\item $(q_8, H_3)$ is pushed on the \emph{high} stack.
 \end{enumerate}
 \item $(q_8, H_3)$ is taken from the \emph{high} stack.
 \item It is pushed on \emph{buffer}. \emph{buffer}$=[(q_8, H_3), (q_7, H_2)]$
 \item It can follow no further transitions and dies.
 \item We discover that the \emph{high} stack is empty.
-\item We now flush \emph{buffer}: $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[]$.
+\item We now flush \emph{buffer}: $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[\ ]$.
 	Note that now, $R$ contains two threads in the reverse order in which they were discovered.
 \item $(q_3, H_1)$ is taken from \emph{low}. It is hungry.
 \item The only transition that consumes ``,'' is $q_3\rightarrow q_4$:\begin{enumerate}
-	\item $(q_4, H_1)$ is pushed to \emph{high} as a fed.
+	\item $(q_4, H_1)$ is pushed to \emph{high} as a fed thread.
 \end{enumerate}
 \item $(q_4, H_1)$ is popped from \emph{high}
 \item It is pushed to the \emph{buffer}. \emph{buffer}$=(q_4, H_1)$
-\item $q_4\rightarrow q_3$ is visited. Note that $q_3$ has not yet been seen.\begin{enumerate}
+\item $q_4\rightarrow q_3$ is visited. \ugh{Note that $q_3$ has not yet been seen.} \on{huh?}
+\begin{enumerate}
 	\item Thread $(q_3, H_1)$ is pushed to 
 	$ \mbox{low} = (q_3, H_1)$, 
 	because $q_4\rightarrow q_3$ has low priority.
@@ -638,6 +639,7 @@ R=[&(q_8, H_3), (q_7, H_2), (q_4, H_1),\\ &(q_6, H_4), (q_5, H_1)]
 \end{enumerate}
 \end{example}
 
+\on{Not sure how to interpret the result. Do we really have all these threads now? Is this correct?}
 
 \section{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
@@ -672,7 +674,7 @@ To give us a chance to ever be in a state that is already in the transition tabl
 check, after executing algorithm \ref{onestep}, \texttt{oneStep}, whether there is a known
 DFA state that is \emph{mappable} to the output of \texttt{oneStep}.
 If \texttt{oneStep} produced a DFA state $Q$, and there is a DFA state $Q'$ that
-contains the same NFA states, in the same order, then $Q$ and $Q'$ may be mappable.
+contains the same NFA states, in the same order, \on{cost of checking this?} then $Q$ and $Q'$ may be mappable.
 If they are, then there is a set of instructions that move the histories from $Q$ into $Q'$
 such that, afterwards, $Q'$ behaves precisely as $Q$ would have. Algorithm \ref{findmapping}
 shows how we can find a mappable state, and the needed instructions.
@@ -804,8 +806,8 @@ Set $T$ to an empty map from state and input to new state and instructions.
 
 \subsection{Compactification}
 \seclabel{Implementation}
-The most important implementation detail, it brought a factor 10
-increase in performance, was the use of a compactified representation
+The most important implementation detail, which brought a factor 10
+improvement in performance, was the use of a compactified representation
 of DFA transition tables whenever possible.  Compactified, here,
 means to store the transition table as a struct of arrays, rather
 than as an array of structs, as recommended by the Intel optimization
