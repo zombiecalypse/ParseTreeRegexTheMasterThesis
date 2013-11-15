@@ -112,18 +112,18 @@
 
 \title{Efficient regular expressions that produce parse trees}
 
-\authorinfo{John}
+\authorinfo{Nobody}
 
-\authorinfo{John}
+\authorinfo{Nobody}
       
-\authorinfo{John}
+\authorinfo{Nobody}
 
 \maketitle
 
 \begin{abstract}
-Regular expressions naturally and intuitively define ASTs that describe
+Regular expressions naturally and intuitively define parse trees that describe
 the text that they're parsing.
-\ins{But existing approaches fail to keep track of all regex matches within the AST.}
+But existing approaches fail to keep track of all regex matches within the parse trees.
 We describe a technique for building
 up the complete parse tree resulting from matching a text against
 a regular expression.
@@ -149,29 +149,33 @@ with their numeric label. Matching the regular expression on \texttt{``Tom
 Lehrer,1;Alan Turing,2;''} will confirm that the list is well formed,
 but the match will only contain \texttt{``Tom Lehrer''} for the
 second capture group and \texttt{``1''} for the third. That is,
-the parse tree found by the \textsc{posix} is: 
+the parse tree found by the \textsc{posix} is seen in \Figref{posix}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/posix_parse}
 \caption{\figlabel{lehrer-posix} Parse tree produced by \textsc{posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
 Lehrer,1;Alan Turing,2;''.}
+\figlabel{posix}
 \end{figure}
 
 With our algorithm we are able to reconstruct the full parse
-tree after the matching phase is done:
+tree after the matching phase is done, as seen in \Figref{our-tree}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/full_parse}
 \caption{\figlabel{lehrer-tree} Parse tree produced by our approach matching regular expression \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
 Lehrer,1;Alan Turing,2;''}
+\figlabel{our-tree}
 \end{figure}
 
-The amortized run time of our approach is $O(m\: n)$, where $m$
-is the length of the regular expression and $n$ is the length of
-the parsed string. This is asymptotically as fast as the best matchers
-that don't extract parse trees. 
+The amortized run time of our approach is $O(m^2n)$, where $m$ is
+the length of the regular expression and $n$ is the length of the
+parsed string. It is, to the best of our knowledge, the first
+algorithm to achieve this bound, while extracting parse trees. The
+best-known algorithm to parse regular expressions, without extracting
+parse trees, run in time $O(m n)$\cite{Sedg90a}.
 
 \subsection{More powerful than standard regular expressions}
 \seclabel{power}
@@ -444,31 +448,31 @@ step. There are four kinds of instructions:
 \Output{ Set of threads $R$.}
 \Begin{
 $R\leftarrow [\ ]$\;
-Initialize empty stack $buffer$\;
-Initialize empty stack $high$\;
-Initialize stack $low$ so that $(q, h)\in Q$ are retrieved front to back of $Q$.\;
-Mark all threads in \emph{low} as hungry.
+Initialize empty stack buffer\;
+Initialize empty stack high\;
+Initialize stack low so that $(q, h)\in Q$ are retrieved front to back of $Q$.\;
+Mark all threads in low as hungry.
 
 \tcp{Follow transitions greedily}
-\While{$high$ and $low$ are not both empty}{
-	\eIf{$high$ not empty}{
-		pop $(q', [h_{1},\dots,h_{n}])$ from $high$\;
+\While{high and low are not both empty}{
+	\eIf{high not empty}{
+		pop $(q', [h_{1},\dots,h_{n}])$ from high\;
 	}{
-		pop $(q', [h_{1},\dots,h_{n}])$ from $low$\;
+		pop $(q', [h_{1},\dots,h_{n}])$ from low\;
 		
-		\lWhile{$buffer$ is not empty}{ 
-			pop $(q, [h_{1},\dots,h_{n}])$ from $buffer$ and add it to $R$\;
+		\lWhile{buffer is not empty}{ 
+			pop $(q, [h_{1},\dots,h_{n}])$ from buffer and add it to $R$\;
 		}
 	}
 	\If{current thread is marked hungry}{
 		\ForEach{$a$-consuming transition $e=q'\rightarrow q''$}{
-			push $(q'', [h_{1},\dots,h_{n}])$ to $high$.\;
+			push $(q'', [h_{1},\dots,h_{n}])$ to high.\;
 		}
 		jump to top of while.\;
 	}
 	\lIf{$q'$ is marked as seen}{ jump to top of while loop \;}
 	mark $q'$ as seen\;
-	add $(q', [h_{1},\dots,h_{n}])$ to $buffer$\;
+	add $(q', [h_{1},\dots,h_{n}])$ to buffer\;
 	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
 		\lIf{$q''$ is marked as seen}{continue for loop\;}
 		\If{$t$ is tagged with an open or close tag}{
@@ -492,9 +496,9 @@ Mark all threads in \emph{low} as hungry.
 				
 		\tcp{Push according to priority of transition:}
 		\eIf{$t$ has low priority}{
-			push $(q'', newHistories)$ to $low$\;
+			push $(q'', newHistories)$ to low\;
 		}{
-			push $(q'', newHistories)$ to $high$\;
+			push $(q'', newHistories)$ to high\;
 		}
 	}
 }
@@ -638,6 +642,12 @@ The output contains six threads, but three of them,  $(q_7, H_2),
 (q_4, H_1),  (q_5, H_1)$ will die as soon as they are scheduled in
 the next iteration of the algorithm, because there are no outgoing
 non-$\varepsilon$ transitions attached to their NFA states.
+
+The overall run time of algorithm \ref{onestep} is $O(m^2)$. The
+only reason that it isn't $O(m)$ is that we must copy arrays of
+histories. Our intuition is that the extra factor isn't needed, if
+only we change the data structure holding all histories to something
+more subtle.
 
 \section{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
