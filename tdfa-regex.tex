@@ -3,7 +3,6 @@
 \usepackage[latin9]{inputenc}
 \usepackage[english]{babel}
 \usepackage{verbatim}
-\usepackage{listings}
 \usepackage{refstyle}
 \usepackage{float}
 \usepackage{textcomp}
@@ -17,8 +16,6 @@
 \theoremstyle{definition}
 \newtheorem{example}{Example}[section]
 \newtheorem*{notation}{Notation}
-
-\lstdefinestyle{sharpc}{language=mathescape, frame=lr, rulecolor=\color{blue!80!black}}
 
 % ============================================================
 %% Uncomment the next few lines to get sf url links:
@@ -97,6 +94,26 @@
 %\newcommand\XXX[1]{\nbc{XXX}{#1}{violet}}
 % ============================================================
 
+
+% Alter some LaTeX defaults for better treatment of figures:
+    % See p.105 of "TeX Unbound" for suggested values.
+    % See pp. 199-200 of Lamport's "LaTeX" book for details.
+    %   General parameters, for ALL pages:
+    \renewcommand{\topfraction}{0.9}	% max fraction of floats at top
+    \renewcommand{\bottomfraction}{0.8}	% max fraction of floats at bottom
+    %   Parameters for TEXT pages (not float pages):
+    \setcounter{topnumber}{2}
+    \setcounter{bottomnumber}{2}
+    \setcounter{totalnumber}{4}     % 2 may work better
+    \setcounter{dbltopnumber}{2}    % for 2-column pages
+    \renewcommand{\dbltopfraction}{0.9}	% fit big float above 2-col. text
+    \renewcommand{\textfraction}{0.07}	% allow minimal text w. figs
+    %   Parameters for FLOAT pages (not text pages):
+    \renewcommand{\floatpagefraction}{0.7}	% require fuller float pages
+	% N.B.: floatpagefraction MUST be less than topfraction !!
+    \renewcommand{\dblfloatpagefraction}{0.7}	% require fuller float pages
+
+	% remember to use [htp] or [htpb] for placement
 
 \begin{document}
 \special{papersize=8.5in,11in}
@@ -436,7 +453,7 @@ step. There are four kinds of instructions:
 
 \end{notation}
 
-\begin{algorithm*}[!htb]
+\begin{algorithm*}[!htpb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -687,7 +704,7 @@ If they are, then there is a set of instructions that move the histories from $Q
 such that, afterwards, $Q'$ behaves precisely as $Q$ would have. Algorithm \ref{findmapping}
 shows how we can find a mappable state, and the needed instructions.
 
-\begin{algorithm}[htb]
+\begin{algorithm}[htpb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
@@ -763,7 +780,7 @@ in the transition table. Otherwise, we run \texttt{oneStep}. If the
 resulting state is mappable, we map.  More formally, we can see
 this in algorithm \ref{interpret}.
 
-\begin{algorithm*}[htb]
+\begin{algorithm*}[!htpb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
