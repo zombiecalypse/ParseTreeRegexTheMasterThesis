@@ -386,6 +386,43 @@ is already running. Not only is an explosion of threads bad for
 performance, it would also lead to ambiguity: if the two threads
 disagree on the histories, which one is correct?
 
+\begin{notation}
+
+We use the following vocabulary:
+
+\begin{description}
+\item[DFA states] are denoted by a capital letter, e.g. $Q$, and
+	contain multiple NFAthreads, in order, associated with their
+	histories.  \[Q=[(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)),
+	(q_2, (h_1, h_2, h_3, h_4, h_7, h_8))]\] for example means
+	that the current DFA state has one thread in $q_1$ with
+	histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another in
+	$q_2$ with the histories $(h_1, h_2, h_3, h_4, h_7, h_8)$.
+	Note that histories can be shared across threads if they
+	have the same matches.
+\item[Histories] are linked list, where each node stores a position in the input text.
+The head is mutable, the rest is immutable. Therefore, histories can share any node
+except their heads.
+\item[Transitions] are  understood to be between NFA states,
+$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$
+\end{description}
+
+Our engine executes instructions at the end of every interpretation step. There are four kinds of instructions:
+
+\begin{description}
+\item [$h\leftarrow\pos$] Stores the current position into the head of history $h$.
+\item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of history $h$.
+\item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
+This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
+\item [$c\uparrow(h)$ and $c\downarrow(h)$] Prepends history$h$ with a new node, which becomes the new head.
+This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
+describes the opening position of the capture group and is therefore called the opening commit. 
+Conversely $c\downarrow(h)$ is the closing commit that marks the end of the capture group. 
+This distinction is only for clarity, the semantic is the same for opening and closing commits.
+\end{description}
+
+\end{notation}
+
 Algorithm~\ref{onestep}  takes as an input a set of threads, an NFA
 transition graph, and an input character, and returns the set of
 threads running after the input character has been read. It makes
@@ -400,7 +437,6 @@ low-priority edges on a stack.  Once we're out of high-priority
 edges, we continue with low priority edges, until all possible
 transitions have been followed.
 
-
 Note that the ordering of threads inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
 input, state 7 can be reached from two threads: either from the
@@ -410,44 +446,6 @@ state, the thread of state 6 is listed first, he `wins the race'
 for state 7, and `captures it'. Thus, the new thread of state 7 is
 a fork of the thread of state 6, not 3.
 
-
-\begin{notation} In the following examples, we will use the following:
-
-\begin{itemize}
-	\item	Each DFA state is denoted by a capital letter, e.g. $Q$, and contains multiple NFA 
-			threads with their current histories in the order in which they are scheduled. 
-			\[Q=[(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)), (q_2, (h_1, h_2, h_3, h_4, h_7, h_8))]\] for
-			example means that the current DFA state has one thread in $q_1$ with 
-			histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another in $q_2$ with the histories
-			$(h_1, h_2, h_3, h_4, h_7, h_8)$. Note that histories can be shared across threads
-			if they have the same matches.
-	\item	A transition is understood to be between NFA states, $q_1\rightarrow q_2$
-			means a transition from $q_1$ to $q_2$.
-			The meta-data about the 
-			transition is described in the text and can contain consumption
-			of characters, priority or opening and closing commit tags.
-	\item	The algorithm uses two stacks, called \emph{high} and \emph{low}. The algorithm uses these two stacks to handle the scheduling
-	of the threads. The LIFO\footnote{last-in-first-out} property ensures that threads preferably are run until they can't follow further $\varepsilon$-edges. The \emph{high} stack takes strict priority
-	over the \emph{low} stack.
-			\on{NB: don't use math mode for words, use emph, or the spacing will be wrong. Within math mode use the textit macro.}
-	\item	In the examples we will pretend for clarity that the commands
-			described below are executed directly after they
-			are encountered. The actual algorithm collects them and executes 
-			them after the \emph{oneStep} call to allow further optimizations.
-\end{itemize}
-
-\begin{description}
-\item [$h\leftarrow\pos$] Stores the current position into the head of the linked list $h$.
-\item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of linked list $h$.
-\item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
-	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
-\item [$c\uparrow(h)$ and $c\downarrow(h)$] Prepends linked list $h$ with a new node, which becomes the new head.
-This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
-describes the opening position of the capture group and is therefore called the opening commit. 
-Conversely $c\downarrow(h)$ is the closing commit that marks the end of the capture group. 
-This distinction is only for clarity, the semantic is the same for opening and closing commits.
-\end{description}
-\end{notation}
 
 \begin{algorithm*}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
@@ -622,7 +620,18 @@ Q=[
 	\end{align*}
 This is the case after initialization or before any commas are read.
 
-This is the execution of \emph{oneStep}(\emph{NFA}, ``,'', $1$, $Q$):
+The algorithm uses two stacks, called \emph{high} and \emph{low}.
+The algorithm uses these two stacks to handle the scheduling of the
+threads. The LIFO\footnote{last-in-first-out} property ensures that
+threads preferably are run until they can't follow further
+$\varepsilon$-edges. The \emph{high} stack takes strict priority.
+We will pretend for clarity that instructions are executed directly
+after theyare encountered.  The actual algorithm collects them and
+executes them after the \emph{oneStep} call to allow further
+optimizations.  This is the execution of \emph{oneStep}(\emph{NFA},
+``,'', $1$, $Q$):
+
+
 
 \begin{enumerate}
 \item Initialize \emph{high} as empty stack and fill \emph{low} with hungry threads of all states of $Q$. The stacks are used for
