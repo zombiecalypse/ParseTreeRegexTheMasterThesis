@@ -541,6 +541,19 @@ transition table contains $\varepsilon$ edges and may have more
 than one transition from one state to another, for the same input
 range.
 
+Our transition tables, both for NFAs and DFAs, assume a transition
+to map a consecutive range of characters. If, instead, we used
+individual characters, the table size would quickly become unwieldly.
+However, input ranges can quickly become confusing if they are
+allowed to intersect. To avoid this, and simplify the code dramatically,
+while keeping the transition table small, we use the following
+trick. When the regular expression is parsed, we keep track of all
+input ranges that occur in it. Then, we split them until no two
+input ranges intersect.  After this step, input ranges are never
+created again.  Doing this step early in the pipeline yields the
+following invariant: it is impossible to ever come across intersecting
+input ranges.
+
 To give us a chance to ever be in a state that is already in the transition table, we 
 check, after executing algorithm \ref{onestep}, \texttt{oneStep}, whether there is a known
 DFA state that is \emph{mappable} to the output of \texttt{oneStep}.
