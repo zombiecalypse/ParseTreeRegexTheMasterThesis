@@ -254,7 +254,6 @@ Let's discuss the stages in turn, starting with 2, since step 1,
 the parsing of the regular expression grammar, is reasonably
 straightforward.
 
-
 \subsection{Thompson's construction} 
 
 We transform the AST of the regular expression into an NFA,
@@ -317,11 +316,11 @@ priority over those of low priority. Rather than formalize this
 notion of preference on NFAs, we come back to prioritized edges when
 discussing the transformation from NFA states to DFA states.
 
-
-\begin{figure*}[tb]
-\includegraphics[width=\linewidth]{graphs/thompson}
-\caption{Modified Thompson~\cite{Thom68a} construction of the automaton: Decent into the abstract syntax tree of the regular expression and expand the constructs recursively.}
-\label{fig:thompson-construction}
+\begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
+\caption{Modified Thompson~\cite{Thom68a} construction of the
+automaton: Decent into the abstract syntax tree of the regular
+expression and expand the constructs recursively.}
+\label{fig:thompson-construction} 
 \end{figure*}
 
 To model capture groups in the NFA, we add \emph{commit tags} to the
@@ -343,20 +342,7 @@ are executed in lock-step, such that at any point in time, all
 threads are at the same position.} \ml{by here i have no clue what a thread is. maybe just drop this sentence}
 
 \begin{notation}
-We denote NFA states with $q_i$ and their array of histories 
-$(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
-Since a history is actually a list of positions in the matched string, we will write it
-as $h_i=[x_1, \dots, x_m]$ to describe that past matches occurred
-at the positions $x_1, \dots, x_m$. 
 
-Each NFA state has an array of $2n$ histories. This is written as 
-$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ 
-is the history of the opening positions of
-the capture group $i$, and at position $2i+1$ is the closing history.
-
-Take, for example, the regular expression \texttt{(..)+} matching 
-pairs of characters on the string ``abcd'', then the history array describing this would be
-$[h_1=[2,0], h_2=[3,1]]$.
 \end{notation}
 
 \global\long\def\naturals{\mathbb{N}}
@@ -396,7 +382,7 @@ disagree on the histories, which one is correct?
 
 \begin{notation}
 
-We use the following vocabulary:
+We use the following vocabulary.
 
 \begin{description}
 \item[DFA states] are denoted by a capital letter, e.g. $Q$, and
@@ -410,12 +396,24 @@ We use the following vocabulary:
 	have the same matches.
 \item[Histories] are linked list, where each node stores a position in the input text.
 The head is mutable, the rest is immutable. Therefore, histories can share any node
-except their heads.
+except their heads. We write $h=[x_1, \dots, x_m]$ to describe that matches occurred
+at the positions $x_1, \dots, x_m$. 
 \item[Transitions] are  understood to be between NFA states,
-$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$
+$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
+\item[NFA states] are denoted as $q_i$ and their array of histories
+$(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
+Each NFA state has an array of $2n$ histories. This is written as
+$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$  is the
+history of the opening positions of the capture group $i$, and at
+position $2i+1$ is the closing history.
 \end{description}
 
-Our engine executes instructions at the end of every interpretation step. There are four kinds of instructions:
+Take, for example, the regular expression \texttt{(..)+} matching
+pairs of characters on the string ``abcd'', then the history of the
+finishing NFA state is $[h_1=[2,0], h_2=[3,1]]$.
+
+Our engine executes instructions at the end of every interpretation
+step. There are four kinds of instructions:
 
 \begin{description}
 \item [$h\leftarrow\pos$] Stores the current position into the head of history $h$.
@@ -443,7 +441,9 @@ follows: The NFA states are taken, in order, they eat one one input
 character, and then follow only high-priority edges, saving
 low-priority edges on a stack.  Once we're out of high-priority
 edges, we continue with low priority edges, until all possible
-transitions have been followed.
+transitions have been followed.The starting state is obtained
+from Algorithm~\ref{onestep}, taking the starting NFA state as input,
+with the slight twist that no input character is consumed.
 
 Note that the ordering of threads inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
@@ -453,55 +453,6 @@ threads are `racing' to capture state 7. Since in the starting
 state, the thread of state 6 is listed first, he `wins the race'
 for state 7, and `captures it'. Thus, the new thread of state 7 is
 a fork of the thread of state 6, not 3.
-
-
-\begin{algorithm*}[htb]
-\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-\DontPrintSemicolon
-\SetAlgoLined
-\Input{$input$ is a sequence of characters}
-\Output{a tree of matching capture groups for the regex}
-\Begin{
-\tcp{Lazily compiles a DFA while matching.}
-
-Set $Q$ to startState.\;
-\tcp{A thread is an NFA state, with an array of histories.}
-Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.\;
-Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.\;
-
-\tcp{Create the transition map of the DFA.}
-Set $T$ to an empty map from state and input to new state and instructions.
-\;
-\tcp{Consume string}
-\ForEach{position $pos$ in $input$}{
-	Let $a$ be the character at position $pos$ in $input$.
-	
-	\eIf{$T$ has an entry for $Q$ and $a$}{
-		\tcp{Let the DFA handle $a$}
-		Read the instructions and new state $Q'$ out of $T$\;
-		execute the instructions\;
-		$Q\leftarrow Q'$\;
-		jump back to start of for loop.\;
-	}{ %else
-		\tcp{lazily compile another DFA state.}
-		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions \;
-		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$\;
-		\eIf{$Q''$ was found}{
-			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$\;
-			Execute the instructions.\;
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.\;
-			Set $Q$ to $Q''$\;
-		}{ %else
-			Execute the instructions found by oneStep.\;
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.\;
-			Set $Q$ to $Q'$.\;
-		}
-	}
-
-}
-}
-\caption{$interpret(input)$: Interpretation and lazy compilation of the NFA}
-\end{algorithm*}
 
 \begin{algorithm*}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
@@ -572,26 +523,43 @@ Mark all threads in \emph{low} as hungry.
 	}
 }
 }
-
 \caption{\label{onestep}$oneStep(NFA, a, pos, Q)$: Compute the follow-up state for DFA state $Q$}
 \end{algorithm*}
 
-\clearpage
+\subsection{DFA transition table}
+
+While repeatedly calling algorithm \ref{onestep} would be sufficient
+to reach the theoretical time bound we claimed, practical performance
+can be dramatically improved by avoiding to construct new states.
+Instead, we build a \emph{transition table} that maps from old DFA
+states and an input range to a new DFA state, and the instructions
+to execute when using the transition. We build the transition table, 
+including instructions, as we go. This is what we mean when we say that the 
+DFA is \emph{lazily compiled}.
+
+To give us a chance to ever be in a state that is already in the transition table, we 
+check, after executing algorithm \ref{onestep}, \texttt{oneStep}, whether there is a known
+DFA state that is \emph{mappable} to the output of \texttt{oneStep}.
+If \texttt{oneStep} produced a DFA state $Q$, and there is a DFA state $Q'$ that
+contains the same NFA states, in the same order, then $Q$ and $Q'$ may be mappable.
+If they are, then there is a set of instructions that move the histories from $Q$ into $Q'$
+such that, afterwards, $Q'$ behaves precisely as $Q$ would have. Algorithm \ref{findmapping}
+shows how we can find a mappable state, and the needed instructions.
 
 \begin{algorithm*}[htb]
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
-\Input{$Q=\{(q_i, h_i)\}_{i=1\dots n}$ is a DFA state.}
+\Input{$Q=[(q_i, h_i)]_{i=1\dots n}$ is a DFA state.}
 \Output{A state $Q'$ that $Q$ is \emph{mappable} to.\\
 	The ordered instructions $m$ that reorder the memory 
 		locations of $Q$ to $Q'$ and don't interfere with each other.}
 \Begin{
     
-\ForEach{ $Q'$ such that $\{q_i\} = \{q'_i\}$}{
+\ForEach{ $Q'$ that contains the same NFA states as $Q$, in the same order}{
 
 	\tcc{Invariant: For each history $H$ there is at most one $H'$\\ so that $H\leftarrow H'$ is part of the mapping.}
-	Initialize empty map $m$\;
+	Initialize empty bimap $m$\; \tcc{A bimap is a bijective map.}
 	
 	\ForEach{$q_i=q'_i$ with histories $H$ and $H'$ respectively}{
 		\For{$i=0\dots length(H)-1$}{
@@ -615,9 +583,64 @@ Mark all threads in \emph{low} as hungry.
 \caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
 \end{algorithm*}
 
+\subsection{DFA execution}
+With these ingredients in place, the entire matching algorithm is straightforward. 
+In a nutshell, we see if the current input appears in the transition table. Otherwise,
+we run \texttt{oneStep}. If the resulting state is mappable, we map.  At any rate, we add an entry to the transition table. 
+More formally, we can see this in algorithm \ref{interpret}.
+
+\begin{algorithm*}[htb]
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\DontPrintSemicolon
+\SetAlgoLined
+\Input{$input$ is a sequence of characters}
+\Output{a tree of matching capture groups for the regex}
+\Begin{
+\tcp{Lazily compiles a DFA while matching.}
+
+Set $Q$ to startState.\;
+\tcp{A thread is an NFA state, with an array of histories.}
+Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.\;
+Execute instructions described in $oneStep$ when walking $\varepsilon$ transitions.\;
+
+\tcp{Create the transition map of the DFA.}
+Set $T$ to an empty map from state and input to new state and instructions.
+\;
+\tcp{Consume string}
+\ForEach{position $pos$ in $input$}{
+	Let $a$ be the character at position $pos$ in $input$.
+	
+	\eIf{$T$ has an entry for $Q$ and $a$}{
+		\tcp{Let the DFA handle $a$}
+		Read the instructions and new state $Q'$ out of $T$\;
+		execute the instructions\;
+		$Q\leftarrow Q'$\;
+		jump back to start of for loop.\;
+	}{ %else
+		\tcp{lazily compile another DFA state.}
+		Run $oneStep(Q,a)$ to find new state $Q'$ and instructions \;
+		Run $findMapping(Q', T)$ to see if Q' can be mapped to an existing state $Q''$\;
+		\eIf{$Q''$ was found}{
+			Append the mapping instructions from $findMapping$ to the instructions found by $oneStep$\;
+			Execute the instructions.\;
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.\;
+			Set $Q$ to $Q''$\;
+		}{ %else
+			Execute the instructions found by oneStep.\;
+			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.\;
+			Set $Q$ to $Q'$.\;
+		}
+	}
+
+}
+}
+\caption{$interpret(input)$: Interpretation and lazy compilation of the NFA}
+\label{interpret}
+\end{algorithm*}
+
+
 \begin{example} Execution of algorithm \ref{onestep}:
 \label{ex:oneStep1}
-
 Assume as an example the automaton in figure \ref{fig:example-automaton} is in the DFA state\footnote{NFA states that do not have any outgoing transitions except for $\varepsilon$ transitions can be omitted, since the first step will only consider edges which consume the next character of the input.} 
 \begin{align*}
 Q=[
@@ -993,6 +1016,10 @@ is probably not true.
 Sulzmann and Lu add to the table a new matching strategy that yields
 good practical performance, although the theoretical bounds are considerably
 worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
+
+\section{Conclusion}
+When a regular expression engine matches input, it can construct the entire parse tree
+of this matching, at no or little additional computational cost.
 
 \bibliographystyle{plain}
 \bibliography{biblio,bib/scg}
