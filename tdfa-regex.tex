@@ -254,7 +254,6 @@ Let's discuss the stages in turn, starting with 2, since step 1,
 the parsing of the regular expression grammar, is reasonably
 straightforward.
 
-
 \subsection{Thompson's construction} 
 
 We transform the AST of the regular expression into an NFA,
@@ -303,11 +302,11 @@ priority over those of low priority. Rather than formalize this
 notion of preference on NFAs, we come back to prioritized edges when
 discussing the transformation from NFA states to DFA states.
 
-
-\begin{figure*}[tb]
-\includegraphics[width=\linewidth]{graphs/thompson}
-\caption{Modified Thompson~\cite{Thom68a} construction of the automaton: Decent into the abstract syntax tree of the regular expression and expand the constructs recursively.}
-\label{fig:thompson-construction}
+\begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
+\caption{Modified Thompson~\cite{Thom68a} construction of the
+automaton: Decent into the abstract syntax tree of the regular
+expression and expand the constructs recursively.}
+\label{fig:thompson-construction} 
 \end{figure*}
 
 To model capture groups in the NFA, we add \emph{commit tags} to the
@@ -329,20 +328,7 @@ are executed in lock-step, such that at any point in time, all
 threads are at the same position.
 
 \begin{notation}
-We denote NFA states with $q_i$ and their array of histories 
-$(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
-Since a history is actually a list of positions in the matched string, we will write it
-as $h_i=[x_1, \dots, x_m]$ to describe that past matches occurred
-at the positions $x_1, \dots, x_m$. 
 
-Each NFA state has an array of $2n$ histories. This is written as 
-$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$ 
-is the history of the opening positions of
-the capture group $i$, and at position $2i+1$ is the closing history.
-
-Take, for example, the regular expression \texttt{(..)+} matching 
-pairs of characters on the string ``abcd'', then the history array describing this would be
-$[h_1=[2,0], h_2=[3,1]]$.
 \end{notation}
 
 \global\long\def\naturals{\mathbb{N}}
@@ -388,7 +374,7 @@ disagree on the histories, which one is correct?
 
 \begin{notation}
 
-We use the following vocabulary:
+We use the following vocabulary.
 
 \begin{description}
 \item[DFA states] are denoted by a capital letter, e.g. $Q$, and
@@ -402,10 +388,21 @@ We use the following vocabulary:
 	have the same matches.
 \item[Histories] are linked list, where each node stores a position in the input text.
 The head is mutable, the rest is immutable. Therefore, histories can share any node
-except their heads.
+except their heads. We write $h=[x_1, \dots, x_m]$ to describe that matches occurred
+at the positions $x_1, \dots, x_m$. 
 \item[Transitions] are  understood to be between NFA states,
-$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$
+$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
+\item[NFA states] are denoted as $q_i$ and their array of histories
+$(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
+Each NFA state has an array of $2n$ histories. This is written as
+$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. At position $2i$  is the
+history of the opening positions of the capture group $i$, and at
+position $2i+1$ is the closing history.
 \end{description}
+
+Take, for example, the regular expression \texttt{(..)+} matching
+pairs of characters on the string ``abcd'', then the history of the
+finishing NFA state is $[h_1=[2,0], h_2=[3,1]]$.
 
 Our engine executes instructions at the end of every interpretation step. There are four kinds of instructions:
 
