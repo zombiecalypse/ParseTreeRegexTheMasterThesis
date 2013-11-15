@@ -852,7 +852,7 @@ compactifying can be done early, and only seldom need to be undone.
 \subsection{Intertwining of the pipeline stages}
 The lazy compilation of the DFA when matching a string enables us
 to avoid compiling states of it that might never be necessary. This
-allows us to avoid the full powerset construction\cite{Sips05a}, which has 
+allows us to avoid the full powerset construction \cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
 \section{Benchmark}
@@ -869,13 +869,12 @@ ran all benchmarks on a 2.3 GHz, i7 Macbook Pro.
 
 As we will see in \Secref{related}, there is a surprising dearth
 of regular expression engines that can extract nested capture groups
--- nevermind extracting entire parse trees -- that do not backtrack.
+-- never mind extracting entire parse trees -- that do not backtrack.
 Back-tracking implementations are exponential in their run-time,
 and so we see in \Figref{patho} (note the log plot) how the run-time
 of ``java.util.regex'' quickly explodes, even for tiny input, for
 a pathological regular expression, while our approach slows down
-only linearly. The raw data is seen in \Tabref{raw}.
-
+only linearly. The raw data is seen in \Tabref{patho}.
 
 \begin{figure}[h]
 \includegraphics[width=\linewidth]{graphs/pathological-with-axes.pdf}
@@ -900,12 +899,12 @@ Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
 
 In the opposite case, in the case of a regular expression that's
 crafted to prevent any back-tracking, java.util.regex outperforms
-our approach by more than factor 2, as seen in \Figref{abc} -- but
+our approach by more than factor 2, as seen in \Tabref{abc} -- but
 bear in mind that java.util.regex does not extract parse trees, but
 only the last match of all capture groups.  A backtracking
 implementation that actually does produce complete parse trees is
 JParsec\footnote{\url{http://jparsec.codehaus.org}}, which, as also
-seen in \Figref{abc}, performs on par with our approach, even though
+seen in \Tabref{abc}, performs on par with our approach, even though
 for JParsec never needs to back-track for the input. That may be
 because JParsec is a general-purpose parser with much bigger machinery
 than java.util.regex, and so, to parse regular expressions, it
@@ -980,8 +979,8 @@ thing, it is that source code is a terrible medium to convey algorithms.
 
 The situation dramatically improved with Cox's simple and concise
 explanation of regular expression matching \cite{Cox07a}. It seems
-ironic that this well-versed author published his influential work
-on his website. Although the joke may be on Academia's side.
+ironic that this well-versed author published this influential work
+on his website. The joke, however, may be on Academia's side.
 
 When \del{the taciturn} practioners acknowledge each other's work, we can't
 help but disagree almost universally with the characterizations they
@@ -992,8 +991,8 @@ algorithm is referred to as a POSIX-style automaton. In truth, Laurikari
 leaves the matching strategy entirely open. It was Kuklewicz that
 found out how to get POSIX-style matching out of Laurikari's TDFA. 
 
-Cox says that Laurikari's TDFA is a reinvention Pike's published
-only in code algorithm \cite{Pike87a}, which is Thompson's NFA with
+Cox says that Laurikari's TDFA is a reinvention of \ugh{Pike's published
+only in code algorithm} \cite{Pike87a} \on{I can't parse this. Also, there is a publication which is not code, so what do you mean?}, which is Thompson's NFA with
 submatch tracking. This seems unfair in that Laurikari's allows for
 far more aggressive \chg{reusing}{reuse} of old states than \del{what}
 Thompson allows. This should lead to Laurikari's TDFA having fewer
