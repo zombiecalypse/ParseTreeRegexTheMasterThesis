@@ -281,7 +281,7 @@ straightforward.
 
 We transform the AST of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
-control greedines, or discern capture groups, our approach adds
+control greediness, or discern capture groups, our approach adds
 $\varepsilon$ transitions to the transition graph. An
 $\varepsilon$ transition has no input range assigned, and can thus always
 be used. It does not consume an input character.
@@ -354,7 +354,7 @@ by a commit, the transition to leave a capture group is tagged by
 a another commit. We distinguish opening and closing commits. The
 NFA keeps track of all times that a transition with an attached
 commit was used, thus keeping the \emph{history} of each commit.
-After parsing succeds, the list of all histories can then be used
+After parsing succeeds, the list of all histories can then be used
 to reconstruct all matches of all capture groups.
 
 We model histories as linked lists, where the payload of each node
@@ -682,7 +682,7 @@ the same input range. DFA transition tables allow no ambiguity.
 
 Our transition tables, both for NFAs and DFAs, assume a transition
 to map a consecutive range of characters. If, instead, we used
-individual characters, the table size would quickly become unwieldly.
+individual characters, the table size would quickly become unwieldy.
 However, input ranges can quickly become confusing if they are
 allowed to intersect. To avoid this, and simplify the code dramatically,
 while keeping the transition table small, we use the following
@@ -789,8 +789,8 @@ execution and to feed into the transition table.
 \SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
 \DontPrintSemicolon
 \SetAlgoLined
-\Input{$input$ is a sequence of characters}
-\Output{a tree of matching capture groups for the regex}
+\Input{$input$ is a sequence of characters.}
+\Output{A tree of matching capture groups.}
 \Begin{
 \tcp{Lazily compiles a DFA while matching.}
 
@@ -881,7 +881,7 @@ compactifying can be done early, and only seldom need to be undone.
 \subsection{Intertwining of the pipeline stages}
 The lazy compilation of the DFA when matching a string enables us
 to avoid compiling states of it that might never be necessary. This
-allows us to avoid the full powerset construction \cite{Sips05a}, which has 
+allows us to avoid the full power set construction \cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
 \section{Benchmark}
@@ -996,7 +996,7 @@ Runtime in microseconds}
 \section{Related work}
 \seclabel{related}
 Our algorithm is a modification of Laurikari's algorithm \cite{Laur00a},
-which is itself a modified powerset construction algorithm \cite[p. 55]{Sips05a}.
+which is itself a modified power set construction algorithm \cite[p. 55]{Sips05a}.
 
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
@@ -1019,7 +1019,7 @@ explanation of regular expression matching \cite{Cox07a}. It seems
 ironic that this well-versed author published this influential work
 on his website. The joke, however, may be on Academia's side.
 
-When the practioners acknowledge each other's work, we can't
+When the practitioners acknowledge each other's work, we can't
 help but disagree almost universally with the characterizations they
 produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
 work an ``implementation'' of Laurikari's algorithm, although Laurikari's
@@ -1073,7 +1073,7 @@ solutions if no backtracking ever happens, exponentially outperforms
 back-tracking approaches for pathological input, and in a realistic
 scenario outperforms backtracking by 40\%.  All source code and all
 benchmarks are available under a free license on
-github\footnote{\url{https://www.dropbox.com/s/p19e4q8u7ci0okv/tree-regex.zip}}.
+Github\footnote{\url{https://www.dropbox.com/s/p19e4q8u7ci0okv/tree-regex.zip}}.
 
 \bibliographystyle{plain}
 \bibliography{biblio,bib/scg}
