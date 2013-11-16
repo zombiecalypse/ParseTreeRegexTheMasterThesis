@@ -1071,9 +1071,11 @@ Our approach can produce entire parse trees while matching regular
 expressions.  The performance is on par with traditional back-tracking
 solutions if no backtracking ever happens, exponentially outperforms
 back-tracking approaches for pathological input, and in a realistic
-scenario outperforms backtracking by 40\%.  All source code and all
+scenario outperforms backtracking by 40\%, even though our approach 
+produces the full parse tree, and the backtracking implementation doesn't.
+All source code and all
 benchmarks are available under a free license on
-Github\footnote{\url{https://www.dropbox.com/s/p19e4q8u7ci0okv/tree-regex.zip}}.
+Dropbox\footnote{\url{https://www.dropbox.com/s/p19e4q8u7ci0okv/tree-regex.zip}}.
 
 \bibliographystyle{plain}
 \bibliography{biblio,bib/scg}
