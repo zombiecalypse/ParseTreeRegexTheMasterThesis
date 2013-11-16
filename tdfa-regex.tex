@@ -144,16 +144,15 @@ We describe a technique for building
 up the complete parse tree resulting from matching a text against
 a regular expression.
 
-In standard TDFA matching, all paths through the NFA are walked simultaneously,
-as if in different threads, where inside each thread, it is fully
-known when which capture group was entered or left. We extend this
-model to keep track of not just the last opening and closing of capture
-groups, but all of them. We do this by storing in every thread 
-a history of the all groups using the flyweight pattern. 
+In standard TDFA matching, all paths through the NFA are walked
+simultaneously, as if in different threads, where inside each thread,
+it is fully known when which capture group was entered or left. We
+extend this model to keep track of not just the last opening and
+closing of capture groups, but all of them. We do this by storing
+in every thread a history of the all groups using the flyweight
+pattern.  Thus, we log enough information during parsing to build
+up the complete parse tree after matching.
 
-Thus, we log
-enough information during parsing to build up the complete AST at
-the end of the mathcing phase.
 \end{abstract}
 
 
@@ -350,9 +349,9 @@ expression and expand the constructs recursively.}
 \end{figure*}
 
 To model capture groups in the NFA, we add \emph{commit tags} to
-the transitions in the graph. The transition into a capture group is tagged
-by a commit, the transition out of a capture group is tagged by
- another commit. We distinguish opening and closing commits. The
+the transition graph. The transition into a capture group is tagged
+by a commit, the transition to leave a capture group is tagged by
+a another commit. We distinguish opening and closing commits. The
 NFA keeps track of all times that a transition with an attached
 commit was used, thus keeping the \emph{history} of each commit.
 After parsing succeds, the list of all histories can then be used
