@@ -140,7 +140,6 @@
 \begin{abstract}
 Regular expressions naturally and intuitively define parse trees that describe
 the text that they're parsing.
-But existing approaches fail to keep track of all regex matches within the parse trees.
 We describe a technique for building
 up the complete parse tree resulting from matching a text against
 a regular expression.
@@ -189,10 +188,10 @@ Lehrer,1;Alan Turing,2;''}
 
 The amortized run time of our approach is $O(m^2n)$, where $m$ is
 the length of the regular expression and $n$ is the length of the
-parsed string. It is, to the best of our knowledge, the first
-algorithm to achieve this bound, while extracting parse trees. The
-best-known algorithm to parse regular expressions, without extracting
-parse trees, run in time $O(m n)$\cite{Sedg90a}.
+parsed string. It is the first algorithm to achieve this bound,
+while extracting parse trees. The best-known algorithm to parse
+regular expressions, without extracting parse trees, run in time
+$O(m n)$\cite{Sedg90a}.
 
 \subsection{More powerful than standard regular expressions}
 \seclabel{power}
@@ -225,7 +224,7 @@ expression.
 
 This is the age of big data, and the first step of processing big
 data is often to parse strings. As an example, consider log files.
-What makes data huge is typically repetition. As Jacobs\cite{Jaco09a}
+As Jacobs\cite{Jaco09a}
 noted, ``What makes most big data big is repeated observations over
 time and/ or space,'' and thus log files grow large frequently. At
 the same time, they provide important insight into the process that
@@ -283,7 +282,7 @@ We transform the AST of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
 control greedines, or discern capture groups, our approach adds
 $\varepsilon$ transitions to the transition graph. An
-$\varepsilon$-transition has no input range assigned, and can thus always
+$\varepsilon$ transition has no input range assigned, and can thus always
 be used. It does not consume an input character.
 The additions are needed for greediness control and capture groups.
 Let's look at both, in turn.
@@ -338,7 +337,7 @@ prefer to match any character repeatedly.
 
 More generally, the NFA will prefer to follow transitions of normal
 priority over those of low priority. Rather than formalize this
-notion of preference on NFAs, we come back to prioritized edges when
+notion of preference on NFAs, we come back to prioritized transitions when
 discussing the transformation from NFA states to DFA states.
 
 \begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
@@ -365,11 +364,6 @@ is an application of the Flyweight pattern, which ensures that all
 of the following instructions on histories can be performed in
 constant time. Here, the \emph{position} is the current position
 of the matcher.
-
-\begin{notation}
-
-\end{notation}
-
 
 \global\long\def\pos{\mathbf{\mathbf{p}}}
 
@@ -408,26 +402,26 @@ We use the following vocabulary.
 
 \begin{description}
 \item[DFA states] are denoted by a capital letter, e.g. $Q$, and
-	contain multiple NFAthreads, in order, associated with their
-	histories.  \[Q=[(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)),
+	contain multiple threads.  \[Q=[(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)),
 	(q_2, (h_1, h_2, h_3, h_4, h_7, h_8))]\] for example means
-	that the current DFA state has one thread in $q_1$ with
-	histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another in
+	that the current DFA state has one thread in NFA state $q_1$ with
+	histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another thread in NFA state
 	$q_2$ with the histories $(h_1, h_2, h_3, h_4, h_7, h_8)$.
 	Note that histories can be shared across threads if they
 	have the same matches.
 \item[Histories] are linked list, where each node stores a position in the input text.
-The head is mutable, the rest is immutable. Therefore, histories can share any node
-except their heads. We write $h=[x_1, \dots, x_m]$ to describe that matches occurred
-at the positions $x_1, \dots, x_m$. 
+	The head is mutable, the rest is immutable. Therefore, histories can share any node
+	except their heads. We write $h=[x_1, \dots, x_m]$ to describe that matches occurred
+	at the positions $x_1, \dots, x_m$. 
+\item[Threads] are denoted as pairs $(q_i, h)$, where $q_i$ is some
+	NFA state, and $h = (h_1, \dots, h_{2n})$ is an array of histories,
+	where $n$ is the number of capture groups.  Each thread has an array
+	of $2n$ histories. In an array of histories $(h_1, h_2, \dots
+	h_{2n-1}, h_{2n})$, history $h_1$ is the history of the openings
+	of the first capture group, $h2$ is the history of the closings of
+	the first capture group, and so on.
 \item[Transitions] are  understood to be between NFA states,
-$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
-\item[NFA states] are denoted as $q_i$ and their array of histories
-$(h_1, \dots, h_{2n})$, where $n$ is the number of capture groups.
-Each NFA state has an array of $2n$ histories. This is written as
-$(h_1, h_2, \dots h_{2n-1}, h_{2n})$. Here, $h_1$ is the history
-of the openings of the first capture group, $h2$ is the history of
-the closings of the first capture group, and so on.
+	$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
 \end{description}
 
 Take, for example, the regular expression \texttt{(..)+} matching
@@ -491,7 +485,7 @@ Mark all threads in low as hungry.
 	\lIf{$q'$ is marked as seen}{ jump to top of while loop \;}
 	mark $q'$ as seen\;
 	add $(q', [h_{1},\dots,h_{n}])$ to buffer\;
-	\ForEach{$\varepsilon$-transitions $t$ from $q'$ to $q''$}{
+	\ForEach{$\varepsilon$ transitions $t$ from $q'$ to $q''$}{
 		\lIf{$q''$ is marked as seen}{continue for loop\;}
 		\If{$t$ is tagged with an open or close tag}{
 			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
@@ -534,9 +528,9 @@ work the same way, just with reversed priorities} will survive. At
 no point of the algorithm are the two states both present in the
 result and thus in conflict. In a nutshell, the algorithm works as
 follows: The NFA states are taken, in order, they eat one input
-character, and then follow only high-priority edges, saving
-low-priority edges on a stack.  Once we're out of high-priority
-edges, we continue with low priority edges, until all possible
+character, and then follow only high-priority transitions, saving
+low-priority transitions on a stack.  Once we're out of high-priority
+transitions, we continue with low priority transitions, until all possible
 transitions have been followed. The starting state is obtained
 from Algorithm~\ref{onestep}, taking the starting NFA state as input,
 with the slight twist that no input character is consumed.
@@ -555,7 +549,7 @@ a fork of the thread of state 6, not 3. This matters, since 6 and
 Consider the automaton in figure \ref{fig:example-automaton} is in
 the DFA state \footnote{NFA states that do not have any outgoing
 transitions except for $\varepsilon$ transitions can be omitted,
-since the first step will only consider edges which consume the
+since the first step will only consider transitions which consume the
 next character of the input.}
 \begin{align*}
 Q=[
@@ -582,7 +576,7 @@ fed threads can only follow $\varepsilon$ transitions.
 \item Fill the \emph{low} stack with hungry threads of all states of $Q$.
 Now, $\mathit{low}=[(q_6, H_2), (q_3, H_1))]$, where the first element is the head of the stack.
 \item Initialize \emph{buffer} as an empty stack. 
-The \emph{buffer} stack exists because while following high priority edges, states are discovered
+The \emph{buffer} stack exists because while following high priority transitions, states are discovered
 in an order that is reversed with respect to the order in which we would like to output them.
 \item Initialize $R=[\ ]$, the DFA state under construction.
 \item Thread $(q_6,H_2)$ is popped from the \emph{low} stack, since \emph{high} is empty. It is hungry.
@@ -590,7 +584,7 @@ in an order that is reversed with respect to the order in which we would like to
 \item $(q_7, H_2)$ is pushed to \emph{high} as fed, and we continue the main loop.
 \item $(q_7, H_2)$ is taken from the \emph{high} stack. It is fed.
 \item $(q_7, H_2)$ is pushed on \emph{buffer}.
-\item Since $(q_7, H_2)$ is fed, it follows $\varepsilon$-edges.
+\item Since $(q_7, H_2)$ is fed, it follows $\varepsilon$ transitions.
 \item The available transition $q_7\rightarrow q_8$ is evaluated:\begin{enumerate}
 	\item 	This transition has a opening tag for capture group 3 on it, and so we'd like to change $h_5$, 
 		the relevant history (see definition of $Q$ above). However, since we're \emph{spawning} a new thread, we cannot change $h_5$ itself.
@@ -679,7 +673,7 @@ that the DFA is \emph{lazily compiled}.
 
 \subsection{DFA transition table}
 The DFA transition table is different from the NFA transition table,
-in that the NFA transition table contains $\varepsilon$ edges and
+in that the NFA transition table contains $\varepsilon$ transitions and
 may have more than one transition from one state to another, for
 the same input range. DFA transition tables allow no ambiguity.
 
