@@ -425,8 +425,8 @@ We use the following vocabulary.
 \end{description}
 
 Take, for example, the regular expression \texttt{(..)+} matching
-pairs of characters on the string ``abcd'', then the history of the
-finishing NFA state is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
+pairs of characters, on the input string ``abcd''. The history array of the
+finishing thread  is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
 Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0 thru 3.
 Histories $h_3$ and $h_4$ contain the positions of all the matches of capture group 1, in reverse. That is:
 one match from 0 thru 1, and another from 2 thru 3.
@@ -440,7 +440,7 @@ step. There are four kinds of instructions:
 \item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
 	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
 \item [$c\uparrow(h)$] Prepends history $h$ with a new node that becomes the new head.
-	This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$ 
+	This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$
 	describes the opening position of the capture group and is therefore called the opening commit. 
 \item [$c\downarrow(h)$] This is the same as $c\uparrow(h)$ except that it denotes a closing commit marking the end of the capture group. 
 	This distinction is only for clarity, the semantics is the same for opening and closing commits.
@@ -492,7 +492,7 @@ Mark all threads in low as hungry.
 			Make a new history $h'$\;
 			$h_{i} \mapsto h'$ \label{algline:old-copy}\tcp*{Copy old history}
 			\eIf{$t$ has a open tag}{
-				Let $newHistories$ be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
+				Let newHistories be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
 				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
 			}{
 				\tcp{$t$ has a close tag}
@@ -502,7 +502,7 @@ Mark all threads in low as hungry.
 				$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
 				Commit $h'$\;
 				Commit $h''$\;
-				Let $newHistories$ be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
+				Let newHistories be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
 			}
 		}					
 				
@@ -565,12 +565,14 @@ and only if it is empty do we pop from the \emph{low} stack.
 We will pretend for clarity that instructions are executed directly
 after they are encountered.  The actual algorithm collects them and
 executes them after the \emph{oneStep} call to allow further
-optimizations.  This is the execution of \emph{oneStep}(\emph{NFA},
-``,'', $1$, $Q$):
+optimizations.  
 
 Further, in the scope of this algorithm, threads have one extra bit of information attached to them:
 they can be hungry or fed. Hungry threads can only follow transitions that consume characters,
 fed threads can only follow $\varepsilon$ transitions.
+
+This is the execution of \emph{oneStep}(\emph{NFA},
+``,'', $1$, $Q$):
 
 \begin{enumerate}
 \item Fill the \emph{low} stack with hungry threads of all states of $Q$.
@@ -692,7 +694,7 @@ input ranges.
 
 To give us a chance to ever be in a state that is already in the
 transition table, we check, after executing algorithm \ref{onestep},
-\texttt{onestep}, whether there is a known DFA state that is
+\texttt{oneStep}, whether there is a known DFA state that is
 \emph{mappable} to the output of \texttt{oneStep}.  If \texttt{oneStep}
 produced a DFA state $Q$, and there is a DFA state $Q'$ that contains
 the same NFA states, in the same order then $Q$ and $Q'$ may be
@@ -854,9 +856,8 @@ However, the above structure isn't a great fit with lazy compilation,
 as new transitions might have to be added into the middle of the
 table at any time.  Another problem is that, above, the state is
 represented as an integer.  However, as described in the algorithm,
-a DFA state is really a list of NFA states and their arrays of
-histories. If we need to lazily compile another DFA state, all of
-these need to be examined.
+a DFA state is really a list of threads. If we need to lazily compile
+another DFA state, all of the threads need to be examined.
 
 The compromise we found is the following: The canonical representation
 of the transition table is a red-black tree of transitions, each
