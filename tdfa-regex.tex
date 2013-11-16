@@ -148,8 +148,10 @@ In standard TDFA matching, all paths through the NFA are walked simultaneously,
 as if in different threads, where inside each thread, it is fully
 known when which capture group was entered or left. We extend this
 model to keep track of not just the last opening and closing of capture
-groups, but all of them. We do this by storing, in every thread, using
-the fly-weight pattern, a history of the all groups. Thus, we log
+groups, but all of them. We do this by storing in every thread 
+a history of the all groups using the flyweight pattern. 
+
+Thus, we log
 enough information during parsing to build up the complete AST at
 the end of parsing.
 \end{abstract}
