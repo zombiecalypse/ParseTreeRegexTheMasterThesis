@@ -329,7 +329,7 @@ one from 4 back to 3, to match more than one time any character,
 and another one from 3 to 4, to enable matching nothing at all.
 Importantly, the transition from 4 back to 3 is marked as low
 priority (the ``--'' sign) while the transition leaving the automaton,
-from 4 to 5, is unmarked, which means normal priority.  This means
+from 3 to 5, is unmarked, which means normal priority.  This means
 that the NFA will prefer leaving the repeating expression, rather
 than staying in it.  If the expression were greedy, then we would
 mark the transition from 3 to 5 as low-priority, and the NFA would
