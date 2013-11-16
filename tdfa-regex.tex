@@ -934,20 +934,21 @@ bear in mind that java.util.regex does not extract parse trees, but
 only the last match of all capture groups.  A backtracking
 implementation that actually does produce complete parse trees is
 JParsec\footnote{\url{http://jparsec.codehaus.org}}, which, as also
-seen in \Tabref{abc}, performs on par with our approach, even though
-for JParsec never needs to back-track for the input. That may be
-because JParsec is a general-purpose parser with much bigger machinery
-than java.util.regex, and so, to parse regular expressions, it
-follows the same overall algorithm as java.util.regex, but always
-with a bigger constant attached.  For this reason, and because
-non-greedy matching cannot be expressed directly in JParsec, we did
-not implement any further JParsec benchmarks.
+seen in \Tabref{abc}, performs on par with our approach. 
 
-Note because java.util.regex achieves its back-tracking through recursion,
-we had to set the stack size to one Gigabyte for it to parse the input.
+%That may be
+%because JParsec is a general-purpose parser with much bigger machinery
+%than java.util.regex, and so, to parse regular expressions, it
+%follows the same overall algorithm as java.util.regex, but always
+%with a bigger constant attached.  For this reason, and because
+%non-greedy matching cannot be expressed directly in JParsec, we did
+%not implement any further JParsec benchmarks.
+
+Note that because java.util.regex achieves its back-tracking through recursion,
+we had to set the JVM's stack size to one Gigabyte for it to parse the input.
 Since default stack size is only a few megabytes, this makes using
 java.util.regex a security risk, even for unproblematic regular expressions
-that cannot backtrack, since an attacker can potentially force the VM to run 
+that cannot cause backtracking, since an attacker can potentially force the VM to run 
 out of stack space.
 
 \begin{table}
@@ -1030,13 +1031,14 @@ found out how to get POSIX-style matching out of Laurikari's TDFA.
 
 Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
 used in the text editor sam~\cite{Pike87a}.  While sam was released
-as free software, the algorithm wasn't published anywhere.  Sam
-uses Thompson's NFA, but adds submatch tracking. This seems unfair
-in that Laurikari's allows for far more aggressive reuse of old
-states than Thompson allows. This should lead to Laurikari's TDFA
-having fewer states, and therefore better performance, than even
-Google's RE2\footnote{\url{https://code.google.com/p/re2/}}, which
-uses Pike's algorithm.  This is not confirmed by the benchmarks by
+as free software, no description of his regular expression matching,
+besides the source code, was published.  Sam uses Thompson's NFA,
+but adds submatch tracking. This seems unfair in that Laurikari's
+allows for far more aggressive reuse of old states than Thompson
+allows. This should lead to Laurikari's TDFA having fewer states,
+and therefore better performance, than even Google's
+RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses
+Pike's algorithm.  This is not confirmed by the benchmarks by
 Sulzmann and Lu \cite{Sulz12a}, but they offer an explanation: in
 their profiling, they see that all Haskell implementations spend
 considerable time decoding the input strings. In other words, the
