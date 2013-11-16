@@ -527,13 +527,14 @@ the one that follows greedy matching\footnote{Non-greedy operators
 work the same way, just with reversed priorities} will survive. At
 no point of the algorithm are the two states both present in the
 result and thus in conflict. In a nutshell, the algorithm works as
-follows: The NFA states are taken, in order, they eat one input
+follows: The threads are scheduled, in order, they eat one input
 character, and then follow only high-priority transitions, saving
 low-priority transitions on a stack.  Once we're out of high-priority
-transitions, we continue with low priority transitions, until all possible
-transitions have been followed. The starting state is obtained
-from Algorithm~\ref{onestep}, taking the starting NFA state as input,
-with the slight twist that no input character is consumed.
+transitions, we continue with low priority transitions, until all
+possible transitions have been followed. Then, we schedule the next
+input thread.  The starting state is obtained from Algorithm~\ref{onestep},
+taking the starting NFA state as input, with the slight twist that
+no input character is consumed.
 
 Note that the ordering of threads inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
@@ -547,10 +548,9 @@ a fork of the thread of state 6, not 3. This matters, since 6 and
 
 \begin{example} Execution of algorithm \ref{onestep}: \label{ex:oneStep1}
 Consider the automaton in figure \ref{fig:example-automaton} is in
-the DFA state \footnote{NFA states that do not have any outgoing
-transitions except for $\varepsilon$ transitions can be omitted,
-since the first step will only consider transitions which consume the
-next character of the input.}
+the DFA state\footnote{This is the starting state, except for the omission of threads 
+that would die immediately after scheduling because there are no consuming
+transitions attached to their NFA state.}
 \begin{align*}
 Q=[
 	(q_6, H_2=(&h_1, h_2, h_7,  h_8, h_5, h_6)), \\
