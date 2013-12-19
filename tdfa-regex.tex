@@ -12,7 +12,7 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage[lined,linesnumbered,commentsnumbered]{algorithm2e}
+\usepackage[lined,linesnumbered,commentsnumbered,norelsize]{algorithm2e}
 \theoremstyle{definition}
 \newtheorem{example}{Example}[section]
 \newtheorem*{notation}{Notation}
@@ -168,7 +168,7 @@ but the match will only contain \texttt{``Tom Lehrer''} for the
 second capture group and \texttt{``1''} for the third. That is,
 the parse tree found by the \textsc{posix} is seen in \Figref{posix}.
 
-\begin{figure}[h]
+\begin{figure}[htp]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/posix_parse}
 \caption{\figlabel{lehrer-posix} Parse tree produced by \textsc{posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
@@ -179,7 +179,7 @@ Lehrer,1;Alan Turing,2;''.}
 With our algorithm we are able to reconstruct the full parse
 tree after the matching phase is done, as seen in \Figref{our-tree}.
 
-\begin{figure}[h]
+\begin{figure}[htp]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/full_parse}
 \caption{\figlabel{lehrer-tree} Parse tree produced by our approach matching regular expression \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
@@ -187,7 +187,7 @@ Lehrer,1;Alan Turing,2;''}
 \figlabel{our-tree}
 \end{figure}
 
-The amortized run time of our approach is $O(m^2n)$, where $m$ is
+The amortized run time of our approach is $O(nm\log(m))$, where $m$ is
 the length of the regular expression and $n$ is the length of the
 parsed string. It is the first algorithm to achieve this bound,
 while extracting parse trees. The best-known algorithm to parse
@@ -302,7 +302,7 @@ Lehrer,1;Alan Turing''.  This is, of course, not what we expect.
 Non-greediness, here, ensures that we get ``Tom Lehrer'', then
 ``Alan Turing'' as the matches of the first capture group.
 
-\begin{figure}[h]
+\begin{figure}[htp]
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
 \caption{\label{fig:example-automaton}
@@ -658,11 +658,13 @@ $(q_4, H_1)$,  $(q_5, H_1)$, will die as soon as they are scheduled in
 the next iteration of the algorithm, because there are no outgoing
 non-$\varepsilon$ transitions attached to their NFA states.
 
-The overall run time of algorithm \ref{onestep} is $O(m^2)$. The
-only reason that it isn't $O(m)$ is that we must copy arrays of
-histories. Our intuition is that the extra factor isn't needed, if
-only we change the data structure holding all histories to something
-more subtle.
+The overall run time of algorithm \ref{onestep} is $O(m\log(m))$.
+To achieve this bound, we must be able to copy arrays of histories in time $O(\log(m))$.
+This is easily achieved replacing the array by a persistent~\cite{Dris89a} 
+data structure to hold the array. A persistent treap, sorted by array index,
+has all necessary properties\footnote{Dana Jansens's  ``Persistent Binary Search Trees''
+at \url{http://cg.scs.carleton.ca/~dana/pbst/} explains a general-purpose implementation.
+See the source code of our regular expression engine for a more specialized, simpler implementation.}.
 
 \section{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
@@ -905,7 +907,7 @@ of ``java.util.regex'' quickly explodes exponentially, even for tiny input, for
 a pathological regular expression, while our approach slows down
 only linearly. The raw data is seen in \Tabref{patho}.
 
-\begin{figure}[h]
+\begin{figure}[htp]
 \includegraphics[width=\linewidth]{graphs/pathological-with-axes.pdf}
 \caption{Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is java.util.regex.}
 \figlabel{patho}
