@@ -663,9 +663,9 @@ The overall run time of algorithm \ref{onestep} is $O(m\log(m))$.
 To achieve this bound, we must be able to copy arrays of histories in time $O(\log(m))$.
 This is easily achieved replacing the array by a persistent~\cite{Dris89a} 
 data structure to hold the array. A persistent treap, sorted by array index,
-has all necessary properties\footnote{Dana Jansens's  ``Persistent Binary Search Trees''
-at \url{http://cg.scs.carleton.ca/~dana/pbst/} explains a general-purpose implementation.
-See the source code of our regular expression engine for a more specialized, simpler implementation.}.
+has all necessary properties\footnote{Clojure~\cite{Hick08} features a slightly more complex 
+data structure under the name of `persistent vectors'. Jean Niklas L'orange offers
+a good explanation in ``Understanding Clojure's Persistent Vectors'', \url{http://hypirion.com/musings/understanding-persistent-vector-pt-1}.}.
 
 \section{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
