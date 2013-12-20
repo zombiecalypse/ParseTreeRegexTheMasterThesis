@@ -1062,6 +1062,16 @@ Sulzmann and Lu add to the table a new matching strategy that yields
 good practical performance, although the theoretical bounds are considerably
 worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
 
+Kearns~\cite{Kear91a} describes the first linear-time algorithm for RE parsing.
+Dub\'e and Feeley~\cite{Dube00a} produce parse trees in linear time using lists as their 
+data representation. Nielsen and Henglein~\cite{Niel11a} improve on it by storing the trees in bit-coded form. 
+Neither produces a greedy or non-greedy parse.
+Grathwohl~\cite{Grat13a} produce a greedy parse in two over the input.
+In comparison, our approach allows full control over greediness, even for subexpressions, 
+thus generalizing over all previous approaches. 
+It runs in only one pass and supports character ranges, lazy compilation, 
+and compactified DFA representation for practical performance.
+
 \section{Conclusion}
 Our approach can produce entire parse trees while matching regular
 expressions.  The performance is on par with traditional back-tracking
@@ -1074,5 +1084,5 @@ benchmarks are available under a free license on
 Dropbox\footnote{\url{https://www.dropbox.com/s/p19e4q8u7ci0okv/tree-regex.zip}}.
 
 \bibliographystyle{plain}
-\bibliography{biblio,bib/scg}
+\bibliography{bib/scg}
 \end{document}

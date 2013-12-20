@@ -28,6 +28,31 @@ R.~Cox.
 \newblock Regular expression matching in the wild.
 \newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp3.html}, 2010.
 
+\bibitem{Dris89a}
+James~R. Driscoll, Neil Sarnak, Daniel~D. Sleator, and Robert~E. Tarjan.
+\newblock Making data structures persistent.
+\newblock {\em Journal of Computer and System Sciences}, 38(1):86--124,
+  February 1989.
+
+\bibitem{Dube00a}
+Danny Dub\'{e} and Marc Feeley.
+\newblock Efficiently building a parse tree from a regular expression.
+\newblock 37(2):121--144, 2000.
+
+\bibitem{Grat13a}
+Niels Bj{\o}rn~Bugge Grathwohl, Fritz Henglein, Lasse Nielsen, and Ulrik~Terp
+  Rasmussen.
+\newblock {Two-Pass} greedy regular expression parsing.
+\newblock In Stavros Konstantinidis, editor, {\em Implementation and
+  Application of Automata}, volume 7982 of {\em Lecture Notes in Computer
+  Science}, pages 60--71. Springer Berlin Heidelberg, 2013.
+
+\bibitem{Hick08}
+Rich Hickey.
+\newblock The {Clojure} programming language.
+\newblock In {\em DLS '08: Proceedings of the 2008 symposium on Dynamic
+  languages}, pages 1--1, New York, NY, USA, 2008. ACM.
+
 \bibitem{Jaco09a}
 Adam Jacobs.
 \newblock The pathologies of big data.
@@ -38,6 +63,12 @@ L.~Karttunen, J.~P. Chanod, G.~Grefenstette, A.~Schiller, and Received
   February.
 \newblock Regular expressions for language engineering.
 \newblock In {\em Natural Language Engineering}, pages 305--328, 1996.
+
+\bibitem{Kear91a}
+Steven~M. Kearns.
+\newblock Extending regular expressions with context operators and parse
+  extraction.
+\newblock {\em Softw: Pract. Exper.}, 21(8):787--804, August 1991.
 
 \bibitem{Kukl07a}
 Chris Kuklewicz.
@@ -57,6 +88,14 @@ Chad~R. Meiners, Jignesh Patel, Eric Norige, Eric Torng, and Alex~X. Liu.
   intrusion detection and prevention systems.
 \newblock In {\em Proceedings of the 19th USENIX conference on Security},
   USENIX Security'10, page~8, Berkeley, CA, USA, 2010. USENIX Association.
+
+\bibitem{Niel11a}
+Lasse Nielsen and Fritz Henglein.
+\newblock Bit-coded regular expression parsing.
+\newblock In Adrian-Horia Dediu, Shunsuke Inenaga, and Carlos Mart\'{\i}n-Vide,
+  editors, {\em Language and Automata Theory and Applications}, volume 6638 of
+  {\em Lecture Notes in Computer Science}, pages 402--413. Springer Berlin
+  Heidelberg, 2011.
 
 \bibitem{Pike87a}
 R.~Pike.
