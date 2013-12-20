@@ -6,6 +6,7 @@
 \usepackage{refstyle}
 \usepackage{float}
 \usepackage{textcomp}
+\usepackage{booktabs}
 \usepackage{amsthm}
 \usepackage{amstext}
 \usepackage{amsmath}
@@ -913,16 +914,14 @@ only linearly. The raw data is seen in \Tabref{patho}.
 \figlabel{patho}
 \end{figure}
 
-\begin{table}
+\begin{table}[htp]
 \begin{tabular}{ccccccccc}
-\hline 
+\toprule
 $n$ & 13 & 14 & 15 & 16 & 17 & 18 & 19 & 20\tabularnewline
-\hline 
-\hline 
+\midrule
 Oracle & 241 & 484 & 1003 & 1874 & 3555 & 7381 & 14561 & 30116\tabularnewline
-\hline 
 Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
-\hline 
+\bottomrule
 \end{tabular}
 \caption{Matching times, in microseconds, for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.}
 \tablabel{patho}
@@ -952,18 +951,15 @@ java.util.regex a security risk, even for unproblematic regular expressions
 that cannot cause backtracking, since an attacker can potentially force the VM to run 
 out of stack space.
 
-\begin{table}
+\begin{table}[htp]
 \begin{tabular}{cc}
-\hline 
-Tool & time\tabularnewline
-\hline 
-\hline 
+\toprule
+Tool & Time\tabularnewline
+\midrule
 JParsec & 4,498\tabularnewline
-\hline 
 java.util.regex & 1,992\tabularnewline
-\hline 
 Ours & 5,332\tabularnewline
-\hline 
+\bottomrule
 \end{tabular}
 \caption{Matching regular expression \texttt{((a+b)+c)+} against input (a\^{}200bc)\^{}2000, where a\^{}200 denotes 200 times character `a'. Time in microseconds.}
 \tablabel{abc}
@@ -977,16 +973,14 @@ even though our approach constructs the entire parse tree, and thus
 all class names, while java.util.regex outputs only the last matched
 class name.
 
-\begin{table}
+\begin{table}[htp]
 \begin{tabular}{cc}
-\hline 
-Tool & time\tabularnewline
-\hline 
-\hline 
+\toprule
+Tool & Time\tabularnewline
+\midrule
 java.util.regex & 11,319\tabularnewline
-\hline 
 Ours & 8,047\tabularnewline
-\hline 
+\bottomrule
 \end{tabular}
 \caption{Runtimes, in microseconds, for finding all java class names in all .java files in the project itself. The regular expression used is 
 \texttt{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
