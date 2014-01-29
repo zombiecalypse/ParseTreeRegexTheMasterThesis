@@ -1,9 +1,8 @@
-\documentclass[english]{sigplanconf}
+\documentclass[english,twocolumn]{article}
 \usepackage[T1]{fontenc}
 \usepackage[latin9]{inputenc}
 \usepackage[english]{babel}
 \usepackage{verbatim}
-\usepackage{refstyle}
 \usepackage{float}
 \usepackage{textcomp}
 \usepackage{booktabs}
@@ -13,7 +12,15 @@
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{xcolor}
-\usepackage[lined,linesnumbered,commentsnumbered,norelsize]{algorithm2e}
+\usepackage{tikz}
+\usetikzlibrary{arrows,automata,shapes}
+\usepackage{algpseudocode}
+\usepackage{float}
+\usepackage{caption}
+\newfloat{algorithm}{t}{lop}
+\floatname{algorithm}{Algorithm}
+\algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
+
 \theoremstyle{definition}
 \newtheorem{example}{Example}[section]
 \newtheorem*{notation}{Notation}
@@ -40,6 +47,14 @@
 \newcommand{\ra}{$\rightarrow$}
 \newboolean{showedits}
 \setboolean{showedits}{false} % toggle to show or hide edits
+
+\newcommand{\Figref}[1]{figure~\ref{fig:#1}}
+\newcommand{\Secref}[1]{section~\ref{sec:#1}}
+\newcommand{\Tabref}[1]{table~\ref{tab:#1}}
+\newcommand{\figlabel}[1]{\label{fig:#1}}
+\newcommand{\seclabel}[1]{\label{sec:#1}}
+\newcommand{\tablabel}[1]{\label{tab:#1}}
+
 \ifthenelse{\boolean{showedits}}
 {
 	\newcommand{\ugh}[1]{\textcolor{red}{\uwave{#1}}} % please rephrase
@@ -116,25 +131,15 @@
 
 	% remember to use [htp] or [htpb] for placement
 
+\author{Aaron Karper \and Niko Schwarz}
 \begin{document}
 \special{papersize=8.5in,11in}
 \setlength{\pdfpageheight}{\paperheight}
 \setlength{\pdfpagewidth}{\paperwidth}
 
-\conferenceinfo{CONF 'yy}{Month d--d, 20yy, City, ST, Country}
-\copyrightyear{20yy} 
-\copyrightdata{978-1-nnnn-nnnn-n/yy/mm} 
-\doi{nnnnnnn.nnnnnnn}
-
 \frenchspacing
 
 \title{Efficient regular expressions that produce parse trees}
-
-\authorinfo{Nobody}
-
-\authorinfo{Nobody}
-      
-\authorinfo{Nobody}
 
 \maketitle
 
@@ -145,21 +150,21 @@ We describe a technique for building
 up the complete parse tree resulting from matching a text against
 a regular expression.
 
-In standard TDFA matching, all paths through the NFA are walked
-simultaneously, as if in different threads, where inside each thread,
+In standard tagged deterministic finite-state automaton (TDFA) matching, 
+all paths through the non-deterministic finite-state automaton (NFA) are walked
+simultaneously, in different co-routines, where inside each co-routine,
 it is fully known when which capture group was entered or left. We
 extend this model to keep track of not just the last opening and
 closing of capture groups, but all of them. We do this by storing
-in every thread a history of the all groups using the flyweight
+in every co-routine a history of the all groups using the flyweight
 pattern.  Thus, we log enough information during parsing to build
-up the complete parse tree after matching.
+up the complete parse tree after matching in a single pass.
 
 \end{abstract}
 
 
 \section{Introduction}
 
-\global\long\def\regex{\text{\text{regular expression}}}
 A regular expression can easily describe that a text matches a comma
 separated values file, but it is unable to extract all the values.
 Instead it will only give a single instance of values: \texttt{((.*?),(\textbackslash d+);)+} might describe a dataset of ASCII names
@@ -188,7 +193,7 @@ Lehrer,1;Alan Turing,2;''}
 \figlabel{our-tree}
 \end{figure}
 
-The amortized run time of our approach is $O(nm\log(m))$, where $m$ is
+The worst-case run time of our approach is $O(n\,m\,\log(m))$, where $m$ is
 the length of the regular expression and $n$ is the length of the
 parsed string. It is the first algorithm to achieve this bound,
 while extracting parse trees. The best-known algorithm to parse
@@ -216,9 +221,9 @@ string: ``"h;i",there;"h;,i",Paul;''.  It is easy to see that, in
 order to extract all four capture group matches, it is insufficient
 to split the input at the semicolon, as that would split the field
 ``h;i'' in half.  More involved examples, where hand-written parsers
-become harder to make, are easily constructed.  In contrast, our
-approach yields the entire parse tree, simply from the regular
-expression.
+become harder to make and more inefficient, are easily constructed.
+In contrast, our approach yields the entire parse tree, simply from
+the regular expression in at most $O(n\,m\,\log m)$ time.
 
 
 
@@ -255,37 +260,38 @@ character. The choice of transition is limited by the transition's
 character range. A transition can only be followed if the current
 input character is inside transition's character range. NFAs differ
 from DFAs in that for some input character and some state, there
-may be more than one applicable transition. If there is, an
-NFA will magically guess the correct one. \autoref{fig:example-automaton}
+may be more than one applicable transition and even transitions that can
+be traversed without consuming a character, called $\varepsilon$-transitions.
+If there is a transition that will eventually lead to the accepting
+state, an NFA will magically guess the correct one. \autoref{fig:example-automaton}
 shows an example of an NFA's transition graph. For the moment, let
 us discuss regular expression matching on NFAs. Assuming that the
 NFA just magically knows the right transition lets us focus on the
 important things, greediness control and capture groups.
 
-Conceptually, our approach is the following pipeline of four stages.
+Conceptually, our approach is the following pipeline of four stages:
 \begin{enumerate}
-  \item Parse the regular expression string into an AST.
-  \item Transform the AST to an NFA.
-  \item Transform the NFA to a DFA. 
-  \item Compactify the DFA.
+  \item Parse the regular expression string into an AST (\Secref{regex-syntax}).
+  \item Transform the AST to an NFA (\Secref{thompson}).
+  \item Transform the NFA to a DFA (\Secref{dfa}).
+  \item Compactify the DFA (\Secref{compact}).
 \end{enumerate}
 
 In reality, things are a little more involved, since the transformation
 to DFA is lazy, and the compactification only happens after no lazy
 compilation occurred in a while. Worse, compactification can be
-undone if needed. We'll get back to these details in \secref{compact}.
-Let's discuss the stages in turn, starting with 2, since step 1,
-the parsing of the regular expression grammar, is reasonably
-straightforward.
+undone if needed. Since the essence of the algorithm is step 2 and 3, 
+we will start with them and proceed see 1 and 4 as part of the implementation.
 
-\subsection{Thompson's construction} 
+\subsection{Thompson's construction} 	\seclabel{thompson}
 
-We transform the AST of the regular expression into an NFA,
+We transform the abstract syntax tree (AST) of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
-control greediness, or discern capture groups, our approach adds
+control greediness, or discern capture groups, our approach adds tagged
 $\varepsilon$ transitions to the transition graph. An
 $\varepsilon$ transition has no input range assigned, and can thus always
-be used. It does not consume an input character.
+be used. It does not consume an input character. Tagged transitions 
+mark the beginning or end of capture groups or controll the prioritization.
 The additions are needed for greediness control and capture groups.
 Let's look at both, in turn.
 
@@ -344,7 +350,7 @@ discussing the transformation from NFA states to DFA states.
 
 \begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
 \caption{Modified Thompson~\cite{Thom68a} construction of the
-automaton:Descend into the abstract syntax tree of the regular
+automaton: Descend into the abstract syntax tree of the regular
 expression and expand the constructs recursively.}
 \label{fig:thompson-construction} 
 \end{figure*}
@@ -369,33 +375,35 @@ of the matcher.
 
 \global\long\def\pos{\mathbf{\mathbf{p}}}
 
-\subsection{DFAs}
+\subsection{DFAs}	\seclabel{dfa}
 
 Our above definition of regular expression assumes a machine that
 guesses the correct transition through magic. To implement regular
 expression matching without supernatural intervention, we lazily transform
 the NFA to a DFA. 
 
-A useful metaphor for regular expression matching is that of threads
-\cite{Cox07a}. Whenever we aren't sure which transition to take,
-we ``fork'' a thread for every option that we have. This way, when
-the input is over, there must be at least one thread that guessed
-correctly at all times. We use the word ``thread'' here to guide
-intuition only. Our approach is not parallel. 
+A useful metaphor for regular expression matching is that of 
+threads\cite{Cox07a} or co-routines (for clarity we will use 
+co-routine, because our algorithm is not parallel).
+Whenever we aren't sure which transition to take,
+we ``fork'' a co-routine for every option that we have. This way, when
+the input is over, there must be at least one co-routine that guessed
+correctly at all times. 
 
-The key insight is that we keep all ``threads'' in lock-step. To
+The key insight is that we keep all co-routines in lock-step. To
 achieve this, we must be very specific about what constitutes the
-state of a thread. Since every thread effectively simulates a different
-NFA, the state inside of a thread contains exactly two items: the
+state of a co-routine. Since every co-routine effectively simulates a different
+NFA run, the state inside of a co-routine contains exactly two items: the
 NFA state it simulates and the history for every tag. Now, the following
-would be a correct, although slow, implementation of a non-magic NFA
-interpreter: whenever an input character is read, we can iterate over
-all threads, kill the ones that have no legal transition for the input
-character, and fork more threads as needed.
+would be a correct, although slow, implementation of an NFA
+interpreter without thaumaturgical component: whenever an input character
+is read, we can iterate over
+all co-routines, kill the ones that have no legal transition for the input
+character, and fork more co-routines as needed.
 
-Trouble starts when we want to fork a thread for an NFA state that
-is already running. Not only is an explosion of threads bad for
-performance, it would also lead to ambiguity: if the two threads
+Trouble starts when we want to fork a co-routine for an NFA state that
+is already running. Not only is an explosion of co-routines bad for
+performance, it would also lead to ambiguity: if the two co-routines
 disagree on the histories, which one is correct?
 
 \begin{notation}
@@ -404,20 +412,20 @@ We use the following vocabulary.
 
 \begin{description}
 \item[DFA states] are denoted by a capital letter, e.g. $Q$, and
-	contain multiple threads.  \[Q=[(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)),
-	(q_2, (h_1, h_2, h_3, h_4, h_7, h_8))]\] for example means
-	that the current DFA state has one thread in NFA state $q_1$ with
-	histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another thread in NFA state
+	contain multiple co-routines.  \begin{equation*}\begin{split}Q=[&(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)),\\
+	&(q_2, (h_1, h_2, h_3, h_4, h_7, h_8))]\end{split}\end{equation*} for example means
+	that the current DFA state has one co-routine in NFA state $q_1$ with
+	histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another co-routine in NFA state
 	$q_2$ with the histories $(h_1, h_2, h_3, h_4, h_7, h_8)$.
-	Note that histories can be shared across threads if they
+	Note that histories can be shared across co-routines if they
 	have the same matches.
 \item[Histories] are linked list, where each node stores a position in the input text.
 	The head is mutable, the rest is immutable. Therefore, histories can share any node
 	except their heads. We write $h=[x_1, \dots, x_m]$ to describe that matches occurred
 	at the positions $x_1, \dots, x_m$. 
-\item[Threads] are denoted as pairs $(q_i, h)$, where $q_i$ is some
+\item[Co-routines] are denoted as pairs $(q_i, h)$, where $q_i$ is some
 	NFA state, and $h = (h_1, \dots, h_{2n})$ is an array of histories,
-	where $n$ is the number of capture groups.  Each thread has an array
+	where $n$ is the number of capture groups.  Each co-routine has an array
 	of $2n$ histories. In an array of histories $(h_1, h_2, \dots
 	h_{2n-1}, h_{2n})$, history $h_1$ is the history of the openings
 	of the first capture group, $h2$ is the history of the closings of
@@ -426,9 +434,9 @@ We use the following vocabulary.
 	$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
 \end{description}
 
-Take, for example, the regular expression \texttt{(..)+} matching
+Take for example the regular expression \texttt{(..)+} matching
 pairs of characters, on the input string ``abcd''. The history array of the
-finishing thread  is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
+finishing co-routine  is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
 Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0 thru 3.
 Histories $h_3$ and $h_4$ contain the positions of all the matches of capture group 1, in reverse. That is:
 one match from 0 thru 1, and another from 2 thru 3.
@@ -445,112 +453,124 @@ step. There are four kinds of instructions:
 	This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$
 	describes the opening position of the capture group and is therefore called the opening commit. 
 \item [$c\downarrow(h)$] This is the same as $c\uparrow(h)$ except that it denotes a closing commit marking the end of the capture group. 
-	This distinction is only for clarity, the semantics is the same for opening and closing commits.
+	This distinction is necessary, because an opening commit will store the position
+	\emph{after} the current character and the closing commit will store the position
+	\emph{at} the current character.
 \end{description}
-
 \end{notation}
 
-\begin{algorithm*}[htpb]
-\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-\DontPrintSemicolon
-\SetAlgoLined
-\Input{Graph of transitions for an NFA,\\
+\begin{algorithm*}[htbp]
+\begin{algorithmic}[1]
+\Require{Graph of transitions for an NFA,\\
 	   Input character $a$,\\
 	   Input position $pos$,\\
-	   a list of threads $Q = [(q, [h_{1},\dots,h_{n}])]$,
+	   a list of co-routines $Q = [(q, [h_{1},\dots,h_{n}])]$,
 	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
-\Output{ Set of threads $R$.}
-\Begin{
-$R\leftarrow [\ ]$\;
-Initialize empty stack buffer\;
-Initialize empty stack high\;
-Initialize stack low so that $(q, h)\in Q$ are retrieved front to back of $Q$.\;
-Mark all threads in low as hungry.
+\Ensure{ Set of co-routines $R$.}
+\State $R\leftarrow [\ ]$\;
+\State Initialize empty stack buffer
+\State Initialize empty stack high
+\State Initialize stack low so that $(q, h)\in Q$ are retrieved front to back of $Q$.
+\State Mark all co-routines in low as hungry.
 
-\tcp{Follow transitions greedily}
-\While{high and low are not both empty}{
-	\eIf{high not empty}{
-		pop $(q', [h_{1},\dots,h_{n}])$ from high\;
-	}{
-		pop $(q', [h_{1},\dots,h_{n}])$ from low\;
+\LineComment{Follow transitions greedily}
+\While{high and low are not both empty}
+	\If{high not empty}
+		\State pop $(q', [h_{1},\dots,h_{n}])$ from high
+	\Else
+		\State pop $(q', [h_{1},\dots,h_{n}])$ from low\;
 		
-		\lWhile{buffer is not empty}{ 
-			pop $(q, [h_{1},\dots,h_{n}])$ from buffer and add it to $R$\;
-		}
-	}
-	\If{current thread is marked hungry}{
-		\ForEach{$a$-consuming transition $e=q'\rightarrow q''$}{
-			push $(q'', [h_{1},\dots,h_{n}])$ to high.\;
-		}
-		jump to top of while.\;
-	}
-	\lIf{$q'$ is marked as seen}{ jump to top of while loop \;}
-	mark $q'$ as seen\;
-	add $(q', [h_{1},\dots,h_{n}])$ to buffer\;
-	\ForEach{$\varepsilon$ transitions $t$ from $q'$ to $q''$}{
-		\lIf{$q''$ is marked as seen}{continue for loop\;}
-		\If{$t$ is tagged with an open or close tag}{
-			Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag\;
-			Make a new history $h'$\;
-			$h_{i} \mapsto h'$ \label{algline:old-copy}\tcp*{Copy old history}
-			\eIf{$t$ has a open tag}{
-				Let newHistories be $[\dots,h_{i-1},h',h_{i+1},\dots]$\;
-				$h' \leftarrow pos+1$ \label{algline:store-after}\tcp*{Store position after current}
-			}{
-				\tcp{$t$ has a close tag}
-				Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag \;
-				Make a new history $h''$\;
-				$h'_{i'} \mapsto h''$ \label{algline:old-copy2}\tcp*{Copy old history}
-				$h'' \leftarrow pos$\label{algline:store-current}\tcp*{Store current position}
-				Commit $h'$\;
-				Commit $h''$\;
-				Let newHistories be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$\;
-			}
-		}					
+		\While{buffer is not empty}
+			\State pop $(q, [h_{1},\dots,h_{n}])$ from buffer and add it to $R$
+		\EndWhile
+	\EndIf
+		
+	\If{current co-routine is marked hungry}
+		\For{$a$-consuming transition $e=q'\rightarrow q''$}
+			\State push $(q'', [h_{1},\dots,h_{n}])$ to high.
+		\EndFor
+		\State jump to top of while.
+	\EndIf
+	
+	\If{$q'$ is marked as seen} \State jump to top of while loop \EndIf
+	\algstore{onestep}
+\end{algorithmic}
+\caption{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up state for DFA state $Q$. Continued on page \pageref{oneStep2}.}
+\end{algorithm*}
+\begin{algorithm*}
+\label{oneStep2}
+
+\ContinuedFloat
+\begin{algorithmic}[1]
+	\algrestore{onestep}
+	\State mark $q'$ as seen
+	\State add $(q', [h_{1},\dots,h_{n}])$ to buffer
+	\For{$\varepsilon$ transitions $t$ from $q'$ to $q''$}
+		\If{$q''$ is marked as seen} \State continue for loop \EndIf
+		\If{$t$ is tagged with an open or close tag}
+			\State Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag
+			\State Make a new history $h'$
+			\State $h_{i} \mapsto h'$ \label{algline:old-copy}\Comment{Copy old history}
+			\If{$t$ has a open tag}
+				\State Let newHistories be $[\dots,h_{i-1},h',h_{i+1},\dots]$
+				\State $h' \leftarrow pos+1$ \label{algline:store-after}\Comment{Store position after current}
+			\Else
+				\LineComment{$t$ has a close tag}
+				\State Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag 
+				\State Make a new history $h''$
+				\State $h'_{i'} \mapsto h''$ \label{algline:old-copy2}\Comment{Copy old history}
+				\State $h'' \leftarrow pos$\label{algline:store-current}\Comment{Store current position}
+				\State Commit $h'$
+				\State Commit $h''$
+				\State Let newHistories be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
+			\EndIf
+		\EndIf		
 				
-		\tcp{Push according to priority of transition:}
-		\eIf{$t$ has low priority}{
-			push $(q'', newHistories)$ to low\;
-		}{
-			push $(q'', newHistories)$ to high\;
-		}
-	}
-}
-}
-\caption{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up state for DFA state $Q$.}
+		\LineComment{Push according to priority of transition:}
+		\If{$t$ has low priority}
+			\State push $(q'', newHistories)$ to low
+		\Else
+			\State push $(q'', newHistories)$ to high
+		\EndIf
+	\EndFor
+\EndWhile
+
+\caption{$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up state for DFA state $Q$. (continued)}
+\end{algorithmic}
 \end{algorithm*}
 
 
-Algorithm~\ref{onestep}  takes as input a set of threads, an NFA
+Algorithm~\ref{onestep}  takes as input a set of co-routines, an NFA
 transition graph, and an input character, and returns the set of
-threads running after the input character has been read. It makes
-sure that if there could be two threads with the same NFA state,
+co-routines running after the input character has been read. It makes
+sure that if there could be two co-routines with the same NFA state,
 the one that follows greedy matching\footnote{Non-greedy operators
-work the same way, just with reversed priorities} will survive. At
-no point of the algorithm are the two states both present in the
+work the same way, just with reversed priorities. Both greediness profiles
+work correctly even if both occur during the onestep execution.} will survive. At
+no point of the algorithm are the two state-memory tuples both present in the
 result and thus in conflict. In a nutshell, the algorithm works as
-follows: The threads are scheduled, in order, they eat one input
+follows: The co-routines are scheduled, in order, they eat one input
 character, and then follow only high-priority transitions, saving
 low-priority transitions on a stack.  Once we're out of high-priority
 transitions, we continue with low priority transitions, until all
 possible transitions have been followed. Then, we schedule the next
-input thread.  The starting state is obtained from Algorithm~\ref{onestep},
+input co-routine.  The starting state is obtained from Algorithm~\ref{onestep},
 taking the starting NFA state as input, with the slight twist that
 no input character is consumed.
 
-Note that the ordering of threads inside of DFA states is relevant.
+Note that the ordering of co-routines inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
-input, state 7 can be reached from two threads: either from the
-thread in state 3, via 4, or from the thread in state 6. The two
-threads are `racing' to capture state 7. Since in the starting
-state, the thread of state 6 is listed first, he `wins the race'
-for state 7, and `captures it'. Thus, the new thread of state 7 is
-a fork of the thread of state 6, not 3. This matters, since 6 and
+input, state 7 can be reached from two co-routines: either from the
+co-routine in state 3, via 4, or from the co-routine in state 6. The two
+co-routines are `racing' to capture state 7. Since in the starting
+state, the co-routine of state 6 is listed first, he `wins the race'
+for state 7, and `captures it'. Thus, the new co-routine of state 7 is
+a fork of the co-routine of state 6, not 3. This matters, since 6 and
 3 may disagree about their histories.
 
 \begin{example} Execution of algorithm \ref{onestep}: \label{ex:oneStep1}
 Consider the automaton in figure \ref{fig:example-automaton} is in
-the DFA state\footnote{This is the starting state, except for the omission of threads 
+the DFA state\footnote{This is the starting state, except for the omission of co-routines 
 that would die immediately after scheduling because there are no consuming
 transitions attached to their NFA state.}
 \begin{align*}
@@ -567,23 +587,23 @@ and only if it is empty do we pop from the \emph{low} stack.
 We will pretend for clarity that instructions are executed directly
 after they are encountered.  The actual algorithm collects them and
 executes them after the \emph{oneStep} call to allow further
-optimizations.  
+optimizations and the storage of the instructions.
 
-Further, in the scope of this algorithm, threads have one extra bit of information attached to them:
-they can be hungry or fed. Hungry threads can only follow transitions that consume characters,
-fed threads can only follow $\varepsilon$ transitions.
+Further, in the scope of this algorithm, co-routines have one extra bit of information attached to them:
+they can be hungry or fed. Hungry co-routines can only follow transitions that consume characters,
+fed co-routines can only follow $\varepsilon$ transitions.
 
 This is the execution of \emph{oneStep}(\emph{NFA},
 ``,'', $1$, $Q$):
 
 \begin{enumerate}
-\item Fill the \emph{low} stack with hungry threads of all states of $Q$.
+\item Fill the \emph{low} stack with hungry co-routines of all states of $Q$.
 Now, $\mathit{low}=[(q_6, H_2), (q_3, H_1))]$, where the first element is the head of the stack.
 \item Initialize \emph{buffer} as an empty stack. 
 The \emph{buffer} stack exists because while following high priority transitions, states are discovered
 in an order that is reversed with respect to the order in which we would like to output them.
 \item Initialize $R=[\ ]$, the DFA state under construction.
-\item Thread $(q_6,H_2)$ is popped from the \emph{low} stack, since \emph{high} is empty. It is hungry.
+\item co-routine $(q_6,H_2)$ is popped from the \emph{low} stack, since \emph{high} is empty. It is hungry.
 \item We iterate all available transitions in the NFA transition graph, and find only $q_6\rightarrow q_7$, which can consume character ``,''.
 \item $(q_7, H_2)$ is pushed to \emph{high} as fed, and we continue the main loop.
 \item $(q_7, H_2)$ is taken from the \emph{high} stack. It is fed.
@@ -591,7 +611,7 @@ in an order that is reversed with respect to the order in which we would like to
 \item Since $(q_7, H_2)$ is fed, it follows $\varepsilon$ transitions.
 \item The available transition $q_7\rightarrow q_8$ is evaluated:\begin{enumerate}
 	\item 	This transition has a opening tag for capture group 3 on it, and so we'd like to change $h_5$, 
-		the relevant history (see definition of $Q$ above). However, since we're \emph{spawning} a new thread, we cannot change $h_5$ itself.
+		the relevant history (see definition of $Q$ above). However, since we're \emph{spawning} a new co-routine, we cannot change $h_5$ itself.
 		Instead, we copy $h_5$, and change the copy.
 	\item	A new history $h$ is created.
 	\item 	$h_5 \mapsto h$. Note that this is constant time, no matter how many entries $h_5$ already has.
@@ -605,20 +625,20 @@ in an order that is reversed with respect to the order in which we would like to
 \item It can follow no further transitions and dies.
 \item We discover that the \emph{high} stack is empty.
 \item We now flush \emph{buffer}: $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[\ ]$.
-	Note that now, $R$ contains two threads in the reverse order in which they were discovered.
+	Note that now, $R$ contains two co-routines in the reverse order in which they were discovered.
 \item $(q_3, H_1)$ is popped from \emph{low}. It is hungry.
-\item  $(q_3, H_1)$ is one of the two threads that constitute the
+\item  $(q_3, H_1)$ is one of the two co-routines that constitute the
 	input of this algorithm. Note how the other, $(q_6, H_2)$, got a
 	chance to follow all of its transitions before $(q_3, H_1)$ was
 	first popped off the low stack.
 \item The only transition that consumes ``,'' is $q_3\rightarrow q_4$:\begin{enumerate}
-	\item $(q_4, H_1)$ is pushed to \emph{high} as a fed thread.
+	\item $(q_4, H_1)$ is pushed to \emph{high} as a fed co-routine.
 \end{enumerate}
 \item $(q_4, H_1)$ is popped from \emph{high}
 \item It is pushed to the \emph{buffer}. \emph{buffer}$=(q_4, H_1)$
 \item $q_4\rightarrow q_3$ is visited.
 \begin{enumerate}
-	\item Thread $(q_3, H_1)$ is pushed to 
+	\item co-routine $(q_3, H_1)$ is pushed to 
 	$ \mbox{low} = (q_3, H_1)$, 
 	because $q_4\rightarrow q_3$ has low priority.
 \end{enumerate}
@@ -633,7 +653,7 @@ in an order that is reversed with respect to the order in which we would like to
 \item It is added to \emph{buffer}.
 \item $q_5\rightarrow q_6$ is visited and contains the closing commit of the second capture group:\begin{enumerate}
 	\item Two histories are created to store the new positions of both the start and the end of the capture group. 
-	This ensures that other threads will not corrupt the memory.
+	This ensures that other co-routines will not corrupt the memory.
 	\item A new history $h$ is for the opening of the capture group.
 	\item A new history $h'$ is created for the closing position.
 	\item $h_3 \mapsto h$. See the definition of $Q$ above, to see that $h3$ is the opening capture group position of $H_1$.
@@ -654,18 +674,28 @@ R=[&(q_8, H_3), (q_7, H_2), (q_4, H_1),\\ &(q_6, H_4), (q_5, H_1), (q_3, H_1)]
 \end{enumerate}
 \end{example}
 
-The output contains six threads, but three of them,  $(q_7, H_2)$,
+The output contains six co-routines, but three of them,  $(q_7, H_2)$,
 $(q_4, H_1)$,  $(q_5, H_1)$, will die as soon as they are scheduled in
 the next iteration of the algorithm, because there are no outgoing
 non-$\varepsilon$ transitions attached to their NFA states.
 
-The overall run time of algorithm \ref{onestep} is $O(m\log(m))$.
-To achieve this bound, we must be able to copy arrays of histories in time $O(\log(m))$.
-This is easily achieved replacing the array by a persistent~\cite{Dris89a} 
-data structure to hold the array. A persistent treap, sorted by array index,
-has all necessary properties\footnote{Clojure~\cite{Hick08} features a slightly more complex 
+The overall run time of algorithm \ref{onestep} depends heavily on the 
+forking of co-routines being efficient: In the worst case, it takes
+$O(m\, T_{fork}(m))$ time. A naive solution is a copy-on-write array, for
+which $T_{fork}(m)=m$ gives $O(m^2)$ for every character read, resulting
+in a $O(n\,m^2)$ regular expression matching, which is only acceptable
+if we assume $m$ to be fixed.
+
+Since at most two histories are actually changed, much of the 
+array would not be modified and could be shared across the original
+co-routine and the forked one. This is easily achieved replacing the
+array by a persistent~\cite{Dris89a} data structure to hold the 
+array. A persistent treap, sorted by array index, has all necessary properties\footnote{Clojure~\cite{Hick08} features a slightly more complex 
 data structure under the name of `persistent vectors'. Jean Niklas L'orange offers
-a good explanation in ``Understanding Clojure's Persistent Vectors'', \url{http://hypirion.com/musings/understanding-persistent-vector-pt-1}.}.
+a good explanation in ``Understanding Clojure's Persistent Vectors'',
+\url{http://hypirion.com/musings/understanding-persistent-vector-pt-1}.}
+and will be further elaborated upon in \Secref{treap}. With
+$T_{fork}=O(\log m)$, the overall runtime is $O(n\,m\,\log m)$.
 
 \section{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
@@ -709,74 +739,39 @@ shows how we can find a mappable state, and the needed instructions.
 The run time of Algorithm~\ref{findmapping} is $O(m)$, where $m$
 is the size of the input NFA.
 
-\begin{algorithm}[htpb]
-\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-\DontPrintSemicolon
-\SetAlgoLined
-\Input{$Q=[(q_i, h_i)]_{i=1\dots n}$ is a DFA state.}
-\Output{A state $Q'$ that $Q$ is \emph{mappable} to.\\
+\begin{algorithm*}[htpb]
+\begin{algorithmic}[1]
+\Require{$Q=[(q_i, h_i)]_{i=1\dots n}$ is a DFA state.}
+\Ensure{A state $Q'$ that $Q$ is \emph{mappable} to.\\
 	The ordered instructions $m$ that reorder the memory 
 		locations of $Q$ to $Q'$ and don't interfere with each other.}
-\Begin{
     
-\ForEach{ $Q'$ that contains the same NFA states as $Q$, in the same order}{
+\For{ $Q'$ that contains the same NFA states as $Q$, in the same order}
 
-	\tcc{Invariant: For each history $H$ there is at most one $H'$\\ so that $H\leftarrow H'$ is part of the mapping.}
-	Initialize empty bimap $m$\; \tcc{A bimap is a bijective map.}
+	\LineComment{Invariant: For each history $H$ there is at most one $H'$\\ so that $H\leftarrow H'$ is part of the mapping.}
+	\State Initialize empty bimap $m$ \Comment{A bimap is a bijective map.}
 	
-	\ForEach{$q_i=q'_i$ with histories $H$ and $H'$ respectively}{
-		\For{$i=0\dots length(H)-1$}{
+	\For{$q_i=q'_i$ with histories $H$ and $H'$ respectively}
+		\For{$i=0\dots length(H)-1$}
     
 			
-			\eIf{$H(i)$ is in $m$ as a key already and does not map to $H'(i)$}{
-				Fail\;
-			}{
-				 \tcc{Hypothesize that this is part of a valid map}
-				Add $H(i) \mapsto H'(i)$ to $m$;
-				}
-			}
-		}
-    }
-	\tcc{The mapping was found and is in $m$.}
+			\If{$H(i)$ is in $m$ as a key already and does not map to $H'(i)$}
+				\State Fail
+			\Else
+				 \LineComment{Hypothesize that this is part of a valid map}
+				\State Add $H(i) \mapsto H'(i)$ to $m$
+			\EndIf
+		\EndFor
+    \EndFor
+\EndFor
+\LineComment{The mapping was found and is in $m$.}
   
-	sort $m$ in reverse topological order so that no values are overwritten. \;
+	\State sort $m$ in reverse topological order so that no values are overwritten.
   
 	\Return{$Q'$ and $m$}
-}
 \caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
-\end{algorithm}
-
-%
-%\begin{example} Executing \texttt{findMapping}.
-%
-%After the execution seen in example~\ref{ex:oneStep1} the new state is 
-%\begin{align*}
-%Q'=\{(q_4, (&h_1=[0], h_2=[0], h_3=[0], \\
-%	&h_4=[0], h_5=[0], h_6=[0])), \\
-%	(q_5, (&h_1=[0], h_2=[0], h_9=[0,0],\\
-%	& h_{10}=[1,1], h_5=[0], h_6=[0]))\}
-%\intertext{and the previous DFA state was}
-%Q=\{(q_3, (&h_1=[0], h_2=[0], h_3=[0],\\
-%	&h_4=[0], h_5=[0], h_6=[0])),\\
-%	(q_5, (&h_1=[0], h_2=[0], h_7=[0,0],\\
-%	&h_8=[0,0], h_5=[0], h_6=[0]))\}
-%\end{align*}
-%
-%This is the execution of $findMapping(Q', DFA)$: 
-%\begin{enumerate}
-%\item $Q$ is considered as a candidate
-%\item $q_3$ is checked \begin{enumerate}
-%	\item All histories can be mapped with the identity.
-%\end{enumerate}
-%\item $q_5$ is checked \begin{enumerate}
-%	\item $h_1, h_2, h_5, h_6$ can be mapped with the identity.
-%	\item $h_9$ can be mapped to $h_7$.
-%	\item $h_{10}$ can be mapped to $h_8$.
-%\end{enumerate}
-%\item The mapping is successful and the instructions $h_8 \leftarrow h_{10}$ and $h_7 \leftarrow h_9$ are returned.
-%\end{enumerate}
-%Note that by construction at most one candidate fulfils the requirement that the same states are present.
-%\end{example}
+\end{algorithmic}
+\end{algorithm*}
 
 \subsection{DFA execution}
 With these ingredients in place, the entire matching algorithm is
@@ -789,50 +784,45 @@ its instructions, but returns them back to the interpreter, both for
 execution and to feed into the transition table.
 
 \begin{algorithm*}[htpb]
-\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
-\DontPrintSemicolon
-\SetAlgoLined
-\Input{$input$ is a sequence of characters.}
-\Output{A tree of matching capture groups.}
-\Begin{
-\tcp{Lazily compiles a DFA while matching.}
+\begin{algorithmic}[1]
+\Require{$input$ is a sequence of characters.}
+\Ensure{A tree of matching capture groups.}
+\LineComment{Lazily compiles a DFA while matching.}
 
-Set $Q$ to startState.\;
-\tcp{A thread is an NFA state, with an array of histories.}
-Let $Q$ be all threads that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.\;
-Execute instructions described in algorithm oneStep, when walking $\varepsilon$ transitions.\;
+\State Set $Q$ to startState.
+\LineComment{A co-routine is an NFA state, with an array of histories.}
+\State Let $Q$ be all co-routines that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.
+\State Execute instructions described in algorithm oneStep, when walking $\varepsilon$ transitions.
 
-\tcp{Create the transition map of the DFA.}
-Set $T$ to an empty map from state and input to new state and instructions.
-\;
-\tcp{Consume string}
-\ForEach{position $pos$ in $input$}{
-	Let $a$ be the character at position $pos$ in $input$.
+\LineComment{Create the transition map of the DFA.}
+\State Set $T$ to an empty map from state and input to new state and instructions.
+\LineComment{Consume string}
+\For{position $pos$ in $input$}
+	\State Let $a$ be the character at position $pos$ in $input$.
 	
-	\eIf{$T$ has an entry for $Q$ and $a$}{
-		\tcp{Let the DFA handle $a$}
-		Read the instructions and new state $Q'$ out of $T$\;
-		execute the instructions\;
-		$Q\leftarrow Q'$\;
-		jump back to start of for loop.\;
-	}{ %else
-		\tcp{lazily compile another DFA state.}
-		Run $\mbox{oneStep}(Q,a)$ to find new state $Q'$ and instructions \;
-		Run $\mbox{findMapping}(Q', T)$ to see if Q' can be mapped to an existing state $Q''$\;
-		\eIf{$Q''$ was found}{
-			Append the mapping instructions from findMapping to the instructions found by oneStep\;
-			Execute the instructions.\;
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.\;
-			Set $Q$ to $Q''$\;
-		}{ %else
-			Execute the instructions found by oneStep.\;
-			Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.\;
-			Set $Q$ to $Q'$.\;
-		}
-	}
-
-}
-}
+	\If{$T$ has an entry for $Q$ and $a$}
+		\LineComment{Let the DFA handle $a$}
+		\State Read the instructions and new state $Q'$ out of $T$
+		\State execute the instructions
+		\State $Q\leftarrow Q'$
+		\State jump back to start of for loop.
+	\Else
+		\LineComment{lazily compile another DFA state.}
+		\State Run $\mbox{oneStep}(Q,a)$ to find new state $Q'$ and instructions 
+		\State Run $\mbox{findMapping}(Q', T)$ to see if Q' can be mapped to an existing state $Q''$
+		\If{$Q''$ was found}
+			\State Append the mapping instructions from findMapping to the instructions found by oneStep\;
+			\State Execute the instructions.
+			\State Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.
+			\State Set $Q$ to $Q''$
+		\Else
+			\State Execute the instructions found by oneStep.
+			\State Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.
+			\State Set $Q$ to $Q'$.
+		\EndIf
+	\EndIf
+\EndFor
+\end{algorithmic}
 \caption{interpret(input): Interpretation and lazy compilation of the NFA.}
 \label{interpret}
 \end{algorithm*}
@@ -860,8 +850,8 @@ However, the above structure isn't a great fit with lazy compilation,
 as new transitions might have to be added into the middle of the
 table at any time.  Another problem is that, above, the state is
 represented as an integer.  However, as described in the algorithm,
-a DFA state is really a list of threads. If we need to lazily compile
-another DFA state, all of the threads need to be examined.
+a DFA state is really a list of co-routines. If we need to lazily compile
+another DFA state, all of the co-routines need to be examined.
 
 The compromise we found is the following: The canonical representation
 of the transition table is a red-black tree of transitions, each
@@ -886,6 +876,95 @@ The lazy compilation of the DFA when matching a string enables us
 to avoid compiling states of it that might never be necessary. This
 allows us to avoid the full power set construction \cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
+
+\subsection{Treap}	\seclabel{treap}
+The treap data structure allows copy-on-write in $\log m$ time, sharing
+much of the structure by using the flyweight pattern as can be seen in \Figref{treap}. The treap is a 
+balanced, left-leaning binary tree with entries in each node, equipped
+with the operations \texttt{get} and
+\texttt{set} as seen in algorithm~\ref{alg:treap}.
+
+\begin{algorithm*}
+\begin{algorithmic}[1]
+\Function{get}{treap, index}
+	\If{$\text{index} = 0$}
+		\State \Return treap.entry
+	\ElsIf{$\text{index}-1 < \text{treap.left.size}$}
+		\State \Return \Call{get}{treap.left, $\text{index}-1$}
+	\Else
+		\State \Return \Call{get}{treap.right, $\text{index}-\text{treap.left.size}-1$}
+	\EndIf
+\EndFunction
+\Statex
+\Function{set}{treap, index, entry}
+	\If{$\text{index} = 0$}
+		\State $\text{treap}'\gets copy(treap)$
+		\State $\text{treap}'\text{.entry} \gets \text{entry}$
+		\State \Return treap'
+	\ElsIf{$\text{index}-1 < \text{treap.left.size}$}
+		\State $\text{treap}'\gets copy(\text{treap})$
+		\State $\text{treap}'\text{.left} \gets \Call{set}{\text{treap.left}, \text{index}-1, \text{entry}}$
+		\State \Return $\text{treap}'$
+	\Else
+		\State $\text{treap}'\gets copy(\text{treap})$
+		\State $\text{treap}'\text{.left} \gets \Call{set}{\text{treap.right}, \text{index}-\text{treap.left.size}-1, \text{entry}}$
+		\State \Return $treap'$
+	\EndIf
+\EndFunction
+\end{algorithmic}
+\caption{\label{alg:treap} Implementation of the treap methods}
+\end{algorithm*}
+
+\begin{figure}
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}[>=stealth',level/.style={
+level 1/.style={sibling distance=6cm},
+level 2/.style={sibling distance=3cm},
+level 3/.style={sibling distance=1.5cm}},
+every node/.style = {align=center, text centered,
+    font=\sffamily, circle, draw=black},
+norm/.style={edge from parent/.style={black,thin,draw}},
+hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
+\node [gray, hiddentree] (n1) {1} 
+	child [hiddentree] {
+		node [gray] (n2) {2}
+			child [hiddentree] {	
+				node (n3) {3} 
+				child [norm] { node {4} } 
+				child [norm] { node {5} }
+			}
+			child [hiddentree] {
+				node (n6) {6}
+				child [norm] { node {7} }
+				child [norm] { node {8} }
+			}
+		} 
+	child [hiddentree] {
+		node (n9) {9}
+			child [norm] {
+				node{10}
+				child {	node{11} }
+				child { node {12} }
+			}
+			child [norm] {node {13} }
+		} ;
+		
+\node (n1p) [right of=n1] {1};
+\node (n2p) [right of=n2] {20};
+\path (n1p) edge (n2p);
+\path (n2p) edge (n3);
+\path (n2p) edge (n6);
+\path (n1p) edge (n9);
+\end{tikzpicture}}
+\caption{\figlabel{treap}Writing to the second entry of the treap only requires $O(\log m)$ copies while keeping the old structure intact (persistence).}
+\end{figure}
+
+\subsection{Parsing the regular expression sytnax}  \seclabel{regex-syntax}
+Parsing the regular expression into an abstract syntax tree is a detail that can easily be missed. However a preliminary experiment showed that, even in simple regular expressions, this step can take up a major part (25\% in our experiment)
+of the time for running the complete match.
+
+The memory model to parse a regular expression is a stack, since capture groups can be nested. The grammar can be formulated as right recursive and with this formulation
+it can be implemented with a simple recursive descent parser.
 
 \section{Benchmark}
 \seclabel{benchmarks}
@@ -914,7 +993,7 @@ only linearly. The raw data is seen in \Tabref{patho}.
 \figlabel{patho}
 \end{figure}
 
-\begin{table}[htp]
+\begin{table*}[htb]\center
 \begin{tabular}{ccccccccc}
 \toprule
 $n$ & 13 & 14 & 15 & 16 & 17 & 18 & 19 & 20\tabularnewline
@@ -925,7 +1004,7 @@ Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
 \end{tabular}
 \caption{Matching times, in microseconds, for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.}
 \tablabel{patho}
-\end{table}
+\end{table*}
 
 In the opposite case, in the case of a regular expression that's
 crafted to prevent any back-tracking, java.util.regex outperforms
@@ -971,7 +1050,10 @@ package names, from the project sources itself.  As seen in
 \Tabref{real}, our approach outperforms java.util.regex by 40\%,
 even though our approach constructs the entire parse tree, and thus
 all class names, while java.util.regex outputs only the last matched
-class name.
+class name. JParsec was not included in this experiment, since it does 
+not allow non-greedy matches. Even though it is possible to build
+a parser that produces the same AST, it would necessarily look very
+different (using negation) from the regular expression.
 
 \begin{table}[htp]
 \begin{tabular}{cc}
@@ -1020,9 +1102,9 @@ help but disagree almost universally with the characterizations they
 produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
 work an ``implementation'' of Laurikari's algorithm, although Laurikari's
 algorithm is far too incomplete for that statement to be fair. Laurikari's
-algorithm is referred to as a POSIX-style automaton. In truth, Laurikari
+algorithm is referred to as a \textsc{posix}-style automaton. In truth, Laurikari
 leaves the matching strategy entirely open. It was Kuklewicz that
-found out how to get POSIX-style matching out of Laurikari's TDFA. 
+found out how to get \textsc{posix}-style matching out of Laurikari's TDFA. 
 
 Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
 used in the text editor sam~\cite{Pike87a}.  While sam was released
@@ -1073,15 +1155,16 @@ It runs in only one pass and supports character ranges, lazy compilation,
 and compactified DFA representation for practical performance.
 
 \section{Conclusion}
-Our approach can produce entire parse trees while matching regular
-expressions.  The performance is on par with traditional back-tracking
+Our approach can produce entire parse trees from matching regular
+expressions in a single pass over the string. 
+The performance is on par with traditional back-tracking
 solutions if no backtracking ever happens, exponentially outperforms
 back-tracking approaches for pathological input, and in a realistic
 scenario outperforms backtracking by 40\%, even though our approach 
 produces the full parse tree, and the backtracking implementation doesn't.
 All source code and all
 benchmarks are available under a free license on
-Dropbox\footnote{\url{https://www.dropbox.com/s/p19e4q8u7ci0okv/tree-regex.zip}}.
+Github\footnote{\url{https://github.com/nes1983/tree-regex}}.
 
 \bibliographystyle{plain}
 \bibliography{bib/scg}
