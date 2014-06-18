@@ -6,6 +6,7 @@
 \usepackage{float}
 \usepackage{textcomp}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{amsthm}
 \usepackage{amstext}
 \usepackage{amsmath}
@@ -157,17 +158,28 @@ simultaneously, in different co-routines, where inside each co-routine, it is
 fully known when which capture group was entered or left. We extend this model
 to keep track of not just the last opening and closing of capture groups, but
 all of them. We do this by storing in every co-routine a history of the all
-groups using the flyweight pattern.  Thus, we log enough information during
-parsing to build up the complete parse tree after matching in a single pass.
-
+groups using the flyweight pattern. Thus, we log enough information during
+parsing to build up the complete parse tree after matching in a single pass, 
+making it possible to use our algorithm with strings exceeding the machine's
+memory. This is achieved in  worst case time $O(m\,n)$, providing full parse 
+trees with only constant slowdown compared to matching.
 \end{abstract}
-
 
 \chapter{Introduction}
 
-A regular expression can easily describe that a text matches a comma
-separated values file, but it is unable to extract all the values.
-Instead it will only give a single instance of values:
+Regular expressions give us a concise language to describe patterns in 
+strings and can be used for log analysis, natural language processing, and 
+many other tasks involving structured data in strings. Their efficiancy make 
+them useful even for big data sets. Standard algorithms run in 
+$\mathcal{n\, m}$, where $n$ is the length of the string to be matched 
+against and $m$ is the length of the pattern\cite{Sedg90a}.
+
+A short-coming of standard regular expression engines is that they can 
+extract only a limited amount of information from the string. A regular
+expression can easily describe that a text matches a comma separated values
+file, but it is unable to extract all the values.  Instead it will only give a
+single instance of values:
+
 \texttt{((.*?),(\textbackslash d+);)+} might describe a dataset of ASCII names
 with their numeric label. Matching the regular expression on \texttt{``Tom
 Lehrer,1;Alan Turing,2;''} will confirm that the list is well formed, but the
@@ -196,12 +208,9 @@ Lehrer,1;Alan Turing,2;''}
 \figlabel{our-tree}
 \end{figure}
 
-The worst-case run time of our approach is $O(n\,m\,\log(m))$, where $m$ is
-the length of the regular expression and $n$ is the length of the
-parsed string. It is the first algorithm to achieve this bound,
-while extracting parse trees. The best-known algorithm to parse
-regular expressions, without extracting parse trees, run in time
-$O(m n)$\cite{Sedg90a}.
+The worst-case run time of our approach is $O(n\,m)$, the same as the 
+algorithm extracting only single matches. It is the first algorithm to achieve
+this bound, while extracting parse trees.
 
 \section{More powerful than standard regular expressions}
 \seclabel{power}
@@ -226,9 +235,7 @@ to split the input at the semicolon, as that would split the field
 ``h;i'' in half.  More involved examples, where hand-written parsers
 become harder to make and more inefficient, are easily constructed.
 In contrast, our approach yields the entire parse tree, simply from
-the regular expression in at most $O(n\,m\,\log m)$ time.
-
-
+the regular expression in at most $O(n\,m)$ time.
 
 \section{Motivation}
 
@@ -240,7 +247,7 @@ time and/ or space,'' and thus log files grow large frequently. At
 the same time, they provide important insight into the process that
 they are logging, so their parsing and understanding is important. 
 
-Regular expressions make for scalable and efficient lightweight parsers.\cite{Kart96a} 
+Regular expressions make for scalable and efficient lightweight parsers\cite{Kart96a}.
 
 The parsing abilities of regular expression have provoked Meiners to declare
 that for intrusion detection, ``fast and scalable RE matching is
@@ -254,23 +261,295 @@ Parsers that can return abstract syntax trees are more useful than
 ones that only give a flat list of matches. Of course only regular
 grammars can be matched by our approach.
 
+\section{Regular expressions}
+Before we dive into the algorithm to match regular expressions, we should 
+first look at the goal -- what regular expressions are and what kind of 
+constructs need to be supported by our algorithm.
+
+Regular expressions are typically described by a string of literal characters
+to match and some special constructs specific to them. With this they can 
+describe any regular language\cite{Sipser2005} if one only considers 
+\emph{match} vs \emph{non-match} and can extract sub-patterns when capture 
+groups are added.
+
+\begin{table}[htb]
+  \begin{tabular}{c|c|c|>{\centering\arraybackslash}m{5cm}}
+    Name & Example & Repetitions & Description \\
+    \hline
+    literal & \texttt{a} & 1 & \\
+    character ranges & \texttt{[a-z]} & 1 & any of the characters in the range
+                                            match \\
+    negated character ranges & \texttt{[\string^a-z]} & 1 & anything except for the
+    characters in the range match \\
+    \hline
+    \texttt{?} operator & \texttt{a?} & 0 or 1 & \\
+    \texttt{*} operator & \texttt{a*} & $0-\infty$ & Prefer more matched \\
+    \texttt{+} operator & \texttt{a+} & $1-\infty$ & \\
+    \hline
+    \texttt{??} operator & \texttt{a??} & 0 or 1 & \\
+    \texttt{*?} operator & \texttt{a*?} & $0-\infty$ & Prefer less matched \\
+    \texttt{+?} operator & \texttt{a+?} & $1-\infty$ & \\
+    \hline
+    alternation operator & \texttt{a|b} & 1 & match one or the other, prefer left \\
+    \hline
+    capture groups & \texttt{(a)} & 1 & treat pattern as single element, 
+    extract match \\
+  \end{tabular}
+  \caption{Summary of regular expression elements}
+\end{table}
+
+\paragraph{Literals} The simplest option are literal characters like 
+\texttt{a}.
+
+\paragraph{Character ranges} Instead of matching only a single character, a 
+regular expression might match any of a range of characters. This is denoted 
+with brackets. For example \texttt{[a-z]} would match any lowercase ASCII 
+letter, \texttt{[abc]} would only match the letters a, b, or c, and 
+\texttt{[a-gk-t]} would match any letter between a and g or between k and t. 
+There is also the special character range \texttt{.} that matches any character.
+
+\paragraph{Negated character ranges} Ranges of the form \texttt{[\string^\dots]} 
+negate their content, so \texttt{[\string^a-g]} would match anything except a thru g.
+
+\paragraph{Concatenation} Two constructs put after each other have to match 
+the string in order. For example \texttt{a[bc]} matches a followed by either 
+b or c.
+
+\paragraph{Option operator} The option operator denoted by \texttt{?} allows 
+either zero or one repetitions of the preceding element, prefering to have 
+one repetition. This means \texttt{a?} will match the empty string or $a$, but nothing else.
+
+\paragraph{Star operator} The star operator \texttt{*} allows for arbitrary 
+repetition of the preceding element, including zero repetitions, prefering as 
+many repetitions as possible. For example \texttt{a*} matches the empty string,
+``a'', ``aa'', and so on.
+
+\paragraph{Plus operator} The plus operator \texttt{+} is similar, but 
+requires at least one repetition. This leads to $a+$ and $aa*$ matching the
+same strings.
+
+\paragraph{Non-greedy operators} The option, the star, and the plus operators 
+also have corresponding non-greedy operators, which are \texttt{??}, 
+\texttt{*?}, and \texttt{+?} respectively. These operators prefer to match as 
+few repetitions as possible.
+
+\paragraph{Alternation} Patters separated by the pipe symbol \texttt{|} can 
+either match the left part or the right part. This binds weaker than 
+concatenation. Therefore \texttt{abc|xyz} would match $abc$ or $xyz$, but not
+$abxyz$.
+
+\paragraph{Capture groups} Patterns enclosed by parens are treated as a 
+single element, thus \texttt{(ab)*} captures $ab$, but not $aba$. More 
+imporantly for us is that after the match, the capture groups can be extracted:
+\texttt{a(b*)c} when matching $abbbc$ can extract $bbb$ and the empty string 
+when matching $ac$. Note that the capture groups can be nested and the 
+semantics differ for \textsc{Posix} and tree regex: In \textsc{Posix} the 
+regular expression \texttt{a((bc+)+)} on the string $abcbccc$ will give $bcbccc$ 
+for the outer capture group and $bc$ for the inner capture group -- the 
+leftmost occurence of outer capture groups is kept and within that substring, 
+the leftmost occurence of the inner group is kept. In tree regex, all 
+occurences are kept and returned in a tree structure: The outer capture group 
+contains $bcbccc$ and both inner matches $bc$ and $bccc$.
+
+\section{(Non-)deterministic finite-state automata}
+As they are heavily used throughout this paper, let us recall what
+non-deterministic finite-state automata (NFAs) and deterministic finite-state
+automata (DFAs) are. A DFA is a state machine that will walk over a finite
+transition graph, one step for every input character. The choice of transition
+is limited by the transition's character range. A transition can only be
+followed if the current input character is inside transition's character 
+range. The possible character ranges are assumed to be disjoint, so that in 
+every step at most one transition can be followed.
+
+NFAs differ from DFAs in that for some input character and some state, there
+may be more than one applicable transition and some transitions can be
+traversed without consuming a character, called $\varepsilon$-transitions.  If
+there is a transition that will eventually lead to the accepting state, an NFA
+will magically guess the correct one. \autoref{fig:example-automaton} shows an
+example of an NFA's transition graph.
+
+\section{Regular expressions matching}
+\subsection{Backtracking}
+\begin{algorithm*}
+  \begin{algorithmic}
+  \Function{match-bt}{string, pattern}
+    \If{string and pattern empty}
+      \State \Return{matches}
+    \ElsIf{string or pattern empty}
+      \State \Return{no match}
+    \ElsIf{first element of pattern is $a\mathtt{*}$}
+      \LineComment{x[1:] means removing the first element of the list}
+      \If{$a$ matches first element of string}
+        \State \Return{match-bt(string[1:], pattern)}
+      \Else
+        \State \Return{match-bt(string, pattern[1:])}
+      \EndIf
+    \ElsIf{\dots}
+      \State \dots
+    \EndIf
+  \EndFunction
+  \end{algorithmic}
+  \caption{\label{match-bt}Overview of backtracking}
+\end{algorithm*}
+
+The algorithm to match regular expressions used by \texttt{java.util.regex} 
+and many other libraries is backtracking, which can be seen in
+algorithm~\ref{match-bt}. It is a simple and easily extensible recursive 
+algorithm for matching regular expressions, but in the worst case it will 
+take $O(2^n\,m)$ time:
+
+If we have the pattern \texttt{(x?)*y} matching against the string\footnote{
+  $x^n$ means $x$ repeated $n$ times} $x^n$, we see that it
+cannot match, but it will take exponential time doing so. In each step there
+are two options, either to collect the $x$ in \texttt{x?}, or to step over it
+and try again. Unfortunately that means that the algorithm branches in each
+character in the string and never succeeding keeps on trying, so it takes $2^n$
+steps to end in the $no\ match$ case.  Backtracking is fast if it guesses
+correctly, since there is not much overhead, but fails miserably if it guesses
+wrongly early on.
+
+\subsection{NFA based matching}
+A faster alternative to this approach is to preprocess the regular expression 
+and convert it into a NFA by the rules in \Figref{thompson-construction-simple}.
+
+\begin{figure*}[htb] \includegraphics[width=\linewidth]{graphs/thompson-simple}
+\caption{Thompson~\cite{Thom68a} construction of the
+automaton: Descend into the abstract syntax tree of the regular
+expression and expand the constructs recursively.}
+\label{fig:thompson-construction-simple} 
+\end{figure*}
+
+The NFA thus optained contains $O(m)$ states and to check if a given string 
+matches the regular expression, we can now simply run the NFA on it. For each 
+character in the input string, we follow all transitions possible from our 
+current states and save the accessible states as a set. In the next 
+iteration, we consider the transitions from any of these states. This allows 
+us to match in $O(n\, m^2)$ time.
+
+\subsection{DFA based matching}
+Dissatisfied with the $O(m^2)$ overhead, we can construct a DFA from the NFA 
+before matching. This is done by the power set construction\cite{Sips05a}, 
+which has time complexity $O(2^m)$. The idea is to replace all states by the 
+set reachable from it with only $\varepsilon$-transitions. The transitions 
+simulate a step in the original NFA, so they point to another set of states.
+After the compilation is done, matching the string is $O(n)$ time.
+
+\subsection{Lazy DFA compilation}
+The DFA based matching takes $O(n\, 2^m)$, which is no better than backtracking
+if $m$ is not fixed. The power set construction simulates every transition 
+possible in the NFA, but that is actually unnecessary: Instead we can 
+interwining the compilation and the matching to only expand new DFA states that
+are reached when parsing the string. At most one new DFA state is created after
+each character read. The time complexity of the match is then $O(n\, m)$. 
+This is the best known result for matching\cite{Cox07a,Cox09a,Cox10a}.
+
+Our algorithm will modify this algorithm by adding instructions to transitions.
+
+\chapter{Related work}
+\seclabel{related}
+Our algorithm is a modification of Laurikari's algorithm \cite{Laur00a},
+which is itself a modified power set construction algorithm \cite[p. 55]{Sips05a}.
+
+While there is no shortage of books discussing the usage of regular
+expressions, the implementation side of regular expression has not
+been so lucky. Cox is spot-on when he argues that innovations have
+repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}. 
+
+This paper is no exception. The authors of this paper had set out
+to implement Laurikari's TDFA algorithm \cite{Laur00a},
+only to discover that Laurikari's description of a TDFA is so far
+from complete that it can rightfully only be called the sketch for
+an algorithm. Only late in the process did we discover that the blanks
+had already been filled by Kuklewicz in the course of his implementation
+of TDFAs in Haskell \cite{Kukl07a}. Kuklewicz enshrined his
+added insight into Haskell library, but never published the algorithm
+as a whole. If the history of regular expressions is evidence of one
+thing, it is that source code is a terrible medium to convey algorithms. 
+
+The situation dramatically improved with Cox's simple and concise
+explanation of regular expression matching \cite{Cox07a}. It seems
+ironic that this well-versed author published this influential work
+on his website. The joke, however, may be on Academia's side.
+
+When the practitioners acknowledge each other's work, we can't
+help but disagree almost universally with the characterizations they
+produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
+work an ``implementation'' of Laurikari's algorithm, although Laurikari's
+algorithm is far too incomplete for that statement to be fair. Laurikari's
+algorithm is referred to as a \textsc{Posix}-style automaton. In truth, Laurikari
+leaves the matching strategy entirely open. It was Kuklewicz that
+found out how to get \textsc{Posix}-style matching out of Laurikari's TDFA. 
+
+Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
+used in the text editor sam~\cite{Pike87a}.  While sam was released
+as free software, no description of his regular expression matching,
+besides the source code, was published.  Sam uses Thompson's NFA,
+but adds submatch tracking. This seems unfair in that Laurikari's
+allows for far more aggressive reuse of old states than Thompson
+allows. This should lead to Laurikari's TDFA having fewer states,
+and therefore better performance, than even Google's
+RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses
+Pike's algorithm. This is not confirmed by the benchmarks by
+Sulzmann and Lu \cite{Sulz12a}, but they offer an explanation: in
+their profiling, they see that all Haskell implementations spend
+considerable time decoding the input strings. In other words, the
+measured performance is more of an artifact of the programming
+environment used.
+
+Another mistake that permeates the scarce literature is to call
+regular expression matching linear. As Sedgewick points out correctly
+\cite{Sedg90a}, Thompson's NFA matching is of complexity $O(m\, n)$,
+where $m$ is the size of the input NFA, and $n$ is the size of the
+input string. To call this linear means to assume that $m$ is fixed,
+which is not justified. It may well be true that, at present, $m$
+tends to be small. But that is a natural consequence of the algorithms for
+parsing not scaling very well with $m$. If they did, that would allow for
+fast feature extracting from text\footnote{To check if a document
+contains features $f_1, f_2, \dots, f_n$, we would match the document
+against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
+Therefore, in this paper, we consider the state of the art algorithms
+to be quadratic, since both $m$ and $n$ are part of the input to a
+regular expression matcher. This is unfortunately the best we can hope for, 
+as can be seen in \Secref{lower-bound}.
+
+Sulzmann and Lu add to the table a new matching strategy that yields
+good practical performance, although the theoretical bounds are considerably
+worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
+
+The problem of producing parse trees from regular expressions (regular 
+expression parsing) is a more active field of study. The misconception of the 
+constant $m$ permeates this field as well, so that comparing the actual 
+running time bounds is nigh-impossible since they are just described as
+\emph{linear}.
+
+Kearns~\cite{Kear91a} describes the first so-called linear-time algorithm for
+RE parsing.  Dub\'e and Feeley~\cite{Dube00a} produce parse trees in so-called
+linear time using lists as their data representation. Nielsen and
+Henglein~\cite{Niel11a} improve on it by storing the trees in bit-coded form.
+Neither produces a greedy or non-greedy parse.  Grathwohl~\cite{Grat13a}
+produce a greedy parse in two passes over the input.  In comparison, our
+approach allows full control over greediness, even for subexpressions, thus
+generalizing over all previous approaches, while matching the running time 
+guarantees of regular expression matching. It runs in only one pass and
+supports character ranges, lazy compilation, and compactified DFA
+representation for practical performance.
+
 \chapter{Algorithm}
 \seclabel{algo}
 
-Let us recall what NFAs and DFAs are. A DFA is a state machine that
-will walk over the transition graph, one step for every input
-character. The choice of transition is limited by the transition's
-character range. A transition can only be followed if the current
-input character is inside transition's character range. NFAs differ
-from DFAs in that for some input character and some state, there
-may be more than one applicable transition and even transitions that can
-be traversed without consuming a character, called $\varepsilon$-transitions.
-If there is a transition that will eventually lead to the accepting
-state, an NFA will magically guess the correct one. \autoref{fig:example-automaton}
-shows an example of an NFA's transition graph. For the moment, let
-us discuss regular expression matching on NFAs. Assuming that the
-NFA just magically knows the right transition lets us focus on the
-important things, greediness control and capture groups.
+The algorithm we present is a extension of the non-deterministic finite state 
+automaton (NFA) matching algorithm for regular expressions with added 
+logging of the start and end of capture groups, as introduced by
+Laurikari\cite{Laur00a}. We will first present the algorithm for matching, 
+which will be $O(n\, m\, u(m))$, where $u(m)$ describes the amortized cost of
+logging a single opening or closing of a capture group. We will then show a
+simple data structure that will allow us to achieve $u(m) = \log m$ and
+continue to present a way to improve this to $u(m) = 1$ following Driscoll et
+al\cite{Dris89a}. This gives us $O(n\, m)$ run time for the
+complete algorithm, which is tight for NFA algorithms as seen in
+\Secref{lower-bound}. Since this is not a purely theoretical paper, there are
+also practical considerations such as caching current results, just-in-time
+compilation, and compact memory usage.
 
 Conceptually, our approach is the following pipeline of four stages:
 \begin{enumerate}
@@ -294,7 +573,7 @@ control greediness, or discern capture groups, our approach adds tagged
 $\varepsilon$ transitions to the transition graph. An
 $\varepsilon$ transition has no input range assigned, and can thus always
 be used. It does not consume an input character. Tagged transitions 
-mark the beginning or end of capture groups or controll the prioritization.
+mark the beginning or end of capture groups or control the prioritization.
 The additions are needed for greediness control and capture groups.
 Let's look at both, in turn.
 
@@ -321,7 +600,6 @@ In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the
 opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing
 tag for capture group $n$.}
 \end{figure}
-
 
 In the NFA, we model greedy repetition or non-greedy repetition of
 an expression in two steps:
@@ -718,6 +996,9 @@ good explanation in ``Understanding Clojure's Persistent Vectors'',
 will be further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
 the overall runtime is $O(n\,m\,\log m)$.
 
+\section{Lower bound for time}\seclabel{lower-bound}
+TODO: proof that run time is tight\cite{Ellul05a}
+
 \chapter{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
 to reach the theoretical time bound we claimed, practical performance
@@ -900,7 +1181,7 @@ to avoid compiling states of it that might never be necessary. This
 allows us to avoid the full power set construction \cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
-\section{Treap}	\seclabel{treap}
+\section{Data structures}	\seclabel{treap}\seclabel{data-structures}
 The treap data structure allows copy-on-write in $\log m$ time, sharing
 much of the structure by using the flyweight pattern as can be seen in
 \Figref{treap}. The treap is a balanced, left-leaning binary tree with entries
@@ -1108,89 +1389,6 @@ Runtime in microseconds}
 \end{table}
 
 
-\chapter{Related work}
-\seclabel{related}
-Our algorithm is a modification of Laurikari's algorithm \cite{Laur00a},
-which is itself a modified power set construction algorithm \cite[p. 55]{Sips05a}.
-
-While there is no shortage of books discussing the usage of regular
-expressions, the implementation side of regular expression has not
-been so lucky. Cox is spot-on when he argues that innovations have
-repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}. 
-
-This paper is no exception. The authors of this paper had set out
-to implement Laurikari's TDFA algorithm \cite{Laur00a},
-only to discover that Laurikari's description of a TDFA is so far
-from complete that it can rightfully only be called the sketch for
-an algorithm. Only late in the process did we discover that the blanks
-had already been filled by Kuklewicz in the course of his implementation
-of TDFAs in Haskell \cite{Kukl07a}. Kuklewicz enshrined his
-added insight into Haskell library, but never published the algorithm
-as a whole. If the history of regular expressions is evidence of one
-thing, it is that source code is a terrible medium to convey algorithms. 
-
-The situation dramatically improved with Cox's simple and concise
-explanation of regular expression matching \cite{Cox07a}. It seems
-ironic that this well-versed author published this influential work
-on his website. The joke, however, may be on Academia's side.
-
-When the practitioners acknowledge each other's work, we can't
-help but disagree almost universally with the characterizations they
-produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
-work an ``implementation'' of Laurikari's algorithm, although Laurikari's
-algorithm is far too incomplete for that statement to be fair. Laurikari's
-algorithm is referred to as a \textsc{posix}-style automaton. In truth, Laurikari
-leaves the matching strategy entirely open. It was Kuklewicz that
-found out how to get \textsc{posix}-style matching out of Laurikari's TDFA. 
-
-Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
-used in the text editor sam~\cite{Pike87a}.  While sam was released
-as free software, no description of his regular expression matching,
-besides the source code, was published.  Sam uses Thompson's NFA,
-but adds submatch tracking. This seems unfair in that Laurikari's
-allows for far more aggressive reuse of old states than Thompson
-allows. This should lead to Laurikari's TDFA having fewer states,
-and therefore better performance, than even Google's
-RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses
-Pike's algorithm.  This is not confirmed by the benchmarks by
-Sulzmann and Lu \cite{Sulz12a}, but they offer an explanation: in
-their profiling, they see that all Haskell implementations spend
-considerable time decoding the input strings. In other words, the
-measured performance is more of an artifact of the programming
-environment used.
-
-Another mistake that permeates the scarce literature is to call
-regular expression matching linear. As Sedgewick points out correctly
-\cite{Sedg90a}, Thompson's NFA matching is of complexity $O(mn)$,
-where $m$ is the size of the input NFA, and $n$ is the size of the
-input string. To call this linear means to assume that $m$ is fixed,
-which is not justified. It may well be true that, at present, $m$
-tends to be small. But that is a natural consequence of the algorithms
-not scaling very well with $m$. If they did, that would allow for
-fast feature extracting from text\footnote{To check if a document
-contains features $f_1, f_2, \dots, f_n$, we would match the document
-against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
-Therefore, in this paper, we consider the state of the art algorithms
-to be quadratic, since both $m$ and $n$ are part of the input to a
-regular expression matcher. We cannot rule out that a linear algorithm
-exists, in fact, we hope for it.  To insist that regular expression
-matching is done in linear time is to insist that the optimal
-algorithm has already been found; that is probably not true.
-
-Sulzmann and Lu add to the table a new matching strategy that yields
-good practical performance, although the theoretical bounds are considerably
-worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
-
-Kearns~\cite{Kear91a} describes the first linear-time algorithm for RE parsing.
-Dub\'e and Feeley~\cite{Dube00a} produce parse trees in linear time using lists
-as their data representation. Nielsen and Henglein~\cite{Niel11a} improve on it
-by storing the trees in bit-coded form.  Neither produces a greedy or
-non-greedy parse.  Grathwohl~\cite{Grat13a} produce a greedy parse in two over
-the input.  In comparison, our approach allows full control over greediness,
-even for subexpressions, thus generalizing over all previous approaches. It
-runs in only one pass and supports character ranges, lazy compilation, and
-compactified DFA representation for practical performance.
-
 \chapter{Conclusion}
 Our approach can produce entire parse trees from matching regular expressions
 in a single pass over the string.  The performance is on par with traditional
@@ -1202,5 +1400,5 @@ code and all benchmarks are available under a free license on
 Github\footnote{\url{https://github.com/nes1983/tree-regex}}.
 
 \bibliographystyle{plain}
-\bibliography{bib/scg}
+\bibliography{biblio}
 \end{document}
