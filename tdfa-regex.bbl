@@ -22,12 +22,6 @@ R.~Cox.
 \newblock Regular expression matching in the wild.
 \newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp3.html}, 2010.
 
-\bibitem{Diet87a}
-P.~Dietz and D.~Sleator.
-\newblock Two algorithms for maintaining order in a list.
-\newblock In {\em Proceedings of the Nineteenth Annual ACM Symposium on Theory
-  of Computing}, STOC '87, pages 365--372, New York, NY, USA, 1987. ACM.
-
 \bibitem{Dris89a}
 James~R. Driscoll, Neil Sarnak, Daniel~D. Sleator, and Robert~E. Tarjan.
 \newblock Making data structures persistent.
