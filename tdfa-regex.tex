@@ -603,6 +603,7 @@ opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing
 tag for capture group $n$.}
 \end{figure}
 
+
 In the NFA, we model greedy repetition or non-greedy repetition of
 an expression in two steps:
 
@@ -996,6 +997,9 @@ good explanation in ``Understanding Clojure's Persistent Vectors'',
 \url{http://hypirion.com/musings/understanding-persistent-vector-pt-1}.} and
 will be further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
 the overall runtime is $O(n\,m\,\log m)$.
+
+\section{Lower bound for time}\seclabel{lower-bound}
+TODO: proof that run time is tight\cite{Ellul05a}
 
 \chapter{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient

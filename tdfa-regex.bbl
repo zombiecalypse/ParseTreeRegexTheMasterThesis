@@ -39,6 +39,12 @@ Danny Dub{\'e} and Marc Feeley.
 \newblock Efficiently building a parse tree from a regular expression.
 \newblock {\em Acta Informatica}, 37(2):121--144, 2000.
 
+\bibitem{Ellul05a}
+Keith Ellul, Bryan Krawetz, Jeffrey Shallit, and Ming-wei Wang.
+\newblock Regular expressions: New results and open problems.
+\newblock {\em Journal of Automata, Languages and Combinatorics},
+  10(4):407--437, 2005.
+
 \bibitem{Grat13a}
 Niels Bj{\o}rn~Bugge Grathwohl, Fritz Henglein, Lasse Nielsen, and Ulrik~Terp
   Rasmussen.
