@@ -1,11 +1,12 @@
-\documentclass[english,twocolumn]{article}
+\documentclass[11pt]{Thesis}
 \usepackage[T1]{fontenc}
-\usepackage[latin9]{inputenc}
+\usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
 \usepackage{verbatim}
 \usepackage{float}
 \usepackage{textcomp}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{amsthm}
 \usepackage{amstext}
 \usepackage{amsmath}
@@ -13,7 +14,7 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{tikz}
-\usetikzlibrary{arrows,automata,shapes}
+\usetikzlibrary{arrows,automata,shapes,positioning,snakes}
 \usepackage{algpseudocode}
 \usepackage{float}
 \usepackage{caption}
@@ -22,7 +23,6 @@
 \algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
 
 \theoremstyle{definition}
-\newtheorem{example}{Example}[section]
 \newtheorem*{notation}{Notation}
 
 % ============================================================
@@ -34,11 +34,7 @@
 %\makeatother
 %\urlstyle{leo} % Now actually use the newly defined style.
 %% Choose coloured or b/w links:
-\usepackage[pdftex,colorlinks=true,pdfstartview=FitV,
- linkcolor=black,citecolor=black,urlcolor=black]{hyperref}
 % \usepackage{hyperref}
-\usepackage{needspace}
-\newcommand{\needlines}[1]{\Needspace{#1\baselineskip}}
 % ============================================================
 % Markup macros for proof-reading
 \usepackage{ifthen}
@@ -54,6 +50,11 @@
 \newcommand{\figlabel}[1]{\label{fig:#1}}
 \newcommand{\seclabel}[1]{\label{sec:#1}}
 \newcommand{\tablabel}[1]{\label{tab:#1}}
+
+\hypersetup{pdftitle={\ttitle}}
+\hypersetup{pdfsubject=\subjectname}
+\hypersetup{pdfauthor=\authornames}
+\hypersetup{pdfkeywords=\keywordnames}
 
 \ifthenelse{\boolean{showedits}}
 {
@@ -131,6 +132,8 @@
 
 	% remember to use [htp] or [htpb] for placement
 
+
+\newcommand{\pos}{\mathbf{\mathbf{p}}}
 \author{Aaron Karper \and Niko Schwarz}
 \begin{document}
 \special{papersize=8.5in,11in}
@@ -145,40 +148,53 @@
 
 \begin{abstract}
 Regular expressions naturally and intuitively define parse trees that describe
-the text that they're parsing.
-We describe a technique for building
-up the complete parse tree resulting from matching a text against
-a regular expression.
+the text that they're parsing.  We describe a technique for building up the
+complete parse tree resulting from matching a text against a regular
+expression.
 
-In standard tagged deterministic finite-state automaton (TDFA) matching, 
-all paths through the non-deterministic finite-state automaton (NFA) are walked
-simultaneously, in different co-routines, where inside each co-routine,
-it is fully known when which capture group was entered or left. We
-extend this model to keep track of not just the last opening and
-closing of capture groups, but all of them. We do this by storing
-in every co-routine a history of the all groups using the flyweight
-pattern.  Thus, we log enough information during parsing to build
-up the complete parse tree after matching in a single pass.
-
+In standard tagged deterministic finite-state automaton (TDFA) matching, all
+paths through the non-deterministic finite-state automaton (NFA) are walked
+simultaneously, in different co-routines, where inside each co-routine, it is
+fully known when which capture group was entered or left. We extend this model
+to keep track of not just the last opening and closing of capture groups, but
+all of them. We do this by storing in every co-routine a history of the all
+groups using the flyweight pattern. Thus, we log enough information during
+parsing to build up the complete parse tree after matching in a single pass, 
+making it possible to use our algorithm with strings exceeding the machine's
+memory. This is achieved in  worst case time $O(m\,n)$, providing full parse 
+trees with only constant slowdown compared to matching.
 \end{abstract}
 
+\tableofcontents
 
-\section{Introduction}
+\chapter{Introduction}
 
-A regular expression can easily describe that a text matches a comma
-separated values file, but it is unable to extract all the values.
-Instead it will only give a single instance of values: \texttt{((.*?),(\textbackslash d+);)+} might describe a dataset of ASCII names
+Regular expressions give us a concise language to describe patterns in 
+strings and can be used for log analysis, natural language processing, and 
+many other tasks involving structured data in strings. Their efficiancy make 
+them useful even for big data sets. Standard algorithms run in 
+$\mathcal{n\, m}$, where $n$ is the length of the string to be matched 
+against and $m$ is the length of the pattern\cite{Sedg90a}.
+
+A short-coming of standard regular expression engines is that they can 
+extract only a limited amount of information from the string. A regular
+expression can easily describe that a text matches a comma separated values
+file, but it is unable to extract all the values.  Instead it will only give a
+single instance of values:
+
+\texttt{((.*?),(\textbackslash d+);)+} might describe a dataset of ASCII names
 with their numeric label. Matching the regular expression on \texttt{``Tom
-Lehrer,1;Alan Turing,2;''} will confirm that the list is well formed,
-but the match will only contain \texttt{``Tom Lehrer''} for the
-second capture group and \texttt{``1''} for the third. That is,
-the parse tree found by the \textsc{posix} is seen in \Figref{posix}.
+Lehrer,1;Alan Turing,2;''} will confirm that the list is well formed, but the
+match will only contain \texttt{``Tom Lehrer''} for the second capture group
+and \texttt{``1''} for the third. That is, the parse tree found by the
+\textsc{posix} is seen in \Figref{posix}.
 
 \begin{figure}[htp]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/posix_parse}
-\caption{\figlabel{lehrer-posix} Parse tree produced by \textsc{posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
-Lehrer,1;Alan Turing,2;''.}
+\caption{\figlabel{lehrer-posix} Parse tree produced by
+\textsc{posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+}
+against input ``Tom Lehrer,1;Alan Turing,2;''.}
 \figlabel{posix}
 \end{figure}
 
@@ -188,19 +204,17 @@ tree after the matching phase is done, as seen in \Figref{our-tree}.
 \begin{figure}[htp]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/full_parse}
-\caption{\figlabel{lehrer-tree} Parse tree produced by our approach matching regular expression \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
+\caption{\figlabel{lehrer-tree} Parse tree produced by our approach matching
+regular expression \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
 Lehrer,1;Alan Turing,2;''}
 \figlabel{our-tree}
 \end{figure}
 
-The worst-case run time of our approach is $O(n\,m\,\log(m))$, where $m$ is
-the length of the regular expression and $n$ is the length of the
-parsed string. It is the first algorithm to achieve this bound,
-while extracting parse trees. The best-known algorithm to parse
-regular expressions, without extracting parse trees, run in time
-$O(m n)$\cite{Sedg90a}.
+The worst-case run time of our approach is $O(n\,m)$, the same as the 
+algorithm extracting only single matches. It is the first algorithm to achieve
+this bound, while extracting parse trees.
 
-\subsection{More powerful than standard regular expressions}
+\section{More powerful than standard regular expressions}
 \seclabel{power}
 It may at first seem as if all capture groups can always, equivalently,
 be extracted by splitting the input, and then applying sub-regular
@@ -223,11 +237,9 @@ to split the input at the semicolon, as that would split the field
 ``h;i'' in half.  More involved examples, where hand-written parsers
 become harder to make and more inefficient, are easily constructed.
 In contrast, our approach yields the entire parse tree, simply from
-the regular expression in at most $O(n\,m\,\log m)$ time.
+the regular expression in at most $O(n\,m)$ time.
 
-
-
-\subsection{Motivation}
+\section{Motivation}
 
 This is the age of big data, and the first step of processing big
 data is often to parse strings. As an example, consider log files.
@@ -237,7 +249,7 @@ time and/ or space,'' and thus log files grow large frequently. At
 the same time, they provide important insight into the process that
 they are logging, so their parsing and understanding is important. 
 
-Regular expressions make for scalable and efficient lightweight parsers.\cite{Kart96a} 
+Regular expressions make for scalable and efficient lightweight parsers\cite{Kart96a}.
 
 The parsing abilities of regular expression have provoked Meiners to declare
 that for intrusion detection, ``fast and scalable RE matching is
@@ -251,23 +263,295 @@ Parsers that can return abstract syntax trees are more useful than
 ones that only give a flat list of matches. Of course only regular
 grammars can be matched by our approach.
 
-\section{Algorithm}
-\seclabel{algo}
+\section{Regular expressions}
+Before we dive into the algorithm to match regular expressions, we should 
+first look at the goal -- what regular expressions are and what kind of 
+constructs need to be supported by our algorithm.
 
-Let us recall what NFAs and DFAs are. A DFA is a state machine that
-will walk over the transition graph, one step for every input
-character. The choice of transition is limited by the transition's
-character range. A transition can only be followed if the current
-input character is inside transition's character range. NFAs differ
-from DFAs in that for some input character and some state, there
-may be more than one applicable transition and even transitions that can
-be traversed without consuming a character, called $\varepsilon$-transitions.
-If there is a transition that will eventually lead to the accepting
-state, an NFA will magically guess the correct one. \autoref{fig:example-automaton}
-shows an example of an NFA's transition graph. For the moment, let
-us discuss regular expression matching on NFAs. Assuming that the
-NFA just magically knows the right transition lets us focus on the
-important things, greediness control and capture groups.
+Regular expressions are typically described by a string of literal characters
+to match and some special constructs specific to them. With this they can 
+describe any regular language\cite{Sipser2005} if one only considers 
+\emph{match} vs \emph{non-match} and can extract sub-patterns when capture 
+groups are added.
+
+\begin{table}[htb]
+  \begin{tabular}{c|c|c|>{\centering\arraybackslash}m{5cm}}
+    Name & Example & Repetitions & Description \\
+    \hline
+    literal & \texttt{a} & 1 & \\
+    character ranges & \texttt{[a-z]} & 1 & any of the characters in the range
+                                            match \\
+    negated character ranges & \texttt{[\string^a-z]} & 1 & anything except for the
+    characters in the range match \\
+    \hline
+    \texttt{?} operator & \texttt{a?} & 0 or 1 & \\
+    \texttt{*} operator & \texttt{a*} & $0-\infty$ & Prefer more matched \\
+    \texttt{+} operator & \texttt{a+} & $1-\infty$ & \\
+    \hline
+    \texttt{??} operator & \texttt{a??} & 0 or 1 & \\
+    \texttt{*?} operator & \texttt{a*?} & $0-\infty$ & Prefer less matched \\
+    \texttt{+?} operator & \texttt{a+?} & $1-\infty$ & \\
+    \hline
+    alternation operator & \texttt{a|b} & 1 & match one or the other, prefer left \\
+    \hline
+    capture groups & \texttt{(a)} & 1 & treat pattern as single element, 
+    extract match \\
+  \end{tabular}
+  \caption{Summary of regular expression elements}
+\end{table}
+
+\paragraph{Literals} The simplest option are literal characters like 
+\texttt{a}.
+
+\paragraph{Character ranges} Instead of matching only a single character, a 
+regular expression might match any of a range of characters. This is denoted 
+with brackets. For example \texttt{[a-z]} would match any lowercase ASCII 
+letter, \texttt{[abc]} would only match the letters a, b, or c, and 
+\texttt{[a-gk-t]} would match any letter between a and g, or between k and t. 
+There is also the special character range \texttt{.} that matches any character.
+
+\paragraph{Negated character ranges} Ranges of the form \texttt{[\string^\dots]} 
+negate their content, so \texttt{[\string^a-g]} would match anything except a thru g.
+
+\paragraph{Concatenation} Two constructs put after each other have to match 
+the string in order. For example \texttt{a[bc]} matches a followed by either 
+b or c.
+
+\paragraph{Option operator} The option operator denoted by \texttt{?} allows 
+either zero or one repetitions of the preceding element, prefering to have 
+one repetition. This means \texttt{a?} will match the empty string or $a$, but nothing else.
+
+\paragraph{Star operator} The star operator \texttt{*} allows for arbitrary 
+repetition of the preceding element, including zero repetitions, prefering as 
+many repetitions as possible. For example \texttt{a*} matches the empty string,
+``a'', ``aa'', and so on.
+
+\paragraph{Plus operator} The plus operator \texttt{+} is similar, but 
+requires at least one repetition. This leads to $a+$ and $aa*$ matching the
+same strings.
+
+\paragraph{Non-greedy operators} The option, the star, and the plus operators 
+also have corresponding non-greedy operators, which are \texttt{??}, 
+\texttt{*?}, and \texttt{+?} respectively. These operators prefer to match as 
+few repetitions as possible.
+
+\paragraph{Alternation} Patters separated by the pipe symbol \texttt{|} can 
+either match the left part or the right part. This binds weaker than 
+concatenation. Therefore \texttt{abc|xyz} would match $abc$ or $xyz$, but not
+$abxyz$.
+
+\paragraph{Capture groups} Patterns enclosed by parens are treated as a 
+single element, thus \texttt{(ab)*} captures $ab$, but not $aba$. More 
+imporantly for us is that after the match, the capture groups can be extracted:
+\texttt{a(b*)c} when matching $abbbc$ can extract $bbb$ and the empty string 
+when matching $ac$. Note that the capture groups can be nested and the 
+semantics differ for \textsc{Posix} and tree regex: In \textsc{Posix} the 
+regular expression \texttt{a((bc+)+)} on the string $abcbccc$ will give $bcbccc$ 
+for the outer capture group and $bc$ for the inner capture group -- the 
+leftmost occurence of outer capture groups is kept and within that substring, 
+the leftmost occurence of the inner group is kept. In tree regex, all 
+occurences are kept and returned in a tree structure: The outer capture group 
+contains $bcbccc$ and both inner matches $bc$ and $bccc$.
+
+\section{(Non-)deterministic finite-state automata}
+As they are heavily used throughout this paper, let us recall what
+non-deterministic finite-state automata (NFAs) and deterministic finite-state
+automata (DFAs) are. A DFA is a state machine that will walk over a finite
+transition graph, one step for every input character. The choice of transition
+is limited by the transition's character range. A transition can only be
+followed if the current input character is inside transition's character 
+range. The possible character ranges are assumed to be disjoint, so that in 
+every step at most one transition can be followed.
+
+NFAs differ from DFAs in that for some input character and some state, there
+may be more than one applicable transition and some transitions can be
+traversed without consuming a character, called $\varepsilon$-transitions.  If
+there is a transition that will eventually lead to the accepting state, an NFA
+will magically guess the correct one. \autoref{fig:example-automaton} shows an
+example of an NFA's transition graph.
+
+\section{Regular expressions matching}
+\subsection{Backtracking}
+\begin{algorithm*}
+  \begin{algorithmic}
+  \Function{match-bt}{string, pattern}
+    \If{string and pattern empty}
+      \State \Return{matches}
+    \ElsIf{string or pattern empty}
+      \State \Return{no match}
+    \ElsIf{first element of pattern is $a\mathtt{*}$}
+      \LineComment{x[1:] means removing the first element of the list}
+      \If{$a$ matches first element of string}
+        \State \Return{match-bt(string[1:], pattern)}
+      \Else
+        \State \Return{match-bt(string, pattern[1:])}
+      \EndIf
+    \ElsIf{\dots}
+      \State \dots
+    \EndIf
+  \EndFunction
+  \end{algorithmic}
+  \caption{\label{match-bt}Overview of backtracking}
+\end{algorithm*}
+
+The algorithm to match regular expressions used by \texttt{java.util.regex} 
+and many other libraries is backtracking, which can be seen in
+algorithm~\ref{match-bt}. It is a simple and easily extensible recursive 
+algorithm for matching regular expressions, but in the worst case it will 
+take $O(2^n\,m)$ time:
+
+If we have the pattern \texttt{(x?)*y} matching against the string\footnote{
+  $x^n$ means $x$ repeated $n$ times} $x^n$, we see that it
+cannot match, but it will take exponential time doing so. In each step there
+are two options, either to collect the $x$ in \texttt{x?}, or to step over it
+and try again. Unfortunately that means that the algorithm branches in each
+character in the string and never succeeding keeps on trying, so it takes $2^n$
+steps to end in the $no\ match$ case.  Backtracking is fast if it guesses
+correctly, since there is not much overhead, but fails miserably if it guesses
+wrongly early on.
+
+\subsection{NFA based matching}
+A faster alternative to this approach is to preprocess the regular expression 
+and convert it into a NFA by the rules in \Figref{thompson-construction-simple}.
+
+\begin{figure*}[htb] \includegraphics[width=\linewidth]{graphs/thompson-simple}
+\caption{Thompson~\cite{Thom68a} construction of the
+automaton: Descend into the abstract syntax tree of the regular
+expression and expand the constructs recursively.}
+\label{fig:thompson-construction-simple} 
+\end{figure*}
+
+The NFA thus optained contains $O(m)$ states and to check if a given string 
+matches the regular expression, we can now simply run the NFA on it. For each 
+character in the input string, we follow all transitions possible from our 
+current states and save the accessible states as a set. In the next 
+iteration, we consider the transitions from any of these states. This allows 
+us to match in $O(n\, m^2)$ time.
+
+\subsection{DFA based matching}
+Dissatisfied with the $O(m^2)$ overhead, we can construct a DFA from the NFA 
+before matching. This is done by the power set construction\cite{Sips05a}, 
+which has time complexity $O(2^m)$. The idea is to replace all states by the 
+set reachable from it with only $\varepsilon$-transitions. The transitions 
+simulate a step in the original NFA, so they point to another set of states.
+After the compilation is done, matching the string is $O(n)$ time.
+
+\subsection{Lazy DFA compilation}
+The DFA based matching takes $O(n\, 2^m)$, which is no better than backtracking
+if $m$ is not fixed. The power set construction simulates every transition 
+possible in the NFA, but that is actually unnecessary: Instead we can 
+interwining the compilation and the matching to only expand new DFA states that
+are reached when parsing the string. At most one new DFA state is created after
+each character read. The time complexity of the match is then $O(n\, m)$. 
+This is the best known result for matching\cite{Cox07a,Cox09a,Cox10a}.
+
+Our algorithm will modify this algorithm by adding instructions to transitions.
+
+\chapter{Related work}
+\seclabel{related}
+Our algorithm is a modification of Laurikari's algorithm \cite{Laur00a},
+which is itself a modified power set construction algorithm \cite[p. 55]{Sips05a}.
+
+While there is no shortage of books discussing the usage of regular
+expressions, the implementation side of regular expression has not
+been so lucky. Cox is spot-on when he argues that innovations have
+repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}. 
+
+This paper is no exception. The authors of this paper had set out
+to implement Laurikari's TDFA algorithm \cite{Laur00a},
+only to discover that Laurikari's description of a TDFA is so far
+from complete that it can rightfully only be called the sketch for
+an algorithm. Only late in the process did we discover that the blanks
+had already been filled by Kuklewicz in the course of his implementation
+of TDFAs in Haskell \cite{Kukl07a}. Kuklewicz enshrined his
+added insight into Haskell library, but never published the algorithm
+as a whole. If the history of regular expressions is evidence of one
+thing, it is that source code is a terrible medium to convey algorithms. 
+
+The situation dramatically improved with Cox's simple and concise
+explanation of regular expression matching \cite{Cox07a}. It seems
+ironic that this well-versed author published this influential work
+on his website. The joke, however, may be on Academia's side.
+
+When the practitioners acknowledge each other's work, we can't
+help but disagree almost universally with the characterizations they
+produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
+work an ``implementation'' of Laurikari's algorithm, although Laurikari's
+algorithm is far too incomplete for that statement to be fair. Laurikari's
+algorithm is referred to as a \textsc{Posix}-style automaton. In truth, Laurikari
+leaves the matching strategy entirely open. It was Kuklewicz that
+found out how to get \textsc{Posix}-style matching out of Laurikari's TDFA. 
+
+Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
+used in the text editor sam~\cite{Pike87a}.  While sam was released
+as free software, no description of his regular expression matching,
+besides the source code, was published.  Sam uses Thompson's NFA,
+but adds submatch tracking. This seems unfair in that Laurikari's
+allows for far more aggressive reuse of old states than Thompson
+allows. This should lead to Laurikari's TDFA having fewer states,
+and therefore better performance, than even Google's
+RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses
+Pike's algorithm. This is not confirmed by the benchmarks by
+Sulzmann and Lu \cite{Sulz12a}, but they offer an explanation: in
+their profiling, they see that all Haskell implementations spend
+considerable time decoding the input strings. In other words, the
+measured performance is more of an artifact of the programming
+environment used.
+
+Another mistake that permeates the scarce literature is to call
+regular expression matching linear. As Sedgewick points out correctly
+\cite{Sedg90a}, Thompson's NFA matching is of complexity $O(m\, n)$,
+where $m$ is the size of the input NFA, and $n$ is the size of the
+input string. To call this linear means to assume that $m$ is fixed,
+which is not justified. It may well be true that, at present, $m$
+tends to be small. But that is a natural consequence of the algorithms for
+parsing not scaling very well with $m$. If they did, that would allow for
+fast feature extracting from text\footnote{To check if a document
+contains features $f_1, f_2, \dots, f_n$, we would match the document
+against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
+Therefore, in this paper, we consider the state of the art algorithms
+to be quadratic, since both $m$ and $n$ are part of the input to a
+regular expression matcher. There is no known lower bound that would prohibit 
+a sub-quadratic match, so there is still hope to beat this algorithm as well 
+as other NFA based regular expression matchers.
+
+Sulzmann and Lu add to the table a new matching strategy that yields
+good practical performance, although the theoretical bounds are considerably
+worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
+
+The problem of producing parse trees from regular expressions (regular 
+expression parsing) is a more active field of study. The misconception of the 
+constant $m$ permeates this field as well, so that comparing the actual 
+running time bounds is nigh-impossible since they are just described as
+\emph{linear}.
+
+Kearns~\cite{Kear91a} describes the first so-called linear-time algorithm 
+(linear in the size of the string, not the pattern) for RE parsing.  Dub\'e and
+Feeley~\cite{Dube00a} produce parse trees in so-called linear-time using lists
+as their data representation. Nielsen and Henglein~\cite{Niel11a} improve on it
+by storing the trees in bit-coded form.  Neither produces a greedy or
+non-greedy parse.  Grathwohl~\cite{Grat13a} produce a greedy parse in two
+passes over the input.  In comparison, our approach allows full control over
+greediness, even for subexpressions, thus generalizing over all previous
+approaches, while matching the running time guarantees of regular expression
+matching. It runs in only one pass and supports character ranges, lazy
+compilation, and compactified DFA representation for practical performance.
+
+\chapter{Algorithm} \seclabel{algo}
+
+The algorithm we present is a extension of the non-deterministic finite state
+automaton (NFA) matching algorithm for regular expressions with added logging
+of the start and end of capture groups, as introduced by
+Laurikari\cite{Laur00a}. We will first present the algorithm for matching,
+which will be $O(n\, m\, u(m))$, where $u(m)$ describes the amortized cost of
+logging a single opening or closing of a capture group. We will then show a
+simple data structure that will allow us to achieve $u(m) = \log m$ and
+continue to present a way to improve this to $u(m) = 1$ following Driscoll et
+al\cite{Dris89a}. This gives us $O(n\, m)$ run time for the
+complete algorithm, which is the best known run time for NFA algorithms. Since
+this is not a purely theoretical paper, there are also practical considerations
+such as caching current results, just-in-time compilation, and compact memory
+usage.
 
 Conceptually, our approach is the following pipeline of four stages:
 \begin{enumerate}
@@ -283,7 +567,7 @@ compilation occurred in a while. Worse, compactification can be
 undone if needed. Since the essence of the algorithm is step 2 and 3, 
 we will start with them and proceed see 1 and 4 as part of the implementation.
 
-\subsection{Thompson's construction} 	\seclabel{thompson}
+\section{Thompson's construction} 	\seclabel{thompson}
 
 We transform the abstract syntax tree (AST) of the regular expression into an NFA,
 in a modified version of Thompson's NFA construction. To
@@ -291,7 +575,7 @@ control greediness, or discern capture groups, our approach adds tagged
 $\varepsilon$ transitions to the transition graph. An
 $\varepsilon$ transition has no input range assigned, and can thus always
 be used. It does not consume an input character. Tagged transitions 
-mark the beginning or end of capture groups or controll the prioritization.
+mark the beginning or end of capture groups or control the prioritization.
 The additions are needed for greediness control and capture groups.
 Let's look at both, in turn.
 
@@ -304,7 +588,7 @@ provisioning \texttt{.*} to be non-greedy, a matching against input
 \texttt{``Tom Lehrer,1;Alan Turing,2;''} would match as much as
 possible into the first capture group, including the record separator
 `,'.  Thus, the first capture group would suddenly contain only one
-entry, and it would contain more than just names, namely``Tom
+entry, and it would contain more than just names, namely ``Tom
 Lehrer,1;Alan Turing''.  This is, of course, not what we expect.
 Non-greediness, here, ensures that we get ``Tom Lehrer'', then
 ``Alan Turing'' as the matches of the first capture group.
@@ -314,9 +598,10 @@ Non-greediness, here, ensures that we get ``Tom Lehrer'', then
 
 \caption{\label{fig:example-automaton}
 Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} 
-In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing tag for capture group $n$.}
+In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the
+opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing
+tag for capture group $n$.}
 \end{figure}
-
 
 In the NFA, we model greedy repetition or non-greedy repetition of
 an expression in two steps:
@@ -373,9 +658,7 @@ of the following instructions on histories can be performed in
 constant time. Here, the \emph{position} is the current position
 of the matcher.
 
-\global\long\def\pos{\mathbf{\mathbf{p}}}
-
-\subsection{DFAs}	\seclabel{dfa}
+\section{DFAs}	\seclabel{dfa}
 
 Our above definition of regular expression assumes a machine that
 guesses the correct transition through magic. To implement regular
@@ -390,21 +673,20 @@ we ``fork'' a co-routine for every option that we have. This way, when
 the input is over, there must be at least one co-routine that guessed
 correctly at all times. 
 
-The key insight is that we keep all co-routines in lock-step. To
-achieve this, we must be very specific about what constitutes the
-state of a co-routine. Since every co-routine effectively simulates a different
-NFA run, the state inside of a co-routine contains exactly two items: the
-NFA state it simulates and the history for every tag. Now, the following
-would be a correct, although slow, implementation of an NFA
-interpreter without thaumaturgical component: whenever an input character
-is read, we can iterate over
-all co-routines, kill the ones that have no legal transition for the input
-character, and fork more co-routines as needed.
+The key insight is that we keep all co-routines in lock-step. To achieve this,
+we must be very specific about what constitutes the state of a co-routine.
+Since every co-routine effectively simulates a different NFA run, the state
+inside of a co-routine contains exactly two items: the NFA state it simulates
+and the history for every tag. Now, the following would be a correct, although
+slow, implementation of an NFA interpreter without thaumaturgical component:
+whenever an input character is read, we can iterate over all co-routines, kill
+the ones that have no legal transition for the input character, and fork more
+co-routines as needed.
 
 Trouble starts when we want to fork a co-routine for an NFA state that
 is already running. Not only is an explosion of co-routines bad for
 performance, it would also lead to ambiguity: if the two co-routines
-disagree on the histories, which one is correct?
+after reading the whole string disagree on the histories, which one is correct?
 
 \begin{notation}
 
@@ -412,17 +694,18 @@ We use the following vocabulary.
 
 \begin{description}
 \item[DFA states] are denoted by a capital letter, e.g. $Q$, and
-	contain multiple co-routines.  \begin{equation*}\begin{split}Q=[&(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)),\\
+	contain multiple co-routines.
+  \begin{equation*}\begin{split}Q=[&(q_1, (h_1, h_2, h_3, h_4, h_5, h_6)),\\
 	&(q_2, (h_1, h_2, h_3, h_4, h_7, h_8))]\end{split}\end{equation*} for example means
 	that the current DFA state has one co-routine in NFA state $q_1$ with
 	histories $(h_1, h_2, h_3, h_4, h_5, h_6)$ and another co-routine in NFA state
 	$q_2$ with the histories $(h_1, h_2, h_3, h_4, h_7, h_8)$.
 	Note that histories can be shared across co-routines if they
 	have the same matches.
-\item[Histories] are linked list, where each node stores a position in the input text.
-	The head is mutable, the rest is immutable. Therefore, histories can share any node
-	except their heads. We write $h=[x_1, \dots, x_m]$ to describe that matches occurred
-	at the positions $x_1, \dots, x_m$. 
+\item[Histories] are linked list, where each node stores a position in the
+  input text.  The head is mutable, the rest is immutable. Therefore, histories
+  can share any node except their heads. We write $h=[x_1, \dots, x_m]$ to
+  describe that matches occurred at the positions $x_1, \dots, x_m$. 
 \item[Co-routines] are denoted as pairs $(q_i, h)$, where $q_i$ is some
 	NFA state, and $h = (h_1, \dots, h_{2n})$ is an array of histories,
 	where $n$ is the number of capture groups.  Each co-routine has an array
@@ -437,25 +720,29 @@ We use the following vocabulary.
 Take for example the regular expression \texttt{(..)+} matching
 pairs of characters, on the input string ``abcd''. The history array of the
 finishing co-routine  is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
-Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0 thru 3.
-Histories $h_3$ and $h_4$ contain the positions of all the matches of capture group 1, in reverse. That is:
-one match from 0 thru 1, and another from 2 thru 3.
+Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0
+thru 3.  Histories $h_3$ and $h_4$ contain the positions of all the matches of
+capture group 1, in reverse. That is: one match from 0 thru 1, and another from
+2 thru 3.
 
 Our engine executes instructions at the end of every interpretation
 step. There are four kinds of instructions:
 
 \begin{description}
 \item [$h\leftarrow\pos$] Stores the current position into the head of history $h$.
-\item [$h\leftarrow\pos+1$] Stores the position after the current one into the head of history $h$.
+\item [$h\leftarrow\pos+1$] Stores the position after the current one into the
+  head of history $h$.
 \item [$h'\mapsto h$] Sets head.next of $h$ to be head.next of $h'$. 
 	This effectively copies the (immutable) rest of $h$ to be the rest of $h'$, also. 
-\item [$c\uparrow(h)$] Prepends history $h$ with a new node that becomes the new head.
-	This effectively \emph{commits} the old head, which is henceforth considered immutable. $c\uparrow(h)$
-	describes the opening position of the capture group and is therefore called the opening commit. 
-\item [$c\downarrow(h)$] This is the same as $c\uparrow(h)$ except that it denotes a closing commit marking the end of the capture group. 
-	This distinction is necessary, because an opening commit will store the position
-	\emph{after} the current character and the closing commit will store the position
-	\emph{at} the current character.
+\item [$c\uparrow(h)$] Prepends history $h$ with a new node that becomes the
+  new head.  This effectively \emph{commits} the old head, which is henceforth
+  considered immutable. $c\uparrow(h)$ describes the opening position of the
+  capture group and is therefore called the opening commit. 
+\item [$c\downarrow(h)$] This is the same as $c\uparrow(h)$ except that it
+  denotes a closing commit marking the end of the capture group.  This
+  distinction is necessary, because an opening commit will store the position
+  \emph{after} the current character and the closing commit will store the
+  position \emph{at} the current character.
 \end{description}
 \end{notation}
 
@@ -466,7 +753,7 @@ step. There are four kinds of instructions:
 	   Input position $pos$,\\
 	   a list of co-routines $Q = [(q, [h_{1},\dots,h_{n}])]$,
 	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
-\Ensure{ Set of co-routines $R$.}
+\Ensure{Set of co-routines $R$.}
 \State $R\leftarrow [\ ]$\;
 \State Initialize empty stack buffer
 \State Initialize empty stack high
@@ -495,7 +782,8 @@ step. There are four kinds of instructions:
 	\If{$q'$ is marked as seen} \State jump to top of while loop \EndIf
 	\algstore{onestep}
 \end{algorithmic}
-\caption{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up state for DFA state $Q$. Continued on page \pageref{oneStep2}.}
+\caption{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute
+the follow-up state for DFA state $Q$. Continued on page \pageref{oneStep2}.}
 \end{algorithm*}
 \begin{algorithm*}
 \label{oneStep2}
@@ -535,7 +823,8 @@ step. There are four kinds of instructions:
 	\EndFor
 \EndWhile
 
-\caption{$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up state for DFA state $Q$. (continued)}
+\caption{$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up
+state for DFA state $Q$. (continued)}
 \end{algorithmic}
 \end{algorithm*}
 
@@ -546,17 +835,16 @@ co-routines running after the input character has been read. It makes
 sure that if there could be two co-routines with the same NFA state,
 the one that follows greedy matching\footnote{Non-greedy operators
 work the same way, just with reversed priorities. Both greediness profiles
-work correctly even if both occur during the onestep execution.} will survive. At
-no point of the algorithm are the two state-memory tuples both present in the
-result and thus in conflict. In a nutshell, the algorithm works as
-follows: The co-routines are scheduled, in order, they eat one input
-character, and then follow only high-priority transitions, saving
-low-priority transitions on a stack.  Once we're out of high-priority
-transitions, we continue with low priority transitions, until all
-possible transitions have been followed. Then, we schedule the next
-input co-routine.  The starting state is obtained from Algorithm~\ref{onestep},
-taking the starting NFA state as input, with the slight twist that
-no input character is consumed.
+work correctly even if both occur during the onestep execution.} will survive.
+At no point of the algorithm are the two state-memory tuples both present in
+the result and thus in conflict. In a nutshell, the algorithm works as follows:
+The co-routines are scheduled, in order, they eat one input character, and then
+follow only high-priority transitions, saving low-priority transitions on a
+stack.  Once we're out of high-priority transitions, we continue with low
+priority transitions, until all possible transitions have been followed. Then,
+we schedule the next input co-routine.  The starting state is obtained from
+Algorithm~\ref{onestep}, taking the starting NFA state as input, with the
+slight twist that no input character is consumed.
 
 Note that the ordering of co-routines inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
@@ -570,9 +858,9 @@ a fork of the co-routine of state 6, not 3. This matters, since 6 and
 
 \begin{example} Execution of algorithm \ref{onestep}: \label{ex:oneStep1}
 Consider the automaton in figure \ref{fig:example-automaton} is in
-the DFA state\footnote{This is the starting state, except for the omission of co-routines 
-that would die immediately after scheduling because there are no consuming
-transitions attached to their NFA state.}
+the DFA state\footnote{This is the starting state, except for the omission of
+co-routines that would die immediately after scheduling because there are no
+consuming transitions attached to their NFA state.}
 \begin{align*}
 Q=[
 	(q_6, H_2=(&h_1, h_2, h_7,  h_8, h_5, h_6)), \\
@@ -589,43 +877,50 @@ after they are encountered.  The actual algorithm collects them and
 executes them after the \emph{oneStep} call to allow further
 optimizations and the storage of the instructions.
 
-Further, in the scope of this algorithm, co-routines have one extra bit of information attached to them:
-they can be hungry or fed. Hungry co-routines can only follow transitions that consume characters,
-fed co-routines can only follow $\varepsilon$ transitions.
+Further, in the scope of this algorithm, co-routines have one extra bit of
+information attached to them: they can be hungry or fed. Hungry co-routines can
+only follow transitions that consume characters, fed co-routines can only
+follow $\varepsilon$ transitions.
 
 This is the execution of \emph{oneStep}(\emph{NFA},
 ``,'', $1$, $Q$):
 
 \begin{enumerate}
 \item Fill the \emph{low} stack with hungry co-routines of all states of $Q$.
-Now, $\mathit{low}=[(q_6, H_2), (q_3, H_1))]$, where the first element is the head of the stack.
+  Now, $\mathit{low}=[(q_6, H_2), (q_3, H_1))]$, where the first element is the
+  head of the stack.
 \item Initialize \emph{buffer} as an empty stack. 
-The \emph{buffer} stack exists because while following high priority transitions, states are discovered
-in an order that is reversed with respect to the order in which we would like to output them.
+  The \emph{buffer} stack exists because while following high priority
+  transitions, states are discovered in an order that is reversed with respect
+  to the order in which we would like to output them.
 \item Initialize $R=[\ ]$, the DFA state under construction.
-\item co-routine $(q_6,H_2)$ is popped from the \emph{low} stack, since \emph{high} is empty. It is hungry.
-\item We iterate all available transitions in the NFA transition graph, and find only $q_6\rightarrow q_7$, which can consume character ``,''.
+\item co-routine $(q_6,H_2)$ is popped from the \emph{low} stack, since
+  \emph{high} is empty. It is hungry.
+\item We iterate all available transitions in the NFA transition graph, and
+  find only $q_6\rightarrow q_7$, which can consume character ``,''.
 \item $(q_7, H_2)$ is pushed to \emph{high} as fed, and we continue the main loop.
 \item $(q_7, H_2)$ is taken from the \emph{high} stack. It is fed.
 \item $(q_7, H_2)$ is pushed on \emph{buffer}.
 \item Since $(q_7, H_2)$ is fed, it follows $\varepsilon$ transitions.
-\item The available transition $q_7\rightarrow q_8$ is evaluated:\begin{enumerate}
-	\item 	This transition has a opening tag for capture group 3 on it, and so we'd like to change $h_5$, 
-		the relevant history (see definition of $Q$ above). However, since we're \emph{spawning} a new co-routine, we cannot change $h_5$ itself.
-		Instead, we copy $h_5$, and change the copy.
-	\item	A new history $h$ is created.
-	\item 	$h_5 \mapsto h$. Note that this is constant time, no matter how many entries $h_5$ already has.
-	\item 	$h\leftarrow\pos+1$. This is the position after the ``,'', because the comma was eaten before the capture
-			group starts.
-	\item	Create $H_3 = h_1, h_2, h_7, h_8, h, h_6)$ as a copy of $H_2$, with $h$ in the appropriate position.
-	\item $(q_8, H_3)$ is pushed on the \emph{high} stack.
-\end{enumerate}
+\item The available transition $q_7\rightarrow q_8$ is evaluated:
+  \begin{enumerate}
+    \item 	This transition has a opening tag for capture group 3 on it, and so we'd like to change $h_5$, 
+      the relevant history (see definition of $Q$ above). However, since we're \emph{spawning} a new co-routine, we cannot change $h_5$ itself.
+      Instead, we copy $h_5$, and change the copy.
+    \item	A new history $h$ is created.
+    \item 	$h_5 \mapsto h$. Note that this is constant time, no matter how many entries $h_5$ already has.
+    \item 	$h\leftarrow\pos+1$. This is the position after the ``,'', because the comma was eaten before the capture
+        group starts.
+    \item	Create $H_3 = h_1, h_2, h_7, h_8, h, h_6)$ as a copy of $H_2$, with $h$ in the appropriate position.
+    \item $(q_8, H_3)$ is pushed on the \emph{high} stack.
+  \end{enumerate}
 \item $(q_8, H_3)$ is taken from the \emph{high} stack.
 \item It is pushed on \emph{buffer}. \emph{buffer}$=[(q_8, H_3), (q_7, H_2)]$
 \item It can follow no further transitions and dies.
 \item We discover that the \emph{high} stack is empty.
-\item We now flush \emph{buffer}: $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[\ ]$.
-	Note that now, $R$ contains two co-routines in the reverse order in which they were discovered.
+\item We now flush \emph{buffer}:
+  $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[\ ]$.  Note that now, $R$
+  contains two co-routines in the reverse order in which they were discovered.
 \item $(q_3, H_1)$ is popped from \emph{low}. It is hungry.
 \item  $(q_3, H_1)$ is one of the two co-routines that constitute the
 	input of this algorithm. Note how the other, $(q_6, H_2)$, got a
@@ -644,19 +939,23 @@ in an order that is reversed with respect to the order in which we would like to
 \end{enumerate}
 \item We flush the \emph{buffer} again: $R=[(q_8, H_3), (q_7, H_2), (q_4, H_1)]$
 	Note how $(q_4, H_1)$ appears \emph{last} in $R$.
-\item $(q_3, H_1)$ is taken from the \emph{low} stack, because \emph{high} is empty.
+\item $(q_3, H_1)$ is taken from the \emph{low} stack, because \emph{high} is
+  empty.
 \item It is added to \emph{buffer}.
 \item $q_3\rightarrow q_5$ is visited:\begin{enumerate}
 	\item $(q_5, H_1)$ is pushed to \emph{high}.
 \end{enumerate}
 \item $(q_5, H_1)$ is taken from the \emph{high} stack.
 \item It is added to \emph{buffer}.
-\item $q_5\rightarrow q_6$ is visited and contains the closing commit of the second capture group:\begin{enumerate}
-	\item Two histories are created to store the new positions of both the start and the end of the capture group. 
-	This ensures that other co-routines will not corrupt the memory.
+\item $q_5\rightarrow q_6$ is visited and contains the closing commit of the
+  second capture group:\begin{enumerate}
+  \item Two histories are created to store the new positions of both the start
+    and the end of the capture group. This ensures that other co-routines will
+    not corrupt the memory.
 	\item A new history $h$ is for the opening of the capture group.
 	\item A new history $h'$ is created for the closing position.
-	\item $h_3 \mapsto h$. See the definition of $Q$ above, to see that $h3$ is the opening capture group position of $H_1$.
+  \item $h_3 \mapsto h$. See the definition of $Q$ above, to see that $h3$ is
+    the opening capture group position of $H_1$.
 	\item $h_4 \mapsto h'$.
 	\item $h'\leftarrow\pos$. This is the position of the ``,''.
 	\item Create a new history array, with $h$ and $h'$ in place. 
@@ -690,14 +989,15 @@ Since at most two histories are actually changed, much of the
 array would not be modified and could be shared across the original
 co-routine and the forked one. This is easily achieved replacing the
 array by a persistent~\cite{Dris89a} data structure to hold the 
-array. A persistent treap, sorted by array index, has all necessary properties\footnote{Clojure~\cite{Hick08} features a slightly more complex 
-data structure under the name of `persistent vectors'. Jean Niklas L'orange offers
-a good explanation in ``Understanding Clojure's Persistent Vectors'',
-\url{http://hypirion.com/musings/understanding-persistent-vector-pt-1}.}
-and will be further elaborated upon in \Secref{treap}. With
-$T_{fork}=O(\log m)$, the overall runtime is $O(n\,m\,\log m)$.
+array. A persistent treap, sorted by array index, has all necessary
+properties\footnote{Clojure~\cite{Hick08} features a slightly more complex data
+structure under the name of `persistent vectors'. Jean Niklas L'orange offers a
+good explanation in ``Understanding Clojure's Persistent Vectors'',
+\url{http://hypirion.com/musings/understanding-persistent-vector-pt-1}.} and
+will be further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
+the overall runtime is $O(n\,m\,\log m)$.
 
-\section{Implementation}
+\chapter{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
 to reach the theoretical time bound we claimed, practical performance
 can be dramatically improved by avoiding to construct new states.
@@ -707,7 +1007,7 @@ to execute when using the transition. We build the transition table,
 including instructions, as we go. This is what we mean when we say
 that the DFA is \emph{lazily compiled}. 
 
-\subsection{DFA transition table}
+\section{DFA transition table}
 The DFA transition table is different from the NFA transition table,
 in that the NFA transition table contains $\varepsilon$ transitions and
 may have more than one transition from one state to another, for
@@ -769,11 +1069,13 @@ is the size of the input NFA.
 	\State sort $m$ in reverse topological order so that no values are overwritten.
   
 	\Return{$Q'$ and $m$}
-\caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is mappable to in order to keep the number of states created bound by the length of the regular expression.}
+\caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is
+mappable to in order to keep the number of states created bound by the length
+of the regular expression.}
 \end{algorithmic}
 \end{algorithm*}
 
-\subsection{DFA execution}
+\section{DFA execution}
 With these ingredients in place, the entire matching algorithm is
 straightforward.  In a nutshell, we see if the current input appears
 in the transition table. Otherwise, we run \texttt{oneStep}. If the
@@ -827,7 +1129,7 @@ execution and to feed into the transition table.
 \label{interpret}
 \end{algorithm*}
 
-\subsection{Compactification}
+\section{Compactification}
 \seclabel{compact}
 The most important implementation detail, which brought a factor 10
 improvement in performance, was the use of a compactified representation
@@ -871,18 +1173,65 @@ The above algorithm chimes well with the observation that usually,
 regular expression matching needs only a handful of DFA states, and thus,
 compactifying can be done early, and only seldom need to be undone.
 
-\subsection{Intertwining of the pipeline stages}
+\section{Intertwining of the pipeline stages}
 The lazy compilation of the DFA when matching a string enables us
 to avoid compiling states of it that might never be necessary. This
 allows us to avoid the full power set construction \cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
-\subsection{Treap}	\seclabel{treap}
+\section{Fully persistent data structures}	\seclabel{treap}\seclabel{data-structures}
+In order to allow modifications of our list of histories, it is
+necessary to build a data structure that provides the interface an guarantees 
+of a copy-on-write array:
+
+\begin{definition}
+  An \texttt{Arraylike} data structure $A$ of length $m$ must provide the 
+  following interface:
+  \begin{description}
+    \item[Constructor] $A(m)$ must return a structure of length $m$.
+    \item[Random access] An instance of $A$ must provide a method $get(i)$,
+      which gives a history for each $0 \leq i < m$.
+    \item[Setting elements] An instance of $A$ must provide a method $set(i,
+      history)$, which returns a new version of $A$, so that $get(i) = history$.
+      The original instance must still return the same value for any $get$ 
+      and $set$ -- it must be logically unmodified.
+  \end{description}
+
+  This is a definition of a fixed-size fully-persistent linear data structure.
+\end{definition}
+
+Note that multiple versions of the data structure can change, every version 
+that is in a living co-routine. A way to visualize this is as a tree of 
+versions, where each $set$ call forks off a new node, as seen in \Figref{version-tree}.
+
+The rest of this section will look at different possible implementations and 
+their relative performance. Since in the worst case $get$ as well as $set$ are
+required in each step of each co-routine, the relevant performance measure is 
+$T=O(T_{get} + T_{set}) = O(max(T_{get}, T_{set}))$ measured in amortized time.
+
+\subsection{Copy-on-write array}
+The arguably simplest class to provide the interface is an array that copies 
+itself before making modifications:
+
+\begin{description}
+  \item[Constructor] $A(m)$ allocate an array of histories $a$ of size $m$.
+  \item[Random access] $get(i)$ gives the $i$th element of the array in $O(1)$ 
+    time.
+  \item[Setting elements] $set(i, history)$ copies $a$ and set the $i$th 
+    element to be $history$. This takes $O(m)$ time.
+\end{description}
+
+The performance for $get$ and $set$ gives us $T=O(1 + m) = O(m)$.
+
+While the asymptotic performance is abysmal, the copy-on-write array is not
+to be dismissed apriori, since it has great memory locality properties and 
+might outperform more complex structures for small $m$.
+
+\subsection{Treap}
 The treap data structure allows copy-on-write in $\log m$ time, sharing
-much of the structure by using the flyweight pattern as can be seen in \Figref{treap}. The treap is a 
-balanced, left-leaning binary tree with entries in each node, equipped
-with the operations \texttt{get} and
-\texttt{set} as seen in algorithm~\ref{alg:treap}.
+much of the structure by using the flyweight pattern as can be seen in
+\Figref{treap}. The treap is a balanced, left-leaning binary tree with entries
+in each node, equipped with the operations \texttt{get} and \texttt{set} as follows.
 
 \begin{algorithm*}
 \begin{algorithmic}[1]
@@ -956,17 +1305,166 @@ hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
 \path (n2p) edge (n6);
 \path (n1p) edge (n9);
 \end{tikzpicture}}
-\caption{\figlabel{treap}Writing to the second entry of the treap only requires $O(\log m)$ copies while keeping the old structure intact (persistence).}
+\caption{\figlabel{treap}Writing to the second entry of the treap only requires
+$O(\log m)$ copies while keeping the old structure intact (persistence).}
 \end{figure}
 
-\subsection{Parsing the regular expression sytnax}  \seclabel{regex-syntax}
-Parsing the regular expression into an abstract syntax tree is a detail that can easily be missed. However a preliminary experiment showed that, even in simple regular expressions, this step can take up a major part (25\% in our experiment)
-of the time for running the complete match.
+This structure gives us better asymptotic performance at the cost of 
+following $\log m$ pointers, because $T = O(\log m + \log m) = O(\log m)$.
 
-The memory model to parse a regular expression is a stack, since capture groups can be nested. The grammar can be formulated as right recursive and with this formulation
-it can be implemented with a simple recursive descent parser.
+\subsection{Storing updates}
+Driscoll et al\cite{Dris89a} describe how any pointer machine data structure 
+with a fixed number of links to each version can be converted to a fully 
+persistent data structure in $O(1)$ amortized time. This section will show 
+the steps involved to equip an array with such an interface.
 
-\section{Benchmark}
+The idea behind the conversion is that instead of modifying the array 
+directly, we will instead keep a buffer of modifications that is of fixed 
+size. Lets for the moment assume that we have a linear order of modifications 
+and only add the version tree later.
+
+\subsubsection{Linear versions}
+In this part, we will only modify the most recent version $t^\star$ and only 
+access the old versions $0 \leq t \leq t^\star$. In order to store the 
+modifications, we introduce the struct $Set(t, i, history)$, which can be stored 
+in the modification buffer. The implementation of the simple methods can be 
+seen in algorithm~\ref{alg:lazy-apply-1}
+
+\begin{algorithm*}
+\begin{algorithmic}[1]
+\Function{makeLazyApply}{m}
+  \State allocate an array of $m$ histories $hs$
+  \State allocate a buffer $b$ of size $p$ for modifications.
+  \State \Return $\{ histories: hs, buffer: b\}$
+\EndFunction
+\Function{get}{lazyApply, t, index}
+  \State $history \leftarrow lazyApply.histories[index]$
+  \For{each $Set(t', i, history')$}
+    \If{$t' < t$ and $i = index$}
+      \State $history \leftarrow history'$
+    \EndIf
+  \EndFor
+  \State \Return $history$
+\EndFunction
+\Statex
+\Function{set}{lazyApply, t, index, entry}
+  \If{$lazyApply.buffer$ has space left}
+    \State add $Set(t, index, entry)$ to $lazyApply.buffer$
+    \State \Return $lazyApply$
+  \Else
+    \State\Return new $LazyApply$ with all changes applied
+  \EndIf
+\EndFunction
+\end{algorithmic}
+\caption{\label{alg:lazy-apply-1}Methods of the $LazyApply$ data structure}
+\end{algorithm*}
+
+The amorized constant time for $get$ and $set$ arise from the fact that while 
+we iterate through the changes, we only have a constant number of them.
+
+\subsubsection{Version tree}
+In the general case of a version tree, we lose the notion of a total order of
+versions and remain with a partial order. Version $t_1$ and version $t_2$ can 
+now be in three different relations: Either $t_1$ can happen before $t_2$, so 
+that the modification in $t_1$ also needs to be taken into account in $t_2$, 
+$t_2$ can happen before $t_1$, or they can be siblings, so that the 
+modifications shouldn't influence each other. 
+
+The problem of generalizing this approach to version trees is two fold: The 
+first problem is, that we need to determine whether a modification applies to a
+version in constant time, otherwise $get$ will become slower. The second 
+problem is that modifying the same version reduces to copying the array of 
+histories if said version has a full buffer. The latter is more easily solved 
+and thus will be discussed first.
+
+\paragraph{Emptying a full buffer} Instead of applying all modifications, we 
+can split the modification buffer in two roughly equal parts. In order to do 
+that, we can find a subtree $v$ of modifications of size $\approx \frac{p}{2}$. 
+Instead of applying all modifications to the array of histories, we only 
+apply the ancestors of $v$. Then we delete all modifications in $v$ from the 
+original node. Now we would be breaking the interface, because some 
+co-routines still have references to the original node, but actually use a 
+version that is in $v$. This can be avoided by storing back-pointers to the 
+threads and modify their references to the new node if necessary. Since there
+are at most $m$ threads referencing the versions of each node, we can still
+update the references in amortized constant time.
+
+\paragraph{Constant time ordering of versions}
+In order to determine whether to apply a modification on a read, we need to 
+find the relation between the version that is querried and the one that is 
+stored. If $t_{stored} < t_{querried}$, we apply the modification. This 
+requires us however to determine the relative positions of $t_{stored}$ and 
+$t_{querried}$ in the version tree, where the naive implementation would take 
+$\log m$ time. This is the order maintenance problem and fittingly can be 
+solved using an order maintenance data structure, such as the one proposed by 
+Dietz and Sleator\cite{Diet87a} which we will discuss in \Secref{order-maintenance}.
+
+For the moment let us assume that we have a linear data structure, that
+\begin{enumerate}
+  \item allows inserting an element next to a known element in $O(1)$ time.
+  \item allows us to query the order of two elements $a$ and $b$ in the list 
+    in $O(1)$ time. We'll call this operation $query_<(a, b)$.
+\end{enumerate}
+
+With this we can flatten the tree to a list by adding a $b_t$ beginning 
+element and a $e_t$ closing element to the list as seen in
+\Figref{flattening-tree}.
+
+\begin{figure}[htpb]
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}[>=stealth',level/.style={
+level 1/.style={sibling distance=6cm},
+level 2/.style={sibling distance=5cm},
+level 3/.style={sibling distance=2.5cm}},
+every node/.style = {align=center, text centered,
+    font=\sffamily, circle, draw=black}]
+\node (n1) {$v_1$} 
+	child {
+		node (n2) {$v_2$}
+    child { node (n3) {$v_3$} } 
+    child { node {$v_4$} }
+  }
+  child { node (n5) {$v_5$} } ;
+\node (o3) [below=0.0cm of n3, draw=none,fill=none] {$(b_1\ (b_2\ (b_3\ e_3)$};
+\node (o4) [draw=none,fill=none, right=3cm of o3] {$(b_4\ e_4)\ e_2)$};
+\node (o5) [draw=none,fill=none, right=of o4] {$(b_3\ b_3)\ e_1)$};
+\end{tikzpicture}
+}
+  \caption{A flattened version tree}
+  \label{fig:flattening-tree}
+\end{figure}
+
+Now we can find if version $t_2$ depends on version $t_1$, by calculating 
+\[ query_<(b_{t_1}, b_{t_2})\ \mathrm{\&\&}\ query_<(e_{t_2}, e_{t_1})\]
+If $t_1$ encloses $t_2$ completely, then $t_2$ is part of the subtree of $t_1$
+and therefore we'd need to apply the modification at $t_1$ to find values at
+$t_2$.
+
+\section{Order maintenance}\seclabel{order-maintenance}
+
+\section{Parsing the regular expression sytnax}  \seclabel{regex-syntax}
+Parsing the regular expression into an abstract syntax tree is a detail that
+can easily be missed. Since the algorithm for matching is already very fast,
+preliminary experiments showed that the parsing of the regular expression, even
+in simple regular expressions, this step can take up a major part (25\% in our
+experiment) of the time for running the complete match.
+
+The memory model to parse a regular expression is a stack, since capture groups
+can be nested. The grammar can be formulated as right recursive and with this
+formulation it can be implemented with a simple recursive descent parser as 
+opposed to the previous Parsec parser. The resulting parser eliminated the 
+parsing of the regular expression as a bottleneck, as can be seen in
+figure~\Figref{regex-syntax-parsing} (note the log plot).
+
+\begin{figure}
+  \includegraphics[width=\linewidth]{graphs/logplot-parserspeed-robust}
+
+  \caption{\figlabel{regex-syntax-parsing}Comparison of two ways of parsing the
+regular expression syntax. Since the measurements are very noisy, the median 
+with the MAD (median absolute deviation) are plotted.}
+\end{figure}
+
+\chapter{Benchmark}
 \seclabel{benchmarks}
 All benchmarks were obtained using Google's
 caliper\footnote{\url{https://code.google.com/p/caliper/}}, which
@@ -989,7 +1487,9 @@ only linearly. The raw data is seen in \Tabref{patho}.
 
 \begin{figure}[htp]
 \includegraphics[width=\linewidth]{graphs/pathological-with-axes.pdf}
-\caption{Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is java.util.regex.}
+\caption{Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against
+input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is
+java.util.regex.}
 \figlabel{patho}
 \end{figure}
 
@@ -1002,7 +1502,8 @@ Oracle & 241 & 484 & 1003 & 1874 & 3555 & 7381 & 14561 & 30116\tabularnewline
 Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
 \bottomrule
 \end{tabular}
-\caption{Matching times, in microseconds, for matching $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.}
+\caption{Matching times, in microseconds, for matching
+  $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.}
 \tablabel{patho}
 \end{table*}
 
@@ -1015,22 +1516,14 @@ implementation that actually does produce complete parse trees is
 JParsec\footnote{\url{http://jparsec.codehaus.org}}, which, as also
 seen in \Tabref{abc}, performs on par with our approach. 
 
-%That may be
-%because JParsec is a general-purpose parser with much bigger machinery
-%than java.util.regex, and so, to parse regular expressions, it
-%follows the same overall algorithm as java.util.regex, but always
-%with a bigger constant attached.  For this reason, and because
-%non-greedy matching cannot be expressed directly in JParsec, we did
-%not implement any further JParsec benchmarks.
-
 Note that because java.util.regex achieves its back-tracking through recursion,
 we had to set the JVM's stack size to one Gigabyte for it to parse the input.
 Since default stack size is only a few megabytes, this makes using
 java.util.regex a security risk, even for unproblematic regular expressions
-that cannot cause backtracking, since an attacker can potentially force the VM to run 
-out of stack space.
+that cannot cause backtracking, since an attacker can potentially force the VM
+to run out of stack space.
 
-\begin{table}[htp]
+\begin{table}[htp]\center
 \begin{tabular}{cc}
 \toprule
 Tool & Time\tabularnewline
@@ -1040,7 +1533,9 @@ java.util.regex & 1,992\tabularnewline
 Ours & 5,332\tabularnewline
 \bottomrule
 \end{tabular}
-\caption{Matching regular expression \texttt{((a+b)+c)+} against input (a\^{}200bc)\^{}2000, where a\^{}200 denotes 200 times character `a'. Time in microseconds.}
+\caption{Matching regular expression \texttt{((a+b)+c)+} against input
+(a\^{}200bc)\^{}2000, where a\^{}200 denotes 200 times character `a'. Time in
+microseconds.}
 \tablabel{abc}
 \end{table}
 
@@ -1055,7 +1550,7 @@ not allow non-greedy matches. Even though it is possible to build
 a parser that produces the same AST, it would necessarily look very
 different (using negation) from the regular expression.
 
-\begin{table}[htp]
+\begin{table}[htp]\center
 \begin{tabular}{cc}
 \toprule
 Tool & Time\tabularnewline
@@ -1064,108 +1559,24 @@ java.util.regex & 11,319\tabularnewline
 Ours & 8,047\tabularnewline
 \bottomrule
 \end{tabular}
-\caption{Runtimes, in microseconds, for finding all java class names in all .java files in the project itself. The regular expression used is 
-\texttt{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
+\caption{Runtimes, in microseconds, for finding all java class names in all
+  .java files in the project itself. The regular expression used is
+  \texttt{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
 Runtime in microseconds}
 \tablabel{real}
 \end{table}
 
 
-\section{Related work}
-\seclabel{related}
-Our algorithm is a modification of Laurikari's algorithm \cite{Laur00a},
-which is itself a modified power set construction algorithm \cite[p. 55]{Sips05a}.
-
-While there is no shortage of books discussing the usage of regular
-expressions, the implementation side of regular expression has not
-been so lucky. Cox is spot-on when he argues that innovations have
-repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}. 
-
-This paper is no exception. The authors of this paper had set out
-to implement Laurikari's TDFA algorithm \cite{Laur00a},
-only to discover that Laurikari's description of a TDFA is so far
-from complete that it can rightfully only be called the sketch for
-an algorithm. Only late in the process did we discover that the blanks
-had already been filled by Kuklewicz in the course of his implementation
-of TDFAs in Haskell \cite{Kukl07a}. Kuklewicz enshrined his
-added insight into Haskell library, but never published the algorithm
-as a whole. If the history of regular expressions is evidence of one
-thing, it is that source code is a terrible medium to convey algorithms. 
-
-The situation dramatically improved with Cox's simple and concise
-explanation of regular expression matching \cite{Cox07a}. It seems
-ironic that this well-versed author published this influential work
-on his website. The joke, however, may be on Academia's side.
-
-When the practitioners acknowledge each other's work, we can't
-help but disagree almost universally with the characterizations they
-produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
-work an ``implementation'' of Laurikari's algorithm, although Laurikari's
-algorithm is far too incomplete for that statement to be fair. Laurikari's
-algorithm is referred to as a \textsc{posix}-style automaton. In truth, Laurikari
-leaves the matching strategy entirely open. It was Kuklewicz that
-found out how to get \textsc{posix}-style matching out of Laurikari's TDFA. 
-
-Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
-used in the text editor sam~\cite{Pike87a}.  While sam was released
-as free software, no description of his regular expression matching,
-besides the source code, was published.  Sam uses Thompson's NFA,
-but adds submatch tracking. This seems unfair in that Laurikari's
-allows for far more aggressive reuse of old states than Thompson
-allows. This should lead to Laurikari's TDFA having fewer states,
-and therefore better performance, than even Google's
-RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses
-Pike's algorithm.  This is not confirmed by the benchmarks by
-Sulzmann and Lu \cite{Sulz12a}, but they offer an explanation: in
-their profiling, they see that all Haskell implementations spend
-considerable time decoding the input strings. In other words, the
-measured performance is more of an artifact of the programming
-environment used.
-
-Another mistake that permeates the scarce literature is to call
-regular expression matching linear. As Sedgewick points out correctly
-\cite{Sedg90a}, Thompson's NFA matching is of complexity $O(mn)$,
-where $m$ is the size of the input NFA, and $n$ is the size of the
-input string. To call this linear means to assume that $m$ is fixed,
-which is not justified. It may well be true that, at present, $m$
-tends to be small. But that is a natural consequence of the algorithms
-not scaling very well with $m$. If they did, that would allow for
-fast feature extracting from text\footnote{To check if a document
-contains features $f_1, f_2, \dots, f_n$, we would match the document
-against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
-Therefore, in this paper, we consider the state of the art algorithms
-to be quadratic, since both $m$ and $n$ are part of the input to a
-regular expression matcher. We cannot rule out that a linear algorithm
-exists, in fact, we hope for it.  To insist that regular expression
-matching is done in linear time is to insist that the optimal
-algorithm has already been found; that is probably not true.
-
-Sulzmann and Lu add to the table a new matching strategy that yields
-good practical performance, although the theoretical bounds are considerably
-worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
-
-Kearns~\cite{Kear91a} describes the first linear-time algorithm for RE parsing.
-Dub\'e and Feeley~\cite{Dube00a} produce parse trees in linear time using lists as their 
-data representation. Nielsen and Henglein~\cite{Niel11a} improve on it by storing the trees in bit-coded form. 
-Neither produces a greedy or non-greedy parse.
-Grathwohl~\cite{Grat13a} produce a greedy parse in two over the input.
-In comparison, our approach allows full control over greediness, even for subexpressions, 
-thus generalizing over all previous approaches. 
-It runs in only one pass and supports character ranges, lazy compilation, 
-and compactified DFA representation for practical performance.
-
-\section{Conclusion}
-Our approach can produce entire parse trees from matching regular
-expressions in a single pass over the string. 
-The performance is on par with traditional back-tracking
-solutions if no backtracking ever happens, exponentially outperforms
-back-tracking approaches for pathological input, and in a realistic
-scenario outperforms backtracking by 40\%, even though our approach 
-produces the full parse tree, and the backtracking implementation doesn't.
-All source code and all
-benchmarks are available under a free license on
+\chapter{Conclusion}
+Our approach can produce entire parse trees from matching regular expressions
+in a single pass over the string.  The performance is on par with traditional
+back-tracking solutions if no backtracking ever happens, exponentially
+outperforms back-tracking approaches for pathological input, and in a realistic
+scenario outperforms backtracking by 40\%, even though our approach produces
+the full parse tree, and the backtracking implementation doesn't. All source
+code and all benchmarks are available under a free license on
 Github\footnote{\url{https://github.com/nes1983/tree-regex}}.
 
 \bibliographystyle{plain}
-\bibliography{bib/scg}
+\bibliography{biblio}
 \end{document}

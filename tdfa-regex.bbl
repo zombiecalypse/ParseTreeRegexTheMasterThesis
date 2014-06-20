@@ -6,12 +6,6 @@ Arvind Arasu, Surajit Chaudhuri, Zhimin Chen, Kris Ganjam, Raghav Kaushik, and
 \newblock Experiences with using data cleaning technology for bing services.
 \newblock {\em IEEE Data Eng. Bull.}, 35(2):14--23, 2012.
 
-\bibitem{Inte13a}
-Intel Corporation.
-\newblock {\em Intel\textsuperscript{\textregistered} 64 and IA-32
-  Architectures Software Developer's Manual}.
-\newblock Intel, 248966-028 edition, July 2013.
-
 \bibitem{Cox07a}
 R.~Cox.
 \newblock Regular expression matching can be simple and fast (but is slow in
@@ -28,6 +22,12 @@ R.~Cox.
 \newblock Regular expression matching in the wild.
 \newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp3.html}, 2010.
 
+\bibitem{Diet87a}
+P.~Dietz and D.~Sleator.
+\newblock Two algorithms for maintaining order in a list.
+\newblock In {\em Proceedings of the Nineteenth Annual ACM Symposium on Theory
+  of Computing}, STOC '87, pages 365--372, New York, NY, USA, 1987. ACM.
+
 \bibitem{Dris89a}
 James~R. Driscoll, Neil Sarnak, Daniel~D. Sleator, and Robert~E. Tarjan.
 \newblock Making data structures persistent.
@@ -35,17 +35,22 @@ James~R. Driscoll, Neil Sarnak, Daniel~D. Sleator, and Robert~E. Tarjan.
   February 1989.
 
 \bibitem{Dube00a}
-Danny Dub\'{e} and Marc Feeley.
+Danny Dub{\'e} and Marc Feeley.
 \newblock Efficiently building a parse tree from a regular expression.
-\newblock 37(2):121--144, 2000.
+\newblock {\em Acta Informatica}, 37(2):121--144, 2000.
 
 \bibitem{Grat13a}
 Niels Bj{\o}rn~Bugge Grathwohl, Fritz Henglein, Lasse Nielsen, and Ulrik~Terp
   Rasmussen.
-\newblock {Two-Pass} greedy regular expression parsing.
-\newblock In Stavros Konstantinidis, editor, {\em Implementation and
-  Application of Automata}, volume 7982 of {\em Lecture Notes in Computer
-  Science}, pages 60--71. Springer Berlin Heidelberg, 2013.
+\newblock Two-pass greedy regular expression parsing.
+\newblock In {\em Implementation and Application of Automata}, pages 60--71.
+  Springer, 2013.
+
+\bibitem{Niel11a}
+Fritz Henglein and Lasse Nielsen.
+\newblock Regular expression containment: coinductive axiomatization and
+  computational interpretation.
+\newblock In {\em ACM SIGPLAN Notices}, volume~46, pages 385--398. ACM, 2011.
 
 \bibitem{Hick08}
 Rich Hickey.
@@ -65,10 +70,10 @@ L.~Karttunen, J.~P. Chanod, G.~Grefenstette, A.~Schiller, and Received
 \newblock In {\em Natural Language Engineering}, pages 305--328, 1996.
 
 \bibitem{Kear91a}
-Steven~M. Kearns.
+Steven~M Kearns.
 \newblock Extending regular expressions with context operators and parse
   extraction.
-\newblock {\em Softw: Pract. Exper.}, 21(8):787--804, August 1991.
+\newblock {\em Software: Practice and Experience}, 21(8):787--804, 1991.
 
 \bibitem{Kukl07a}
 Chris Kuklewicz.
@@ -89,14 +94,6 @@ Chad~R. Meiners, Jignesh Patel, Eric Norige, Eric Torng, and Alex~X. Liu.
 \newblock In {\em Proceedings of the 19th USENIX conference on Security},
   USENIX Security'10, page~8, Berkeley, CA, USA, 2010. USENIX Association.
 
-\bibitem{Niel11a}
-Lasse Nielsen and Fritz Henglein.
-\newblock Bit-coded regular expression parsing.
-\newblock In Adrian-Horia Dediu, Shunsuke Inenaga, and Carlos Mart\'{\i}n-Vide,
-  editors, {\em Language and Automata Theory and Applications}, volume 6638 of
-  {\em Lecture Notes in Computer Science}, pages 402--413. Springer Berlin
-  Heidelberg, 2011.
-
 \bibitem{Pike87a}
 R.~Pike.
 \newblock The text editor sam.
@@ -106,6 +103,11 @@ R.~Pike.
 Robert Sedgewick.
 \newblock {\em Algorithms in C (paperback)}.
 \newblock Addison-Wesley Professional, 1 edition, January 1990.
+
+\bibitem{Sipser2005}
+Michael Sipser.
+\newblock {\em Introduction to the Theory of Computation}.
+\newblock Course Technology, 2 edition, February 2005.
 
 \bibitem{Sips05a}
 Michael Sipser.

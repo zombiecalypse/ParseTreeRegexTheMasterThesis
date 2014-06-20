@@ -1,3 +1,4 @@
+/tdfa-regex.fls
 .DS_Store
 .settings/
 bin/
@@ -36,6 +37,7 @@ bin/
 *.vrb
 *.xdy
 *.tdo
+*-eps-converted-to.pdf
 tdfa-regex.pdf
 untitled folder/scg.bib
 _gitPull.command
