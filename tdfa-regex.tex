@@ -14,16 +14,20 @@
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{tikz}
+\usepackage{mathtools}
+
 \usetikzlibrary{arrows,automata,shapes,positioning,snakes}
 \usepackage{algpseudocode}
 \usepackage{float}
 \usepackage{caption}
-\newfloat{algorithm}{t}{lop}
-\floatname{algorithm}{Algorithm}
+\usepackage{algorithm}
 \algnewcommand{\LineComment}[1]{\State \(\triangleright\) #1}
+
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
 
 \theoremstyle{definition}
 \newtheorem*{notation}{Notation}
+\newtheorem*{defn}{Definition}
 
 % ============================================================
 %% Uncomment the next few lines to get sf url links:
@@ -172,7 +176,7 @@ trees with only constant slowdown compared to matching.
 Regular expressions give us a concise language to describe patterns in 
 strings and can be used for log analysis, natural language processing, and 
 many other tasks involving structured data in strings. Their efficiancy make 
-them useful even for big data sets. Standard algorithms run in 
+them useful even for large data sets. Standard algorithms run in 
 $\mathcal{n\, m}$, where $n$ is the length of the string to be matched 
 against and $m$ is the length of the pattern\cite{Sedg90a}.
 
@@ -192,7 +196,7 @@ and \texttt{``1''} for the third. That is, the parse tree found by the
 \begin{figure}[htp]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/posix_parse}
-\caption{\figlabel{lehrer-posix} Parse tree produced by
+\caption[Posix parse tree]{\figlabel{lehrer-posix} Parse tree produced by
 \textsc{posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+}
 against input ``Tom Lehrer,1;Alan Turing,2;''.}
 \figlabel{posix}
@@ -204,7 +208,7 @@ tree after the matching phase is done, as seen in \Figref{our-tree}.
 \begin{figure}[htp]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/full_parse}
-\caption{\figlabel{lehrer-tree} Parse tree produced by our approach matching
+\caption[Full parse tree]{\figlabel{lehrer-tree} Parse tree produced by our approach matching
 regular expression \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
 Lehrer,1;Alan Turing,2;''}
 \figlabel{our-tree}
@@ -241,13 +245,12 @@ the regular expression in at most $O(n\,m)$ time.
 
 \section{Motivation}
 
-This is the age of big data, and the first step of processing big
-data is often to parse strings. As an example, consider log files.
-As Jacobs\cite{Jaco09a}
-noted, ``What makes most big data big is repeated observations over
-time and/ or space,'' and thus log files grow large frequently. At
-the same time, they provide important insight into the process that
-they are logging, so their parsing and understanding is important. 
+A first step of processing large data sets is often to parse strings in order 
+to optain a more manageable format. As an example, consider log files.  As
+Jacobs\cite{Jaco09a} noted, ``What makes most big data big is repeated
+observations over time and/ or space,'' and thus log files grow large
+frequently. At the same time, they provide important insight into the process
+that they are logging, so their parsing and understanding is important. 
 
 Regular expressions make for scalable and efficient lightweight parsers\cite{Kart96a}.
 
@@ -269,10 +272,10 @@ first look at the goal -- what regular expressions are and what kind of
 constructs need to be supported by our algorithm.
 
 Regular expressions are typically described by a string of literal characters
-to match and some special constructs specific to them. With this they can 
-describe any regular language\cite{Sipser2005} if one only considers 
-\emph{match} vs \emph{non-match} and can extract sub-patterns when capture 
-groups are added.
+to match and some special constructs specific to the regular expression syntax.
+With this they can describe any regular language\cite{Sipser2005} if one only
+considers \emph{match} vs \emph{non-match} and can extract sub-patterns when
+capture groups are added.
 
 \begin{table}[htb]
   \begin{tabular}{c|c|c|>{\centering\arraybackslash}m{5cm}}
@@ -333,7 +336,9 @@ same strings.
 \paragraph{Non-greedy operators} The option, the star, and the plus operators 
 also have corresponding non-greedy operators, which are \texttt{??}, 
 \texttt{*?}, and \texttt{+?} respectively. These operators prefer to match as 
-few repetitions as possible.
+few repetitions as possible. In back-tracking implementation, guessing the 
+right path is an important efficiancy feature and for all capturing 
+implementation the path taken influences the captured groups.
 
 \paragraph{Alternation} Patters separated by the pipe symbol \texttt{|} can 
 either match the left part or the right part. This binds weaker than 
@@ -353,6 +358,12 @@ the leftmost occurence of the inner group is kept. In tree regex, all
 occurences are kept and returned in a tree structure: The outer capture group 
 contains $bcbccc$ and both inner matches $bc$ and $bccc$.
 
+The relevance of greedy and non-greedy matches becomes apparent now: The 
+regular expression \texttt{a(.*)c?} on the string $abc$ will capture $bc$ in 
+the group, while \texttt{a(.*?)c?} will capture only $b$. This is because the 
+grammar is ambiguous without specifying the greedyness of the match -- both 
+$b$ and $bc$ would be valid.
+
 \section{(Non-)deterministic finite-state automata}
 As they are heavily used throughout this paper, let us recall what
 non-deterministic finite-state automata (NFAs) and deterministic finite-state
@@ -369,6 +380,58 @@ traversed without consuming a character, called $\varepsilon$-transitions.  If
 there is a transition that will eventually lead to the accepting state, an NFA
 will magically guess the correct one. \autoref{fig:example-automaton} shows an
 example of an NFA's transition graph.
+
+An simple way to think about the process of reading input with a NFA is that 
+of \emph{co-routines}. A co-routine is a procedure that has the ability to 
+suspend itself and continue later -- it is similar to a thread, but it is 
+not executed in parallel. In the context of NFA a co-routine contains the 
+current state and has access to the transition graph. When reading a 
+string, the NFA will maintain a set of co-routines and advance them in 
+lock-step. This means that each co-routine reads the current character and 
+spawn new co-routines for all possible transitions. When reading a character, 
+a co-routine must consume it, but might follow $\varepsilon$-transitions 
+afterwards. In order to model that, we propose an additional state kept in 
+the co-routine: it can either be \emph{hungry} or \emph{fed}. If it is 
+hungry, it can only follow transitions that contain the character to be read, 
+but the co-routine will become fed. If a co-routine is fed, it can only 
+follow $\varepsilon$-transitions. This is formalized in algorithm~\ref{alg:nfa-string}.
+
+\begin{algorithm*}
+  \begin{algorithmic}
+  \Function{read}{string, nfa}
+    \State Initialize set of co-routines $coroutines$
+    \State $r\leftarrow$ \emph{fed} co-routine $r$ in starting state of $nfa$
+    \State \Call{$r.push$}{$\varepsilon$, $coroutines$}
+    \For{all characters $c$ in $string$}
+      \State make new set of co-routines $coroutines'$
+      \For{all co-routines $r$ in $coroutines'$}
+        \State remove $r$ from $coroutines$
+        \State \Call{$r.push$}{c, $coroutines'$}
+      \EndFor
+      \State $coroutines \leftarrow coroutines'$
+    \EndFor
+  \EndFunction
+  \Statex
+  \Function{$push_{fed}$}{character, coroutines}
+    \For{all $\varepsilon$-transitions from current state to state $s$}
+      \If{no co-routine in state $s$ exists in coroutines}
+        \State add a \emph{fed} co-routine $r$ in state $s$ to coroutines
+        \State \Call{$r.push$}{character, coroutines}
+      \EndIf
+    \EndFor
+  \EndFunction
+  \Statex
+  \Function{$push_{hungry}$}{character, coroutines}
+    \For{all $character$-transitions from current state to state $s$}
+      \If{no co-routine in state $s$ exists in coroutines}
+        \State add a \emph{fed} co-routine $r$ in state $s$ to coroutines
+        \State \Call{$r.push$}{character, coroutines}
+      \EndIf
+    \EndFor
+  \EndFunction
+  \end{algorithmic}
+  \caption{\label{alg:nfa-string}NFA reading a string}
+\end{algorithm*}
 
 \section{Regular expressions matching}
 \subsection{Backtracking}
@@ -415,7 +478,7 @@ A faster alternative to this approach is to preprocess the regular expression
 and convert it into a NFA by the rules in \Figref{thompson-construction-simple}.
 
 \begin{figure*}[htb] \includegraphics[width=\linewidth]{graphs/thompson-simple}
-\caption{Thompson~\cite{Thom68a} construction of the
+  \caption[Thompson construction]{Thompson~\cite{Thom68a} construction of the
 automaton: Descend into the abstract syntax tree of the regular
 expression and expand the constructs recursively.}
 \label{fig:thompson-construction-simple} 
@@ -446,6 +509,36 @@ each character read. The time complexity of the match is then $O(n\, m)$.
 This is the best known result for matching\cite{Cox07a,Cox09a,Cox10a}.
 
 Our algorithm will modify this algorithm by adding instructions to transitions.
+
+\section{Tagged finite state automata}
+The algorithms so far did not extract capture groups and looking at the data 
+structures involved it's clear that without storing this information in some 
+way, we will not be able to do so. Here our model of co-routines comes in 
+handy, because we can simply add more instructions into the execution of each 
+co-routine. A \emph{tagged finite-state automaton} is a 
+more general form of a finite-state automaton, where transitions are allowed 
+to contain \emph{tags}. At run-time the tags can be interpreted into 
+modifications of the coroutine's memory. To simplify the analysis, only 
+$\varepsilon$-transitions can have tags. This can be seen in
+algorithm~\ref{alg:coroutine-tagged}. To see how this is a generalisation of 
+the NFA, we can imagine non-$\varepsilon$-transitions as simply tagged 
+transitions, where the tag consumes the character and sets the memory to \emph{fed}.
+
+\begin{algorithm*}
+  \begin{algorithmic}
+  \Function{$push_{tagged}$}{coroutines}
+    \For{all $\varepsilon$-transitions from current state to state $s$ with tag $t$}
+      \If{no co-routine in state $s$ exists in coroutines}
+        \State copy own memory into $m$
+        \State \Call{interpret}{$t$, $m$}
+        \State add a co-routine $r$ in state $s$ with memory $m$ to coroutines
+        \State \Call{$r.push$}{character, coroutines}
+      \EndIf
+    \EndFor
+  \EndFunction
+  \end{algorithmic}
+  \caption{\label{alg:coroutine-tagged}Tagged transition execution}
+\end{algorithm*}
 
 \chapter{Related work}
 \seclabel{related}
@@ -596,7 +689,7 @@ Non-greediness, here, ensures that we get ``Tom Lehrer'', then
 \begin{figure}[htp]
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
-\caption{\label{fig:example-automaton}
+\caption[NFA for \texttt{((.*?),(\textbackslash{}d+);)+}]{\label{fig:example-automaton}
 Automaton for \texttt{((.*?),(\textbackslash{}d+);)+} 
 In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the
 opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing
@@ -618,7 +711,7 @@ transition labeled ``any'' between them.
 \item We add prioritized transitions to model repetition. In our
 example, repeating is achieved by adding two $\varepsilon$ transitions:
 one from 4 back to 3, to match more than one time any character,
-and another one from 3 to 4, to enable matching nothing at all.
+and another one from 3 to 5, to enable matching nothing at all.
 Importantly, the transition from 4 back to 3 is marked as low
 priority (the ``--'' sign) while the transition leaving the automaton,
 from 3 to 5, is unmarked, which means normal priority.  This means
@@ -635,7 +728,7 @@ notion of preference on NFAs, we come back to prioritized transitions when
 discussing the transformation from NFA states to DFA states.
 
 \begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
-\caption{Modified Thompson~\cite{Thom68a} construction of the
+  \caption[Modified Thompson construction]{Modified Thompson~\cite{Thom68a} construction of the
 automaton: Descend into the abstract syntax tree of the regular
 expression and expand the constructs recursively.}
 \label{fig:thompson-construction} 
@@ -783,7 +876,7 @@ step. There are four kinds of instructions:
 	\If{$q'$ is marked as seen} \State jump to top of while loop \EndIf
 	\algstore{onestep}
 \end{algorithmic}
-\caption{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute
+\caption[Compute the follow-up state for DFA state $Q$]{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute
 the follow-up state for DFA state $Q$. Continued on page \pageref{oneStep2}.}
 \end{algorithm*}
 \begin{algorithm*}
@@ -824,7 +917,7 @@ the follow-up state for DFA state $Q$. Continued on page \pageref{oneStep2}.}
 	\EndFor
 \EndWhile
 
-\caption{$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up
+\caption[]{$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up
 state for DFA state $Q$. (continued)}
 \end{algorithmic}
 \end{algorithm*}
@@ -1073,7 +1166,7 @@ is the size of the input NFA.
 	\State sort $m$ in reverse topological order so that no values are overwritten.
   
 	\Return{$Q'$ and $m$}
-\caption{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is
+  \caption[$findMapping(Q)$]{\label{findmapping}$findMapping(Q)$: Finding a state that $Q$ is
 mappable to in order to keep the number of states created bound by the length
 of the regular expression.}
 \end{algorithmic}
@@ -1309,7 +1402,7 @@ hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
 \path (n2p) edge (n6);
 \path (n1p) edge (n9);
 \end{tikzpicture}}
-\caption{\figlabel{treap}Writing to the second entry of the treap only requires
+\caption[Treap for history storage]{\figlabel{treap}Writing to the second entry of the treap only requires
 $O(\log m)$ copies while keeping the old structure intact (persistence).}
 \end{figure}
 
@@ -1401,7 +1494,7 @@ requires us however to determine the relative positions of $t_{stored}$ and
 $t_{querried}$ in the version tree, where the naive implementation would take 
 $\log m$ time. This is the order maintenance problem and fittingly can be 
 solved using an order maintenance data structure, such as the one proposed by 
-Dietz and Sleator\cite{Diet87a} which we will discuss in \Secref{order-maintenance}.
+Dietz and Sleator\cite{Diet87b} which we will discuss in \Secref{order-maintenance}.
 
 For the moment let us assume that we have a linear data structure, that
 \begin{enumerate}
@@ -1417,9 +1510,8 @@ element and a $e_t$ closing element to the list as seen in
 \begin{figure}[htpb]
 \resizebox{\linewidth}{!}{
 \begin{tikzpicture}[>=stealth',level/.style={
-level 1/.style={sibling distance=6cm},
-level 2/.style={sibling distance=5cm},
-level 3/.style={sibling distance=2.5cm}},
+level 1/.style={sibling distance=5cm},
+level 2/.style={sibling distance=2.5cm}},
 every node/.style = {align=center, text centered,
     font=\sffamily, circle, draw=black}]
 \node (n1) {$v_1$} 
@@ -1430,7 +1522,7 @@ every node/.style = {align=center, text centered,
   }
   child { node (n5) {$v_5$} } ;
 \node (o3) [below=0.0cm of n3, draw=none,fill=none] {$(b_1\ (b_2\ (b_3\ e_3)$};
-\node (o4) [draw=none,fill=none, right=3cm of o3] {$(b_4\ e_4)\ e_2)$};
+\node (o4) [draw=none,fill=none, right=0.5cm of o3] {$(b_4\ e_4)\ e_2)$};
 \node (o5) [draw=none,fill=none, right=of o4] {$(b_3\ b_3)\ e_1)$};
 \end{tikzpicture}
 }
@@ -1445,6 +1537,108 @@ and therefore we'd need to apply the modification at $t_1$ to find values at
 $t_2$.
 
 \section{Order maintenance}\seclabel{order-maintenance}
+Dietz and Sleator describe in their paper Two Algorithms for Maintaining 
+Order in a List\cite{Diet87b}\footnote{And Bender et al\cite{Bend02a} in 
+their revision of this classical paper}, a simple one that provides amortized 
+guarantees and a more involved one, which could offer worst-case guarantees. 
+For our purposes the amortized version suffices, as noted by Driscoll et
+al\cite[p. 108]{Dris89a}.
+
+The datastructure keeps so called \emph{tags} $\eta(e)$ for elements, which are 
+integers that describe the order. In order to query the relative position of 
+two elements, their tags are simply compared, which leaves us with the 
+problem of maintaining tags for all list elements such that 
+$\eta(e_1)<\eta(e_2) \Leftarrow index(e_1) < index(e_2)$.
+
+The key to achieve this is to use a doubly linked list of tags with their 
+corresponding elements. If we need to insert an element after another known 
+element $e$, we can insert it, but to keep our invariant, we assign 
+$\eta(e_{new}) =\floor*{\frac{\eta(e) + \eta(e.next)}{2}}$. This is possible, 
+unless the new tag is actually equal to $\eta(e)$ -- if $\eta(e)$ doesn't 
+have any space to $\eta(e.next)$. In this case we need to relabel the 
+existing nodes.
+
+\subsection{Relabeling}
+The repurpose of the relabeling step is to ensure that there is a gap to fit 
+inthe new element and reduce the potential of a next reordering step. An 
+intutive perspective is shown by Bender et al\cite{Bend02a}:
+
+The labels can be thought of a coding of paths in a complete binary tree as 
+visualized in \Figref{labels-bin-tree}. We can then define the 
+\emph{overflow} in a subtree, which will trigger relabeling.
+
+\begin{figure}[htb]
+  \centering
+\begin{tikzpicture}[>=stealth',level/.style={
+level 1/.style={sibling distance=6cm},
+level 2/.style={sibling distance=3cm},
+level 3/.style={sibling distance=1.5cm}},
+every node/.style = {align=center, text centered,
+    font=\sffamily, circle, draw=black},
+norm/.style={edge from parent/.style={black,thin,draw}},
+hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
+\node {}
+  child {
+    node {}
+    child [hiddentree] {	
+        node [gray] {}
+        child { node [gray] {$000_2$}  edge from parent node[left,draw=none] {0} }
+        child { node [gray] {$001_2$}  edge from parent node[right,draw=none] {1} }
+        edge from parent node[left,draw=none] {0}
+			}
+			child {
+        node {}
+        child {node {$010_2$} edge from parent node[left,draw=none] {0} }
+        child {node (n6) {$011_2$} edge from parent node[right,draw=none] {1} }
+        edge from parent node[right,draw=none] {1}
+			} edge from parent node[left,draw=none] {0}
+		} 
+	child {
+		node {}
+			child {	
+        node {}
+        child [hiddentree] { node [gray] {$100_2$}  edge from parent node[left,draw=none] {0} }
+        child { node {$101_2$}  edge from parent node[right,draw=none] {1} }
+        edge from parent node[left,draw=none] {0}
+			}
+			child {
+        node {}
+        child [hiddentree] {node [gray] {$110_2$} edge from parent node[left,draw=none] {0} }
+        child {node {$111_2$} edge from parent node[right,draw=none] {1} }
+        edge from parent node[right,draw=none] {1}
+			} edge from parent node[right,draw=none] {1}
+		} ;
+\end{tikzpicture}
+\caption[Tree for relabeling order]{Labels are binary numbers describing paths in a tree. Relabeling
+  walks up the tree until it finds a subtree with a density below the
+threshold. In this range, the labels changed to make them equally spaced.}
+  \label{fig:labels-bin-tree}
+\end{figure}
+
+\begin{defn}
+  The \emph{overflow threshold} of a subtree is $1.5^i$ for any 
+  level\footnote{$a=1.5$ is an arbitrary choice for a number $1 < a < 2$.} $i$, 
+  starting counting from the leafs, which are level 0.
+
+  \emph{Overflow} happens, when the number of items in a subtree are bigger 
+  than the overflow threshold.
+\end{defn}
+
+With this definition, we can define the region that we relabel to be the 
+first subtree that isn't in overflow -- which means that is is filled 
+sufficiently sparsely to reduce the potential new relabels. In this subtree 
+we spread the the labels equally, which will ensure that we will not have to 
+do any relabeling for another $\floor{1.5^{-i}}$ inserts. Note that a much 
+bigger region might be in overflow, but no checks are done if they are not 
+triggered by an overflow at level 0, i.e.\ placing a node between two adjacent
+nodes.
+
+This algorithm leaves us with the disappointment of only achieving $O(\log m)$ 
+amortized insert. This can be resolved using a technique known as \emph{indirection}.
+
+\subsubsection{Indirection}
+Indirection is a method introduced by Willard\cite{Will82a} to eliminate 
+annoying $\log$ factors under certain conditions such as the one just encountered.
 
 \section{Parsing the regular expression sytnax}  \seclabel{regex-syntax}
 Parsing the regular expression into an abstract syntax tree is a detail that
@@ -1463,7 +1657,7 @@ figure~\Figref{regex-syntax-parsing} (note the log plot).
 \begin{figure}
   \includegraphics[width=\linewidth]{graphs/logplot-parserspeed-robust}
 
-  \caption{\figlabel{regex-syntax-parsing}Comparison of two ways of parsing the
+  \caption[Regular expression grammar parse time]{\figlabel{regex-syntax-parsing}Comparison of two ways of parsing the
 regular expression syntax. Since the measurements are very noisy, the median 
 with the MAD (median absolute deviation) are plotted.}
 \end{figure}
@@ -1491,7 +1685,7 @@ only linearly. The raw data is seen in \Tabref{patho}.
 
 \begin{figure}[htp]
 \includegraphics[width=\linewidth]{graphs/pathological-with-axes.pdf}
-\caption{Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against
+\caption[Pathological regular expression parse time]{Time in nanoseconds for matching $\textit{a?}^n\textit{a}^n$ against
 input $\textit{a}^n$. Bottom (purple) line is our approach, top (blue) line is
 java.util.regex.}
 \figlabel{patho}
@@ -1502,11 +1696,11 @@ java.util.regex.}
 \toprule
 $n$ & 13 & 14 & 15 & 16 & 17 & 18 & 19 & 20\tabularnewline
 \midrule
-Oracle & 241 & 484 & 1003 & 1874 & 3555 & 7381 & 14561 & 30116\tabularnewline
+java.util.regex & 241 & 484 & 1003 & 1874 & 3555 & 7381 & 14561 & 30116\tabularnewline
 Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
 \bottomrule
 \end{tabular}
-\caption{Matching times, in microseconds, for matching
+\caption[Matching times $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.]{Matching times, in microseconds, for matching
   $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.}
 \tablabel{patho}
 \end{table*}
@@ -1537,8 +1731,9 @@ java.util.regex & 1,992\tabularnewline
 Ours & 5,332\tabularnewline
 \bottomrule
 \end{tabular}
-\caption{Matching regular expression \texttt{((a+b)+c)+} against input
-(a\^{}200bc)\^{}2000, where a\^{}200 denotes 200 times character `a'. Time in
+\caption[Matching times regular expression \texttt{((a+b)+c)+} against input $(a^{200}bc)^{2000}$]{
+  Matching regular expression \texttt{((a+b)+c)+} against input
+$(a^{200}bc)^{2000}$, where $a^{200}$ denotes 200 times character `a'. Time in
 microseconds.}
 \tablabel{abc}
 \end{table}
@@ -1563,7 +1758,7 @@ java.util.regex & 11,319\tabularnewline
 Ours & 8,047\tabularnewline
 \bottomrule
 \end{tabular}
-\caption{Runtimes, in microseconds, for finding all java class names in all
+\caption[Matching times for finding all java class names]{Runtimes, in microseconds, for finding all java class names in all
   .java files in the project itself. The regular expression used is
   \texttt{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
 Runtime in microseconds}
@@ -1573,14 +1768,20 @@ Runtime in microseconds}
 
 \chapter{Conclusion}
 Our approach can produce entire parse trees from matching regular expressions
-in a single pass over the string.  The performance is on par with traditional
-back-tracking solutions if no backtracking ever happens, exponentially
-outperforms back-tracking approaches for pathological input, and in a realistic
-scenario outperforms backtracking by 40\%, even though our approach produces
-the full parse tree, and the backtracking implementation doesn't. All source
-code and all benchmarks are available under a free license on
-Github\footnote{\url{https://github.com/nes1983/tree-regex}}.
+in a single pass over the string and do so asymptotically no slower than 
+regular expression matching without any extraction.  The practical performance
+is on par with traditional back-tracking solutions if no backtracking ever
+happens, exponentially outperforms back-tracking approaches for pathological
+input, and in a realistic scenario outperforms backtracking by 40\%, even
+though our approach produces the full parse tree, and the backtracking
+implementation doesn't. All source code and all benchmarks are available under
+a free license on Github\footnote{\url{https://github.com/nes1983/tree-regex}}.
 
 \bibliographystyle{plain}
 \bibliography{biblio}
+
+\listoffigures
+\listoftables
+\listofalgorithms
+\listoffigures
 \end{document}

@@ -6,6 +6,12 @@ Arvind Arasu, Surajit Chaudhuri, Zhimin Chen, Kris Ganjam, Raghav Kaushik, and
 \newblock Experiences with using data cleaning technology for bing services.
 \newblock {\em IEEE Data Eng. Bull.}, 35(2):14--23, 2012.
 
+\bibitem{Bend02a}
+Michael~A Bender, Richard Cole, Erik~D Demaine, Martin Farach-Colton, and Jack
+  Zito.
+\newblock Two simplified algorithms for maintaining order in a list.
+\newblock In {\em Algorithms—ESA 2002}, pages 152--164. Springer, 2002.
+
 \bibitem{Cox07a}
 R.~Cox.
 \newblock Regular expression matching can be simple and fast (but is slow in
@@ -21,6 +27,12 @@ R.~Cox.
 R.~Cox.
 \newblock Regular expression matching in the wild.
 \newblock {\em URL: http://swtch.com/\~{}rsc/regexp/regexp3.html}, 2010.
+
+\bibitem{Diet87b}
+Paul Dietz and Daniel Sleator.
+\newblock Two algorithms for maintaining order in a list.
+\newblock In {\em Proceedings of the nineteenth annual ACM symposium on Theory
+  of computing}, pages 365--372. ACM, 1987.
 
 \bibitem{Dris89a}
 James~R. Driscoll, Neil Sarnak, Daniel~D. Sleator, and Robert~E. Tarjan.
@@ -124,5 +136,11 @@ M.~Sulzmann and K.Z.M. Lu.
 Ken Thompson.
 \newblock Programming techniques: Regular expression search algorithm.
 \newblock {\em Commun. ACM}, 11(6):419--422, June 1968.
+
+\bibitem{Will82a}
+Dan~E Willard.
+\newblock Maintaining dense sequential files in a dynamic environment.
+\newblock In {\em Proceedings of the fourteenth annual ACM symposium on Theory
+  of computing}, pages 114--121. ACM, 1982.
 
 \end{thebibliography}
