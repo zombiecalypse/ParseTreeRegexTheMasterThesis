@@ -12,6 +12,10 @@ Michael~A Bender, Richard Cole, Erik~D Demaine, Martin Farach-Colton, and Jack
 \newblock Two simplified algorithms for maintaining order in a list.
 \newblock In {\em Algorithms—ESA 2002}, pages 152--164. Springer, 2002.
 
+\bibitem{Inte13a}
+Intel Coorporation.
+\newblock Intel 64 and ia-32 architectures optimization reference manual, 2013.
+
 \bibitem{Cox07a}
 R.~Cox.
 \newblock Regular expression matching can be simple and fast (but is slow in
