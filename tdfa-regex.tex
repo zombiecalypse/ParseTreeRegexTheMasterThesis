@@ -16,7 +16,7 @@
 \usepackage{tikz}
 \usepackage{mathtools}
 
-\usetikzlibrary{arrows,automata,shapes,positioning,snakes}
+\usetikzlibrary{arrows,automata,shapes,positioning,fit}
 \usepackage{algpseudocode}
 \usepackage{float}
 \usepackage{caption}
@@ -60,6 +60,7 @@
 \hypersetup{pdfauthor=\authornames}
 \hypersetup{pdfkeywords=\keywordnames}
 
+\newcommand{\nes}[1]{\textcolor{red}{#1}}
 \ifthenelse{\boolean{showedits}}
 {
 	\newcommand{\ugh}[1]{\textcolor{red}{\uwave{#1}}} % please rephrase
@@ -271,11 +272,11 @@ Before we dive into the algorithm to match regular expressions, we should
 first look at the goal -- what regular expressions are and what kind of 
 constructs need to be supported by our algorithm.
 
-Regular expressions are typically described by a string of literal characters
-to match and some special constructs specific to the regular expression syntax.
-With this they can describe any regular language\cite{Sipser2005} if one only
-considers \emph{match} vs \emph{non-match} and can extract sub-patterns when
-capture groups are added.
+Regular expressions have some constructs specific to them and literal 
+character matches. They are typically described in a string describing the pattern.
+They can describe any regular language\cite{Sips05a} if one only
+considers \emph{match} vs \emph{non-match} though they are typically used to 
+extract information.
 
 \begin{table}[htb]
   \begin{tabular}{c|c|c|>{\centering\arraybackslash}m{5cm}}
@@ -345,23 +346,24 @@ either match the left part or the right part. This binds weaker than
 concatenation. Therefore \texttt{abc|xyz} would match $abc$ or $xyz$, but not
 $abxyz$.
 
-\paragraph{Capture groups} Patterns enclosed by parens are treated as a 
-single element, thus \texttt{(ab)*} captures $ab$, but not $aba$. More 
-imporantly for us is that after the match, the capture groups can be extracted:
-\texttt{a(b*)c} when matching $abbbc$ can extract $bbb$ and the empty string 
-when matching $ac$. Note that the capture groups can be nested and the 
-semantics differ for \textsc{Posix} and tree regex: In \textsc{Posix} the 
-regular expression \texttt{a((bc+)+)} on the string $abcbccc$ will give $bcbccc$ 
-for the outer capture group and $bc$ for the inner capture group -- the 
-leftmost occurence of outer capture groups is kept and within that substring, 
-the leftmost occurence of the inner group is kept. In tree regex, all 
-occurences are kept and returned in a tree structure: The outer capture group 
-contains $bcbccc$ and both inner matches $bc$ and $bccc$.
+\subsection{Capture groups}
+Patterns enclosed by parens are treated as a single element, thus
+\texttt{(ab)*} captures $ab$, but not $aba$. More imporantly for us is that
+after the match, the capture groups can be extracted: \texttt{a(b*)c} when
+matching $abbbc$ can extract $bbb$ and the empty string when matching $ac$.
+Note that the capture groups can be nested and the semantics differ for
+\textsc{Posix} and tree regex: In \textsc{Posix} the regular expression
+\texttt{a((bc+)+)} on the string $abcbccc$ will give $bcbccc$ for the outer
+capture group and $bc$ for the inner capture group -- the leftmost occurence of
+outer capture groups is kept and within that substring, the leftmost occurence
+of the inner group is kept. In tree regex, all occurences are kept and returned
+in a tree structure: The outer capture group contains $bcbccc$ and both inner
+matches $bc$ and $bccc$.
 
-The relevance of greedy and non-greedy matches becomes apparent now: The 
-regular expression \texttt{a(.*)c?} on the string $abc$ will capture $bc$ in 
-the group, while \texttt{a(.*?)c?} will capture only $b$. This is because the 
-grammar is ambiguous without specifying the greedyness of the match -- both 
+The relevance of greedy and non-greedy matches becomes apparent now: The
+regular expression \texttt{a(.*)c?} on the string $abc$ will capture $bc$ in
+the group, while \texttt{a(.*?)c?} will capture only $b$. This is because 
+the parsing is ambiguous without specifying the greedyness of the match -- both
 $b$ and $bc$ would be valid.
 
 \section{(Non-)deterministic finite-state automata}
@@ -378,14 +380,17 @@ NFAs differ from DFAs in that for some input character and some state, there
 may be more than one applicable transition and some transitions can be
 traversed without consuming a character, called $\varepsilon$-transitions.  If
 there is a transition that will eventually lead to the accepting state, an NFA
-will magically guess the correct one. \autoref{fig:example-automaton} shows an
-example of an NFA's transition graph.
+will find it, by trying the alternatives in lock-step.
+\autoref{fig:example-automaton} shows an example of an NFA's transition graph.
 
 An simple way to think about the process of reading input with a NFA is that 
 of \emph{co-routines}. A co-routine is a procedure that has the ability to 
-suspend itself and continue later -- it is similar to a thread, but it is 
-not executed in parallel. In the context of NFA a co-routine contains the 
-current state and has access to the transition graph. When reading a 
+suspend itself and continue later -- it is similar to a thread, but they 
+don't need to be executed in parallel. In order to resume their work later, 
+they contain some kind of memory that is specific to them.
+
+In the context of NFAs, a co-routine contains the current state and has access
+to the transition graph. When reading a 
 string, the NFA will maintain a set of co-routines and advance them in 
 lock-step. This means that each co-routine reads the current character and 
 spawn new co-routines for all possible transitions. When reading a character, 
@@ -395,6 +400,7 @@ the co-routine: it can either be \emph{hungry} or \emph{fed}. If it is
 hungry, it can only follow transitions that contain the character to be read, 
 but the co-routine will become fed. If a co-routine is fed, it can only 
 follow $\varepsilon$-transitions. This is formalized in algorithm~\ref{alg:nfa-string}.
+
 
 \begin{algorithm*}
   \begin{algorithmic}
@@ -435,6 +441,18 @@ follow $\varepsilon$-transitions. This is formalized in algorithm~\ref{alg:nfa-s
 
 \section{Regular expressions matching}
 \subsection{Backtracking}
+
+\nes{memoization throw in: make anything cubic } 
+In the context of NFA a co-routine contains the 
+current state and has access to the transition graph. When reading a 
+string, the NFA will maintain a set of co-routines and advance them in 
+lock-step. This means that each co-routine reads the current character and 
+spawn new co-routines for all possible transitions. When reading a character, 
+a co-routine must consume it, but might follow $\varepsilon$-transitions 
+afterwards. In order to model that, we propose an additional state kept in 
+the co-routine: it can either be \emph{hungry} or \emph{fed}. If it is 
+hungry, it can only follow transitions that contain the character to be read, 
+but the co-routine will become fed. 
 \begin{algorithm*}
   \begin{algorithmic}
   \Function{match-bt}{string, pattern}
@@ -517,10 +535,10 @@ way, we will not be able to do so. Here our model of co-routines comes in
 handy, because we can simply add more instructions into the execution of each 
 co-routine. A \emph{tagged finite-state automaton} is a 
 more general form of a finite-state automaton, where transitions are allowed 
-to contain \emph{tags}. At run-time the tags can be interpreted into 
+to contain \emph{tags}. At run-time, the tags can be interpreted into 
 modifications of the coroutine's memory. To simplify the analysis, only 
 $\varepsilon$-transitions can have tags. This can be seen in
-algorithm~\ref{alg:coroutine-tagged}. To see how this is a generalisation of 
+algorithm~\ref{alg:coroutine-tagged}. To see how this is a generalization of 
 the NFA, we can imagine non-$\varepsilon$-transitions as simply tagged 
 transitions, where the tag consumes the character and sets the memory to \emph{fed}.
 
@@ -610,7 +628,7 @@ as other NFA based regular expression matchers.
 
 Sulzmann and Lu add to the table a new matching strategy that yields
 good practical performance, although the theoretical bounds are considerably
-worse than the state of the art, at $O(n^{2}m)$ \cite{Sulz12a}.
+worse than the state of the art, at $O(n^{2}m)$ \cite{Sucanlz12a}.
 
 The problem of producing parse trees from regular expressions (regular 
 expression parsing) is a more active field of study. The misconception of the 
@@ -630,7 +648,17 @@ approaches, while matching the running time guarantees of regular expression
 matching. It runs in only one pass and supports character ranges, lazy
 compilation, and compactified DFA representation for practical performance.
 
+\nes{POSIX matching? same conference of Dube. Please check all. Quote more. 
+Expand all. 
+There's a paper on using parse trees to achieve POSIX. There's a rsc groups 
+post on why posix sucks.}
+
 \chapter{Algorithm} \seclabel{algo}
+We will describe our algorithm in this chapter. Since it is based on previous 
+work and especially the lazy DFA compilation algorithm, you should expect to 
+see previously discussed topics to be reiterated.
+
+\section{TNFA}
 
 The algorithm we present is a extension of the non-deterministic finite state
 automaton (NFA) matching algorithm for regular expressions with added logging
@@ -743,23 +771,17 @@ commit was used, thus keeping the \emph{history} of each commit.
 After parsing succeeds, the list of all histories can then be used
 to reconstruct all matches of all capture groups.
 
-We model histories as linked lists, where the payload of each node
-is a position.  Only the payload of the \emph{head}, the first node,
-is mutable, the \emph{rest}, all other nodes, are immutable.  Because
-the rests are immutable, they may be shared between histories.  This
-is an application of the Flyweight pattern, which ensures that all
-of the following instructions on histories can be performed in
-constant time. Here, the \emph{position} is the current position
-of the matcher.
+We model histories as singly linked lists, where the payload of each node is a
+position.  Only the payload of the \emph{head}, the first node, is mutable, the
+\emph{rest}, all other nodes, are immutable.  Because the rests are immutable,
+they may be shared between histories.  This is an application of the Flyweight
+pattern, which ensures that all of the following instructions on histories can
+be performed in constant time. Here, the \emph{position} is the current
+position of the matcher.
 
-\section{DFAs}	\seclabel{dfa}
+\section{TDFA}	\seclabel{dfa}
 
-Our above definition of regular expression assumes a machine that
-guesses the correct transition through magic. To implement regular
-expression matching without supernatural intervention, we lazily transform
-the NFA to a DFA. 
-
-A useful metaphor for regular expression matching is that of 
+As discussed earlier, a useful metaphor for regular expression matching is that of 
 threads\cite{Cox07a} or co-routines (for clarity we will use 
 co-routine, because our algorithm is not parallel).
 Whenever we aren't sure which transition to take,
@@ -1094,6 +1116,463 @@ the overall runtime is $O(n\,m\,\log m)$.
 \section{Lower bound for time}\seclabel{lower-bound}
 TODO: proof that run time is tight\cite{Ellul05a}
 
+\chapter{Datastructures}
+In the previous chapter, we optained an algorithm with a run-time 
+proportional to the cost of storing updates in a fixed size datastructure 
+with one access and one update. This needs to be fully 
+persistent\footnote{This means that old versions of the datastructure are 
+  still accessible and can be forked so that a new datastructure with only 
+that change applied can be accessed.} in order to allow for co-routine forking.
+
+This chapter will present some possible datastructures, that allow for this.
+
+\section{Fully persistent data structures}	\seclabel{treap}\seclabel{data-structures}
+In order to allow modifications of our list of histories, it is
+necessary to build a data structure that provides the interface an guarantees 
+of a copy-on-write array:
+
+\begin{definition}
+  An \texttt{Arraylike} data structure $A$ of length $m$ must provide the 
+  following interface:
+  \begin{description}
+    \item[Constructor] $A(m)$ must return a structure of length $m$.
+    \item[Random access] An instance of $A$ must provide a method $get(i)$,
+      which gives a history for each $0 \leq i < m$.
+    \item[Setting elements] An instance of $A$ must provide a method $set(i,
+      history)$, which returns a new version of $A$, so that $get(i) = history$.
+      The original instance must still return the same value for any $get$ 
+      and $set$ -- it must be logically unmodified.
+  \end{description}
+
+  This is a definition of a fixed-size fully-persistent linear data structure.
+\end{definition}
+
+Note that multiple versions of the data structure can change, every version 
+that is in a living co-routine. A way to visualize this is as a tree of 
+versions, where each $set$ call forks off a new node, as seen in
+\Figref{version-tree}.
+
+\begin{figure}[htpb]
+  \centering
+  \begin{tikzpicture}[
+every node/.style = {align=center, text centered,
+font=\sffamily, circle, draw=black}, level/.style={
+sibling distance=3cm} ]
+\node {0}
+child { 
+  node {1}
+  child { 
+    node {2}
+    child { 
+      node {4}
+      child { 
+        node {12}
+        child { 
+          node {13}
+        }
+      }
+    }
+  }
+  child { 
+    node {3}
+    child { 
+      node {7}
+      child { 
+        node {11}
+      }
+    }
+    child {
+      node {8}
+      child { 
+        node {9}
+        child { 
+          node {10}
+        }
+      }
+    }
+  }
+};
+  \end{tikzpicture}
+  \caption{A tree of versions. Forks in the tree mean that multiple threads 
+  forked from the same state in the TNFA. The labels describe be the relative 
+order of creation. It isn't linear.}
+  \figlabel{version-tree}
+\end{figure}
+
+The rest of this section will look at different possible implementations and 
+their relative performance. Since in the worst case $get$ as well as $set$ are
+required in each step of each co-routine, the relevant performance measure is 
+$T=O(T_{get} + T_{set}) = O(max(T_{get}, T_{set}))$ measured in amortized time.
+
+\section{Copy-on-write array}
+The arguably simplest class to provide the interface is an array that copies 
+itself before making modifications:
+
+\begin{description}
+  \item[Constructor] $A(m)$ allocate an array of histories $a$ of size $m$.
+  \item[Random access] $get(i)$ gives the $i$th element of the array in $O(1)$ 
+    time.
+  \item[Setting elements] $set(i, history)$ copies $a$ and set the $i$th 
+    element to be $history$. This takes $O(m)$ time.
+\end{description}
+
+The performance for $get$ and $set$ gives us $T=O(1 + m) = O(m)$.
+
+While the asymptotic performance is abysmal, the copy-on-write array is not
+to be dismissed apriori, since it has great memory locality properties and 
+might outperform more complex structures for small $m$.
+
+\section{Treap}
+The treap data structure allows copy-on-write in $\log m$ time, sharing
+much of the structure by using the flyweight pattern as can be seen in
+\Figref{treap}. The treap is a balanced, left-leaning binary tree with entries
+in each node, equipped with the operations \texttt{get} and \texttt{set} as follows.
+
+\begin{algorithm*}
+\begin{algorithmic}[1]
+\Function{get}{treap, index}
+	\If{$\text{index} = 0$}
+		\State \Return treap.entry
+	\ElsIf{$\text{index}-1 < \text{treap.left.size}$}
+		\State \Return \Call{get}{treap.left, $\text{index}-1$}
+	\Else
+		\State \Return \Call{get}{treap.right, $\text{index}-\text{treap.left.size}-1$}
+	\EndIf
+\EndFunction
+\Statex
+\Function{set}{treap, index, entry}
+	\If{$\text{index} = 0$}
+		\State $\text{treap}'\gets copy(treap)$
+		\State $\text{treap}'\text{.entry} \gets \text{entry}$
+		\State \Return treap'
+	\ElsIf{$\text{index}-1 < \text{treap.left.size}$}
+		\State $\text{treap}'\gets copy(\text{treap})$
+		\State $\text{treap}'\text{.left} \gets \Call{set}{\text{treap.left}, \text{index}-1, \text{entry}}$
+		\State \Return $\text{treap}'$
+	\Else
+		\State $\text{treap}'\gets copy(\text{treap})$
+		\State $\text{treap}'\text{.left} \gets \Call{set}{\text{treap.right}, \text{index}-\text{treap.left.size}-1, \text{entry}}$
+		\State \Return $treap'$
+	\EndIf
+\EndFunction
+\end{algorithmic}
+\caption{\label{alg:treap} Implementation of the treap methods}
+\end{algorithm*}
+
+\begin{figure}
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}[>=stealth',level/.style={
+level 1/.style={sibling distance=6cm},
+level 2/.style={sibling distance=3cm},
+level 3/.style={sibling distance=1.5cm}},
+every node/.style = {align=center, text centered,
+    font=\sffamily, circle, draw=black},
+norm/.style={edge from parent/.style={black,thin,draw}},
+hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
+\node [gray, hiddentree] (n1) {1} 
+	child [hiddentree] {
+		node [gray] (n2) {2}
+			child [hiddentree] {	
+				node (n3) {3} 
+				child [norm] { node {4} } 
+				child [norm] { node {5} }
+			}
+			child [hiddentree] {
+				node (n6) {6}
+				child [norm] { node {7} }
+				child [norm] { node {8} }
+			}
+		} 
+	child [hiddentree] {
+		node (n9) {9}
+			child [norm] {
+				node{10}
+				child {	node{11} }
+				child { node {12} }
+			}
+			child [norm] {node {13} }
+		} ;
+		
+\node (n1p) [right of=n1] {1};
+\node (n2p) [right of=n2] {20};
+\path (n1p) edge (n2p);
+\path (n2p) edge (n3);
+\path (n2p) edge (n6);
+\path (n1p) edge (n9);
+\end{tikzpicture}}
+\caption[Treap for history storage]{\figlabel{treap}Writing to the second entry of the treap only requires
+$O(\log m)$ copies while keeping the old structure intact (persistence).}
+\end{figure}
+
+This structure gives us better asymptotic performance at the cost of 
+following $\log m$ pointers, because $T = O(\log m + \log m) = O(\log m)$.
+
+\section{Storing updates}
+Driscoll et al\cite{Dris89a} describe how any pointer machine data structure 
+with a fixed number of links to each version can be converted to a fully 
+persistent data structure in $O(1)$ amortized time. This section will show 
+the steps involved to equip an array with such an interface.
+
+The idea behind the conversion is that instead of modifying the array 
+directly, we will instead keep a buffer of modifications that is of fixed 
+size. Lets for the moment assume that we have a linear order of modifications 
+and only add the version tree later.
+
+\subsection{Linear versions}
+In this part, we will only modify the most recent version $t^\star$ and only 
+access the old versions $0 \leq t \leq t^\star$. In order to store the 
+modifications, we introduce the struct $Set(t, i, history)$, which can be stored 
+in the modification buffer. The implementation of the simple methods can be 
+seen in algorithm~\ref{alg:lazy-apply-1}
+
+\begin{algorithm*}
+\begin{algorithmic}[1]
+\Function{makeLazyApply}{m}
+  \State allocate an array of $m$ histories $hs$
+  \State allocate a buffer $b$ of size $p$ for modifications.
+  \State \Return $\{ histories: hs, buffer: b\}$
+\EndFunction
+\Function{get}{lazyApply, t, index}
+  \State $history \leftarrow lazyApply.histories[index]$
+  \For{each $Set(t', i, history')$}
+    \If{$t' < t$ and $i = index$}
+      \State $history \leftarrow history'$
+    \EndIf
+  \EndFor
+  \State \Return $history$
+\EndFunction
+\Statex
+\Function{set}{lazyApply, t, index, entry}
+  \If{$lazyApply.buffer$ has space left}
+    \State add $Set(t, index, entry)$ to $lazyApply.buffer$
+    \State \Return $lazyApply$
+  \Else
+    \State\Return new $LazyApply$ with all changes applied
+  \EndIf
+\EndFunction
+\end{algorithmic}
+\caption{\label{alg:lazy-apply-1}Methods of the $LazyApply$ data structure}
+\end{algorithm*}
+
+The amorized constant time for $get$ and $set$ arise from the fact that while 
+we iterate through the changes, we only have a constant number of them.
+
+\subsection{Version tree}
+In the general case of a version tree, we lose the notion of a total order of
+versions and remain with a partial order. Version $t_1$ and version $t_2$ can 
+now be in three different relations: Either $t_1$ can happen before $t_2$, so 
+that the modification in $t_1$ also needs to be taken into account in $t_2$, 
+$t_2$ can happen before $t_1$, or they can be siblings, so that the 
+modifications shouldn't influence each other. 
+
+The problem of generalizing this approach to version trees is two fold: The 
+first problem is, that we need to determine whether a modification applies to a
+version in constant time, otherwise $get$ will become slower. The second 
+problem is that modifying the same version reduces to copying the array of 
+histories if said version has a full buffer. The latter is more easily solved 
+and thus will be discussed first.
+
+\paragraph{Emptying a full buffer} Instead of applying all modifications, we 
+can split the modification buffer in two roughly equal parts. In order to do 
+that, we can find a subtree $v$ of modifications of size $\approx \frac{p}{2}$. 
+Instead of applying all modifications to the array of histories, we only 
+apply the ancestors of $v$. Then we delete all modifications in $v$ from the 
+original node. Now we would be breaking the interface, because some 
+co-routines still have references to the original node, but actually use a 
+version that is in $v$. This can be avoided by storing back-pointers to the 
+threads and modify their references to the new node if necessary. Since there
+are at most $m$ threads referencing the versions of each node, we can still
+update the references in amortized constant time.
+
+\paragraph{Constant time ordering of versions}
+In order to determine whether to apply a modification on a read, we need to 
+find the relation between the version that is querried and the one that is 
+stored. If $t_{stored} < t_{querried}$, we apply the modification. This 
+requires us however to determine the relative positions of $t_{stored}$ and 
+$t_{querried}$ in the version tree, where the naive implementation would take 
+$\log m$ time. This is the order maintenance problem and fittingly can be 
+solved using an order maintenance data structure, such as the one proposed by 
+Dietz and Sleator\cite{Diet87b} which we will discuss in \Secref{order-maintenance}.
+
+For the moment let us assume that we have a linear data structure, that
+\begin{enumerate}
+  \item allows inserting an element next to a known element in $O(1)$ time.
+  \item allows us to query the order of two elements $a$ and $b$ in the list 
+    in $O(1)$ time. We'll call this operation $query_<(a, b)$.
+\end{enumerate}
+
+With this we can flatten the tree to a list by adding a $b_t$ beginning 
+element and a $e_t$ closing element to the list as seen in
+\Figref{flattening-tree}.
+
+\begin{figure}[htpb]
+\resizebox{\linewidth}{!}{
+\begin{tikzpicture}[>=stealth',level/.style={
+level 1/.style={sibling distance=5cm},
+level 2/.style={sibling distance=2.5cm}},
+every node/.style = {align=center, text centered,
+    font=\sffamily, circle, draw=black}]
+\node (n1) {$v_1$} 
+	child {
+		node (n2) {$v_2$}
+    child { node (n3) {$v_3$} } 
+    child { node {$v_4$} }
+  }
+  child { node (n5) {$v_5$} } ;
+\node (o3) [below=0.0cm of n3, draw=none,fill=none] {$(b_1\ (b_2\ (b_3\ e_3)$};
+\node (o4) [draw=none,fill=none, right=0.5cm of o3] {$(b_4\ e_4)\ e_2)$};
+\node (o5) [draw=none,fill=none, right=of o4] {$(b_3\ b_3)\ e_1)$};
+\end{tikzpicture}
+}
+  \caption{A flattened version tree}
+  \label{fig:flattening-tree}
+\end{figure}
+
+Now we can find if version $t_2$ depends on version $t_1$, by calculating 
+\[ query_<(b_{t_1}, b_{t_2})\ \mathrm{\&\&}\ query_<(e_{t_2}, e_{t_1})\]
+If $t_1$ encloses $t_2$ completely, then $t_2$ is part of the subtree of $t_1$
+and therefore we'd need to apply the modification at $t_1$ to find values at
+$t_2$.
+
+\section{Order maintenance}\seclabel{order-maintenance}
+Dietz and Sleator describe in their paper Two Algorithms for Maintaining 
+Order in a List\cite{Diet87b}\footnote{And Bender et al\cite{Bend02a} in 
+their revision of this classical paper}, a simple one that provides amortized 
+guarantees and a more involved one, which could offer worst-case guarantees. 
+For our purposes the amortized version suffices, as noted by Driscoll et
+al\cite[p. 108]{Dris89a}.
+
+The datastructure keeps so called \emph{tags} $\eta(e)$ for elements, which are 
+integers that describe the order. In order to query the relative position of 
+two elements, their tags are simply compared, which leaves us with the 
+problem of maintaining tags for all list elements such that 
+$\eta(e_1)<\eta(e_2) \Leftarrow index(e_1) < index(e_2)$.
+
+Compare this to the related problem of list-labeling: in order maintenance we 
+need to be able to compute the full label for each element in constant time, 
+whereas in list-labeling, the node has to contain the full label itself. This 
+insight is key to maintaining order in amortized contant time. For the moment 
+however we will see the method we can use for list-labeling.
+
+The key to achieve this is to use a doubly linked list of tags with their 
+corresponding elements. If we need to insert an element after another known 
+element $e$, we can insert it, but to keep our invariant, we assign 
+$\eta(e_{new}) =\floor*{\frac{\eta(e) + \eta(e.next)}{2}}$. This is possible, 
+unless the new tag is actually equal to $\eta(e)$ -- if $\eta(e)$ doesn't 
+have any space to $\eta(e.next)$. In this case we need to relabel the 
+existing nodes.
+
+\subsection{Relabeling}
+The repurpose of the relabeling step is to ensure that there is a gap to fit 
+inthe new element and reduce the potential of a next reordering step. An 
+intutive perspective is shown by Bender et al\cite{Bend02a}:
+
+The labels can be thought of a coding of paths in a complete binary tree as 
+visualized in \Figref{labels-bin-tree}. We can then define the 
+\emph{overflow} in a subtree, which will trigger relabeling.
+
+\begin{figure}[htb]
+  \centering
+\begin{tikzpicture}[>=stealth',level/.style={
+level 1/.style={sibling distance=6cm},
+level 2/.style={sibling distance=3cm},
+level 3/.style={sibling distance=1.5cm}},
+every node/.style = {align=center, text centered,
+    font=\sffamily, circle, draw=black},
+norm/.style={edge from parent/.style={black,thin,draw}},
+hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
+\node {}
+  child {
+    node {}
+    child [hiddentree] {	
+        node [gray] {}
+        child { node [gray] {$000_2$}  edge from parent node[left,draw=none] {0} }
+        child { node [gray] {$001_2$}  edge from parent node[right,draw=none] {1} }
+        edge from parent node[left,draw=none] {0}
+			}
+			child {
+        node {}
+        child {node {$010_2$} edge from parent node[left,draw=none] {0} }
+        child {node (n6) {$011_2$} edge from parent node[right,draw=none] {1} }
+        edge from parent node[right,draw=none] {1}
+			} edge from parent node[left,draw=none] {0}
+		} 
+	child {
+		node {}
+			child {	
+        node {}
+        child [hiddentree] { node [gray] {$100_2$}  edge from parent node[left,draw=none] {0} }
+        child { node {$101_2$}  edge from parent node[right,draw=none] {1} }
+        edge from parent node[left,draw=none] {0}
+			}
+			child {
+        node {}
+        child [hiddentree] {node [gray] {$110_2$} edge from parent node[left,draw=none] {0} }
+        child {node {$111_2$} edge from parent node[right,draw=none] {1} }
+        edge from parent node[right,draw=none] {1}
+			} edge from parent node[right,draw=none] {1}
+		} ;
+\end{tikzpicture}
+\caption[Tree for relabeling order]{Labels are binary numbers describing paths in a tree. Relabeling
+  walks up the tree until it finds a subtree with a density below the
+threshold. In this range, the labels changed to make them equally spaced.}
+  \label{fig:labels-bin-tree}
+\end{figure}
+
+\begin{defn}
+  The \emph{overflow threshold} of a subtree is $1.5^i$ for any 
+  level\footnote{$a=1.5$ is an arbitrary choice for a number $1 < a < 2$.} $i$, 
+  starting counting from the leafs, which are level 0.
+
+  \emph{Overflow} happens, when the number of items in a subtree are bigger 
+  than the overflow threshold.
+\end{defn}
+
+With this definition, we can define the region that we relabel to be the 
+first subtree that isn't in overflow -- which means that is is filled 
+sufficiently sparsely to reduce the potential new relabels. In this subtree 
+we spread the the labels equally, which will ensure that we will not have to 
+do any relabeling for another $\floor{1.5^{-i}}$ inserts. Note that a much 
+bigger region might be in overflow, but no checks are done if they are not 
+triggered by an overflow at level 0, i.e.\ placing a node between two adjacent
+nodes.
+
+This algorithm leaves us with the disappointment of only achieving $O(\log m)$ 
+amortized insert. This can be resolved using a technique known as 
+\emph{indirection}.
+
+\subsection{Indirection}
+Indirection is a method introduced by Willard\cite{Will82a} to eliminate
+annoying $\log$ factors under certain conditions such as the one just
+encountered.  With it we leave the realm of list-labeling and ceise to store
+the full label in each node. Instead we will now keep a two-level structure 
+as shown in \Figref{graphs/indirection}.
+
+\begin{figure}[htpb]
+  \centering
+  \includegraphics[width=0.8\linewidth]{graphs/indirection}
+  \caption{Indirection structure: use a compount index with the high-order 
+  bits being the index for the upper structure and the low-order bits being 
+the index for the lower structure. Since the upper index is stored in the 
+summary structure, $\log u$ items can be relabeled in $O(1)$ time.}
+  \figlabel{graphs/indirection}
+\end{figure}
+
+We split our universe into blocks of size $\Theta(\log u)$. In these blocks we keep a 
+labeled list as seen in the previous section. Above this, we create a summary 
+structure, which stores a second part of the index. This too is a labeled 
+list, but since each element of the summary structure represents 
+$\Theta(\log u)$ elements of the universe, we can effectively do relabels 
+faster by a $\log$-factor. This gives us amortized $O(1)$ updates.
+
+It can be said that this seems to set a limit on the size of the match: Once 
+our labels are used up, we cannot do $O(1)$ order queries anymore. This is 
+true, but there is a smaller limit already in place: We can't store pointers 
+to a string that doesn't fit into memory. If we ceise to understand positions 
+as fixed in size, we would again get a $\log$-factor. This is typically not
+considered.
+
+
 \chapter{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
 to reach the theoretical time bound we claimed, practical performance
@@ -1276,370 +1755,6 @@ to avoid compiling states of it that might never be necessary. This
 allows us to avoid the full power set construction \cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
-\section{Fully persistent data structures}	\seclabel{treap}\seclabel{data-structures}
-In order to allow modifications of our list of histories, it is
-necessary to build a data structure that provides the interface an guarantees 
-of a copy-on-write array:
-
-\begin{definition}
-  An \texttt{Arraylike} data structure $A$ of length $m$ must provide the 
-  following interface:
-  \begin{description}
-    \item[Constructor] $A(m)$ must return a structure of length $m$.
-    \item[Random access] An instance of $A$ must provide a method $get(i)$,
-      which gives a history for each $0 \leq i < m$.
-    \item[Setting elements] An instance of $A$ must provide a method $set(i,
-      history)$, which returns a new version of $A$, so that $get(i) = history$.
-      The original instance must still return the same value for any $get$ 
-      and $set$ -- it must be logically unmodified.
-  \end{description}
-
-  This is a definition of a fixed-size fully-persistent linear data structure.
-\end{definition}
-
-Note that multiple versions of the data structure can change, every version 
-that is in a living co-routine. A way to visualize this is as a tree of 
-versions, where each $set$ call forks off a new node, as seen in \Figref{version-tree}.
-
-The rest of this section will look at different possible implementations and 
-their relative performance. Since in the worst case $get$ as well as $set$ are
-required in each step of each co-routine, the relevant performance measure is 
-$T=O(T_{get} + T_{set}) = O(max(T_{get}, T_{set}))$ measured in amortized time.
-
-\subsection{Copy-on-write array}
-The arguably simplest class to provide the interface is an array that copies 
-itself before making modifications:
-
-\begin{description}
-  \item[Constructor] $A(m)$ allocate an array of histories $a$ of size $m$.
-  \item[Random access] $get(i)$ gives the $i$th element of the array in $O(1)$ 
-    time.
-  \item[Setting elements] $set(i, history)$ copies $a$ and set the $i$th 
-    element to be $history$. This takes $O(m)$ time.
-\end{description}
-
-The performance for $get$ and $set$ gives us $T=O(1 + m) = O(m)$.
-
-While the asymptotic performance is abysmal, the copy-on-write array is not
-to be dismissed apriori, since it has great memory locality properties and 
-might outperform more complex structures for small $m$.
-
-\subsection{Treap}
-The treap data structure allows copy-on-write in $\log m$ time, sharing
-much of the structure by using the flyweight pattern as can be seen in
-\Figref{treap}. The treap is a balanced, left-leaning binary tree with entries
-in each node, equipped with the operations \texttt{get} and \texttt{set} as follows.
-
-\begin{algorithm*}
-\begin{algorithmic}[1]
-\Function{get}{treap, index}
-	\If{$\text{index} = 0$}
-		\State \Return treap.entry
-	\ElsIf{$\text{index}-1 < \text{treap.left.size}$}
-		\State \Return \Call{get}{treap.left, $\text{index}-1$}
-	\Else
-		\State \Return \Call{get}{treap.right, $\text{index}-\text{treap.left.size}-1$}
-	\EndIf
-\EndFunction
-\Statex
-\Function{set}{treap, index, entry}
-	\If{$\text{index} = 0$}
-		\State $\text{treap}'\gets copy(treap)$
-		\State $\text{treap}'\text{.entry} \gets \text{entry}$
-		\State \Return treap'
-	\ElsIf{$\text{index}-1 < \text{treap.left.size}$}
-		\State $\text{treap}'\gets copy(\text{treap})$
-		\State $\text{treap}'\text{.left} \gets \Call{set}{\text{treap.left}, \text{index}-1, \text{entry}}$
-		\State \Return $\text{treap}'$
-	\Else
-		\State $\text{treap}'\gets copy(\text{treap})$
-		\State $\text{treap}'\text{.left} \gets \Call{set}{\text{treap.right}, \text{index}-\text{treap.left.size}-1, \text{entry}}$
-		\State \Return $treap'$
-	\EndIf
-\EndFunction
-\end{algorithmic}
-\caption{\label{alg:treap} Implementation of the treap methods}
-\end{algorithm*}
-
-\begin{figure}
-\resizebox{\linewidth}{!}{
-\begin{tikzpicture}[>=stealth',level/.style={
-level 1/.style={sibling distance=6cm},
-level 2/.style={sibling distance=3cm},
-level 3/.style={sibling distance=1.5cm}},
-every node/.style = {align=center, text centered,
-    font=\sffamily, circle, draw=black},
-norm/.style={edge from parent/.style={black,thin,draw}},
-hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
-\node [gray, hiddentree] (n1) {1} 
-	child [hiddentree] {
-		node [gray] (n2) {2}
-			child [hiddentree] {	
-				node (n3) {3} 
-				child [norm] { node {4} } 
-				child [norm] { node {5} }
-			}
-			child [hiddentree] {
-				node (n6) {6}
-				child [norm] { node {7} }
-				child [norm] { node {8} }
-			}
-		} 
-	child [hiddentree] {
-		node (n9) {9}
-			child [norm] {
-				node{10}
-				child {	node{11} }
-				child { node {12} }
-			}
-			child [norm] {node {13} }
-		} ;
-		
-\node (n1p) [right of=n1] {1};
-\node (n2p) [right of=n2] {20};
-\path (n1p) edge (n2p);
-\path (n2p) edge (n3);
-\path (n2p) edge (n6);
-\path (n1p) edge (n9);
-\end{tikzpicture}}
-\caption[Treap for history storage]{\figlabel{treap}Writing to the second entry of the treap only requires
-$O(\log m)$ copies while keeping the old structure intact (persistence).}
-\end{figure}
-
-This structure gives us better asymptotic performance at the cost of 
-following $\log m$ pointers, because $T = O(\log m + \log m) = O(\log m)$.
-
-\subsection{Storing updates}
-Driscoll et al\cite{Dris89a} describe how any pointer machine data structure 
-with a fixed number of links to each version can be converted to a fully 
-persistent data structure in $O(1)$ amortized time. This section will show 
-the steps involved to equip an array with such an interface.
-
-The idea behind the conversion is that instead of modifying the array 
-directly, we will instead keep a buffer of modifications that is of fixed 
-size. Lets for the moment assume that we have a linear order of modifications 
-and only add the version tree later.
-
-\subsubsection{Linear versions}
-In this part, we will only modify the most recent version $t^\star$ and only 
-access the old versions $0 \leq t \leq t^\star$. In order to store the 
-modifications, we introduce the struct $Set(t, i, history)$, which can be stored 
-in the modification buffer. The implementation of the simple methods can be 
-seen in algorithm~\ref{alg:lazy-apply-1}
-
-\begin{algorithm*}
-\begin{algorithmic}[1]
-\Function{makeLazyApply}{m}
-  \State allocate an array of $m$ histories $hs$
-  \State allocate a buffer $b$ of size $p$ for modifications.
-  \State \Return $\{ histories: hs, buffer: b\}$
-\EndFunction
-\Function{get}{lazyApply, t, index}
-  \State $history \leftarrow lazyApply.histories[index]$
-  \For{each $Set(t', i, history')$}
-    \If{$t' < t$ and $i = index$}
-      \State $history \leftarrow history'$
-    \EndIf
-  \EndFor
-  \State \Return $history$
-\EndFunction
-\Statex
-\Function{set}{lazyApply, t, index, entry}
-  \If{$lazyApply.buffer$ has space left}
-    \State add $Set(t, index, entry)$ to $lazyApply.buffer$
-    \State \Return $lazyApply$
-  \Else
-    \State\Return new $LazyApply$ with all changes applied
-  \EndIf
-\EndFunction
-\end{algorithmic}
-\caption{\label{alg:lazy-apply-1}Methods of the $LazyApply$ data structure}
-\end{algorithm*}
-
-The amorized constant time for $get$ and $set$ arise from the fact that while 
-we iterate through the changes, we only have a constant number of them.
-
-\subsubsection{Version tree}
-In the general case of a version tree, we lose the notion of a total order of
-versions and remain with a partial order. Version $t_1$ and version $t_2$ can 
-now be in three different relations: Either $t_1$ can happen before $t_2$, so 
-that the modification in $t_1$ also needs to be taken into account in $t_2$, 
-$t_2$ can happen before $t_1$, or they can be siblings, so that the 
-modifications shouldn't influence each other. 
-
-The problem of generalizing this approach to version trees is two fold: The 
-first problem is, that we need to determine whether a modification applies to a
-version in constant time, otherwise $get$ will become slower. The second 
-problem is that modifying the same version reduces to copying the array of 
-histories if said version has a full buffer. The latter is more easily solved 
-and thus will be discussed first.
-
-\paragraph{Emptying a full buffer} Instead of applying all modifications, we 
-can split the modification buffer in two roughly equal parts. In order to do 
-that, we can find a subtree $v$ of modifications of size $\approx \frac{p}{2}$. 
-Instead of applying all modifications to the array of histories, we only 
-apply the ancestors of $v$. Then we delete all modifications in $v$ from the 
-original node. Now we would be breaking the interface, because some 
-co-routines still have references to the original node, but actually use a 
-version that is in $v$. This can be avoided by storing back-pointers to the 
-threads and modify their references to the new node if necessary. Since there
-are at most $m$ threads referencing the versions of each node, we can still
-update the references in amortized constant time.
-
-\paragraph{Constant time ordering of versions}
-In order to determine whether to apply a modification on a read, we need to 
-find the relation between the version that is querried and the one that is 
-stored. If $t_{stored} < t_{querried}$, we apply the modification. This 
-requires us however to determine the relative positions of $t_{stored}$ and 
-$t_{querried}$ in the version tree, where the naive implementation would take 
-$\log m$ time. This is the order maintenance problem and fittingly can be 
-solved using an order maintenance data structure, such as the one proposed by 
-Dietz and Sleator\cite{Diet87b} which we will discuss in \Secref{order-maintenance}.
-
-For the moment let us assume that we have a linear data structure, that
-\begin{enumerate}
-  \item allows inserting an element next to a known element in $O(1)$ time.
-  \item allows us to query the order of two elements $a$ and $b$ in the list 
-    in $O(1)$ time. We'll call this operation $query_<(a, b)$.
-\end{enumerate}
-
-With this we can flatten the tree to a list by adding a $b_t$ beginning 
-element and a $e_t$ closing element to the list as seen in
-\Figref{flattening-tree}.
-
-\begin{figure}[htpb]
-\resizebox{\linewidth}{!}{
-\begin{tikzpicture}[>=stealth',level/.style={
-level 1/.style={sibling distance=5cm},
-level 2/.style={sibling distance=2.5cm}},
-every node/.style = {align=center, text centered,
-    font=\sffamily, circle, draw=black}]
-\node (n1) {$v_1$} 
-	child {
-		node (n2) {$v_2$}
-    child { node (n3) {$v_3$} } 
-    child { node {$v_4$} }
-  }
-  child { node (n5) {$v_5$} } ;
-\node (o3) [below=0.0cm of n3, draw=none,fill=none] {$(b_1\ (b_2\ (b_3\ e_3)$};
-\node (o4) [draw=none,fill=none, right=0.5cm of o3] {$(b_4\ e_4)\ e_2)$};
-\node (o5) [draw=none,fill=none, right=of o4] {$(b_3\ b_3)\ e_1)$};
-\end{tikzpicture}
-}
-  \caption{A flattened version tree}
-  \label{fig:flattening-tree}
-\end{figure}
-
-Now we can find if version $t_2$ depends on version $t_1$, by calculating 
-\[ query_<(b_{t_1}, b_{t_2})\ \mathrm{\&\&}\ query_<(e_{t_2}, e_{t_1})\]
-If $t_1$ encloses $t_2$ completely, then $t_2$ is part of the subtree of $t_1$
-and therefore we'd need to apply the modification at $t_1$ to find values at
-$t_2$.
-
-\section{Order maintenance}\seclabel{order-maintenance}
-Dietz and Sleator describe in their paper Two Algorithms for Maintaining 
-Order in a List\cite{Diet87b}\footnote{And Bender et al\cite{Bend02a} in 
-their revision of this classical paper}, a simple one that provides amortized 
-guarantees and a more involved one, which could offer worst-case guarantees. 
-For our purposes the amortized version suffices, as noted by Driscoll et
-al\cite[p. 108]{Dris89a}.
-
-The datastructure keeps so called \emph{tags} $\eta(e)$ for elements, which are 
-integers that describe the order. In order to query the relative position of 
-two elements, their tags are simply compared, which leaves us with the 
-problem of maintaining tags for all list elements such that 
-$\eta(e_1)<\eta(e_2) \Leftarrow index(e_1) < index(e_2)$.
-
-The key to achieve this is to use a doubly linked list of tags with their 
-corresponding elements. If we need to insert an element after another known 
-element $e$, we can insert it, but to keep our invariant, we assign 
-$\eta(e_{new}) =\floor*{\frac{\eta(e) + \eta(e.next)}{2}}$. This is possible, 
-unless the new tag is actually equal to $\eta(e)$ -- if $\eta(e)$ doesn't 
-have any space to $\eta(e.next)$. In this case we need to relabel the 
-existing nodes.
-
-\subsection{Relabeling}
-The repurpose of the relabeling step is to ensure that there is a gap to fit 
-inthe new element and reduce the potential of a next reordering step. An 
-intutive perspective is shown by Bender et al\cite{Bend02a}:
-
-The labels can be thought of a coding of paths in a complete binary tree as 
-visualized in \Figref{labels-bin-tree}. We can then define the 
-\emph{overflow} in a subtree, which will trigger relabeling.
-
-\begin{figure}[htb]
-  \centering
-\begin{tikzpicture}[>=stealth',level/.style={
-level 1/.style={sibling distance=6cm},
-level 2/.style={sibling distance=3cm},
-level 3/.style={sibling distance=1.5cm}},
-every node/.style = {align=center, text centered,
-    font=\sffamily, circle, draw=black},
-norm/.style={edge from parent/.style={black,thin,draw}},
-hiddentree/.style={edge from parent/.style={gray,thin,draw}}]
-\node {}
-  child {
-    node {}
-    child [hiddentree] {	
-        node [gray] {}
-        child { node [gray] {$000_2$}  edge from parent node[left,draw=none] {0} }
-        child { node [gray] {$001_2$}  edge from parent node[right,draw=none] {1} }
-        edge from parent node[left,draw=none] {0}
-			}
-			child {
-        node {}
-        child {node {$010_2$} edge from parent node[left,draw=none] {0} }
-        child {node (n6) {$011_2$} edge from parent node[right,draw=none] {1} }
-        edge from parent node[right,draw=none] {1}
-			} edge from parent node[left,draw=none] {0}
-		} 
-	child {
-		node {}
-			child {	
-        node {}
-        child [hiddentree] { node [gray] {$100_2$}  edge from parent node[left,draw=none] {0} }
-        child { node {$101_2$}  edge from parent node[right,draw=none] {1} }
-        edge from parent node[left,draw=none] {0}
-			}
-			child {
-        node {}
-        child [hiddentree] {node [gray] {$110_2$} edge from parent node[left,draw=none] {0} }
-        child {node {$111_2$} edge from parent node[right,draw=none] {1} }
-        edge from parent node[right,draw=none] {1}
-			} edge from parent node[right,draw=none] {1}
-		} ;
-\end{tikzpicture}
-\caption[Tree for relabeling order]{Labels are binary numbers describing paths in a tree. Relabeling
-  walks up the tree until it finds a subtree with a density below the
-threshold. In this range, the labels changed to make them equally spaced.}
-  \label{fig:labels-bin-tree}
-\end{figure}
-
-\begin{defn}
-  The \emph{overflow threshold} of a subtree is $1.5^i$ for any 
-  level\footnote{$a=1.5$ is an arbitrary choice for a number $1 < a < 2$.} $i$, 
-  starting counting from the leafs, which are level 0.
-
-  \emph{Overflow} happens, when the number of items in a subtree are bigger 
-  than the overflow threshold.
-\end{defn}
-
-With this definition, we can define the region that we relabel to be the 
-first subtree that isn't in overflow -- which means that is is filled 
-sufficiently sparsely to reduce the potential new relabels. In this subtree 
-we spread the the labels equally, which will ensure that we will not have to 
-do any relabeling for another $\floor{1.5^{-i}}$ inserts. Note that a much 
-bigger region might be in overflow, but no checks are done if they are not 
-triggered by an overflow at level 0, i.e.\ placing a node between two adjacent
-nodes.
-
-This algorithm leaves us with the disappointment of only achieving $O(\log m)$ 
-amortized insert. This can be resolved using a technique known as \emph{indirection}.
-
-\subsubsection{Indirection}
-Indirection is a method introduced by Willard\cite{Will82a} to eliminate 
-annoying $\log$ factors under certain conditions such as the one just encountered.
-
 \section{Parsing the regular expression sytnax}  \seclabel{regex-syntax}
 Parsing the regular expression into an abstract syntax tree is a detail that
 can easily be missed. Since the algorithm for matching is already very fast,
@@ -1783,5 +1898,5 @@ a free license on Github\footnote{\url{https://github.com/nes1983/tree-regex}}.
 \listoffigures
 \listoftables
 \listofalgorithms
-\listoffigures
+\addcontentsline{toc}{chapter}{List of Algorithms}
 \end{document}
