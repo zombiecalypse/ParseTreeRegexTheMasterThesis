@@ -30,7 +30,7 @@
 \newtheorem*{defn}{Definition}
 
 % ============================================================
-%% Uncomment the next few lines to get sf url links:
+%% Uncomment the next few lines to get sf URL links:
 %\usepackage{url}            
 %\makeatletter
 %\def\url@leostyle{%
@@ -176,7 +176,7 @@ trees with only constant slowdown compared to matching.
 
 Regular expressions give us a concise language to describe patterns in 
 strings and can be used for log analysis, natural language processing, and 
-many other tasks involving structured data in strings. Their efficiancy make 
+many other tasks involving structured data in strings. Their efficiency make 
 them useful even for large data sets. Standard algorithms run in 
 $\mathcal{n\, m}$, where $n$ is the length of the string to be matched 
 against and $m$ is the length of the pattern\cite{Sedg90a}.
@@ -192,13 +192,13 @@ with their numeric label. Matching the regular expression on \texttt{``Tom
 Lehrer,1;Alan Turing,2;''} will confirm that the list is well formed, but the
 match will only contain \texttt{``Tom Lehrer''} for the second capture group
 and \texttt{``1''} for the third. That is, the parse tree found by the
-\textsc{posix} is seen in \Figref{posix}.
+\textsc{Posix} is seen in \Figref{posix}.
 
 \begin{figure}[htp]
 \centering
 \includegraphics[width=.75\linewidth]{graphs/posix_parse}
 \caption[Posix parse tree]{\figlabel{lehrer-posix} Parse tree produced by
-\textsc{posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+}
+\textsc{Posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+}
 against input ``Tom Lehrer,1;Alan Turing,2;''.}
 \figlabel{posix}
 \end{figure}
@@ -247,7 +247,7 @@ the regular expression in at most $O(n\,m)$ time.
 \section{Motivation}
 
 A first step of processing large data sets is often to parse strings in order 
-to optain a more manageable format. As an example, consider log files.  As
+to obtain a more manageable format. As an example, consider log files.  As
 Jacobs\cite{Jaco09a} noted, ``What makes most big data big is repeated
 observations over time and/ or space,'' and thus log files grow large
 frequently. At the same time, they provide important insight into the process
@@ -315,18 +315,18 @@ letter, \texttt{[abc]} would only match the letters a, b, or c, and
 There is also the special character range \texttt{.} that matches any character.
 
 \paragraph{Negated character ranges} Ranges of the form \texttt{[\string^\dots]} 
-negate their content, so \texttt{[\string^a-g]} would match anything except a thru g.
+negate their content, so \texttt{[\string^a-g]} would match anything except a through g.
 
 \paragraph{Concatenation} Two constructs put after each other have to match 
 the string in order. For example \texttt{a[bc]} matches a followed by either 
 b or c.
 
 \paragraph{Option operator} The option operator denoted by \texttt{?} allows 
-either zero or one repetitions of the preceding element, prefering to have 
+either zero or one repetitions of the preceding element, preferring to have 
 one repetition. This means \texttt{a?} will match the empty string or $a$, but nothing else.
 
 \paragraph{Star operator} The star operator \texttt{*} allows for arbitrary 
-repetition of the preceding element, including zero repetitions, prefering as 
+repetition of the preceding element, including zero repetitions, preferring as 
 many repetitions as possible. For example \texttt{a*} matches the empty string,
 ``a'', ``aa'', and so on.
 
@@ -338,7 +338,7 @@ same strings.
 also have corresponding non-greedy operators, which are \texttt{??}, 
 \texttt{*?}, and \texttt{+?} respectively. These operators prefer to match as 
 few repetitions as possible. In back-tracking implementation, guessing the 
-right path is an important efficiancy feature and for all capturing 
+right path is an important efficiency feature and for all capturing 
 implementation the path taken influences the captured groups.
 
 \paragraph{Alternation} Patters separated by the pipe symbol \texttt{|} can 
@@ -348,35 +348,35 @@ $abxyz$.
 
 \subsection{Capture groups}
 Patterns enclosed by parens are treated as a single element, thus
-\texttt{(ab)*} captures $ab$, but not $aba$. More imporantly for us is that
+\texttt{(ab)*} captures $ab$, but not $aba$. More importantly for us is that
 after the match, the capture groups can be extracted: \texttt{a(b*)c} when
 matching $abbbc$ can extract $bbb$ and the empty string when matching $ac$.
 Note that the capture groups can be nested and the semantics differ for
-\textsc{Posix} and tree regex: In \textsc{Posix} the regular expression
+\textsc{Posix} and tree regular expressions: In \textsc{Posix} the regular expression
 \texttt{a((bc+)+)} on the string $abcbccc$ will give $bcbccc$ for the outer
-capture group and $bc$ for the inner capture group -- the leftmost occurence of
-outer capture groups is kept and within that substring, the leftmost occurence
-of the inner group is kept. In tree regex, all occurences are kept and returned
+capture group and $bc$ for the inner capture group -- the leftmost occurrence of
+outer capture groups is kept and within that substring, the leftmost occurrence
+of the inner group is kept. In tree regular expressions, all occurrences are kept and returned
 in a tree structure: The outer capture group contains $bcbccc$ and both inner
 matches $bc$ and $bccc$.
 
 The relevance of greedy and non-greedy matches becomes apparent now: The
 regular expression \texttt{a(.*)c?} on the string $abc$ will capture $bc$ in
 the group, while \texttt{a(.*?)c?} will capture only $b$. This is because 
-the parsing is ambiguous without specifying the greedyness of the match -- both
+the parsing is ambiguous without specifying the greediness of the match -- both
 $b$ and $bc$ would be valid.
 
 \section{(Non-)deterministic finite-state automata}
 As they are heavily used throughout this paper, let us recall what
-non-deterministic finite-state automata (NFAs) and deterministic finite-state
-automata (DFAs) are. A DFA is a state machine that will walk over a finite
+non-deterministic finite-state automata (NFA) and deterministic finite-state
+automata (DFA) are. A DFA is a state machine that will walk over a finite
 transition graph, one step for every input character. The choice of transition
 is limited by the transition's character range. A transition can only be
 followed if the current input character is inside transition's character 
 range. The possible character ranges are assumed to be disjoint, so that in 
 every step at most one transition can be followed.
 
-NFAs differ from DFAs in that for some input character and some state, there
+NFA differ from DFA in that for some input character and some state, there
 may be more than one applicable transition and some transitions can be
 traversed without consuming a character, called $\varepsilon$-transitions.  If
 there is a transition that will eventually lead to the accepting state, an NFA
@@ -439,10 +439,10 @@ follow $\varepsilon$-transitions. This is formalized in algorithm~\ref{alg:nfa-s
   \caption{\label{alg:nfa-string}NFA reading a string}
 \end{algorithm*}
 
-\section{Regular expressions matching}
-\subsection{Backtracking}
+\chapter{Related work}
+\seclabel{related}
+\section{Backtracking}
 
-\nes{memoization throw in: make anything cubic } 
 In the context of NFA a co-routine contains the 
 current state and has access to the transition graph. When reading a 
 string, the NFA will maintain a set of co-routines and advance them in 
@@ -491,7 +491,7 @@ steps to end in the $no\ match$ case.  Backtracking is fast if it guesses
 correctly, since there is not much overhead, but fails miserably if it guesses
 wrongly early on.
 
-\subsection{NFA based matching}
+\section{NFA based matching}
 A faster alternative to this approach is to preprocess the regular expression 
 and convert it into a NFA by the rules in \Figref{thompson-construction-simple}.
 
@@ -509,7 +509,7 @@ current states and save the accessible states as a set. In the next
 iteration, we consider the transitions from any of these states. This allows 
 us to match in $O(n\, m^2)$ time.
 
-\subsection{DFA based matching}
+\section{DFA based matching}
 Dissatisfied with the $O(m^2)$ overhead, we can construct a DFA from the NFA 
 before matching. This is done by the power set construction\cite{Sips05a}, 
 which has time complexity $O(2^m)$. The idea is to replace all states by the 
@@ -517,7 +517,7 @@ set reachable from it with only $\varepsilon$-transitions. The transitions
 simulate a step in the original NFA, so they point to another set of states.
 After the compilation is done, matching the string is $O(n)$ time.
 
-\subsection{Lazy DFA compilation}
+\section{Lazy DFA compilation}
 The DFA based matching takes $O(n\, 2^m)$, which is no better than backtracking
 if $m$ is not fixed. The power set construction simulates every transition 
 possible in the NFA, but that is actually unnecessary: Instead we can 
@@ -541,6 +541,7 @@ $\varepsilon$-transitions can have tags. This can be seen in
 algorithm~\ref{alg:coroutine-tagged}. To see how this is a generalization of 
 the NFA, we can imagine non-$\varepsilon$-transitions as simply tagged 
 transitions, where the tag consumes the character and sets the memory to \emph{fed}.
+This approach has originally been put forward by Laurikari\cite{Laur00a}.
 
 \begin{algorithm*}
   \begin{algorithmic}
@@ -558,11 +559,36 @@ transitions, where the tag consumes the character and sets the memory to \emph{f
   \caption{\label{alg:coroutine-tagged}Tagged transition execution}
 \end{algorithm*}
 
-\chapter{Related work}
-\seclabel{related}
-Our algorithm is a modification of Laurikari's algorithm \cite{Laur00a},
-which is itself a modified power set construction algorithm \cite[p. 55]{Sips05a}.
+\section{Revisiting backtracking}
+As seen earlier, backtracking makes for easy implementations, but exponential 
+run-time in the worst case for many patterns. In 1996 Frost and
+Szydlowski\cite{Fros96a} showed that this can be avoided by using memoization.
+This allows for $O(n^3\, m)$ time parsing. While this is significantly higher
+than $O(n\, m)$ of the automata based approaches, it is also more general,
+because more than just regular grammars can be parsed with this approach. 
+This approach is taken by combinatoric parsers such as the (J)Parsec library.
+It should be noted however that while this approach has been known for some 
+time now and promises exponential speed-up, it is by no means a standard
+optimization for backtracking based regular expression implementations.
 
+First let us recapitulate what memoization means: For a function $f$ we can 
+create a memoized function $\hat f$ such that
+\begin{algorithmic}
+  \State Initialize $cache$
+  \Function{$\hat f$}{*args}
+  \If{args not in $cache$}
+  \State $val\leftarrow f(*args)$
+  \State $cache[args] = val$
+  \EndIf
+  \State \Return $cache[args]$
+  \EndFunction
+\end{algorithmic}
+This means that repeatedly calling the same function with  the same inputs 
+only costs lookup time after the function has been evaluated once.
+\nes{memoization throw in: make anything cubic } 
+%TODO
+
+\section{News} %TODO
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
 been so lucky. Cox is spot-on when he argues that innovations have
@@ -837,9 +863,9 @@ Take for example the regular expression \texttt{(..)+} matching
 pairs of characters, on the input string ``abcd''. The history array of the
 finishing co-routine  is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
 Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0
-thru 3.  Histories $h_3$ and $h_4$ contain the positions of all the matches of
-capture group 1, in reverse. That is: one match from 0 thru 1, and another from
-2 thru 3.
+through 3.  Histories $h_3$ and $h_4$ contain the positions of all the matches of
+capture group 1, in reverse. That is: one match from 0 through 1, and another from
+2 through 3.
 
 Our engine executes instructions at the end of every interpretation
 step. There are four kinds of instructions:
@@ -1882,6 +1908,12 @@ Runtime in microseconds}
 
 
 \chapter{Conclusion}
+Regular expression make for lightweight parsers and there are many cases 
+where structured data is extracted this way. If such data is structured 
+instead of flat, a parser that produces trees is superior to a standard 
+regular expression parser. We provide such an algorithm with modern 
+optimizations applied.
+
 Our approach can produce entire parse trees from matching regular expressions
 in a single pass over the string and do so asymptotically no slower than 
 regular expression matching without any extraction.  The practical performance
