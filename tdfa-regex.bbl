@@ -55,6 +55,12 @@ Keith Ellul, Bryan Krawetz, Jeffrey Shallit, and Ming-wei Wang.
 \newblock {\em Journal of Automata, Languages and Combinatorics},
   10(4):407--437, 2005.
 
+\bibitem{Fros96a}
+Richard~A Frost and Barbara Szydlowski.
+\newblock Memoizing purely functional top-down backtracking language
+  processors.
+\newblock {\em Science of Computer Programming}, 27(3):263--288, 1996.
+
 \bibitem{Grat13a}
 Niels Bj{\o}rn~Bugge Grathwohl, Fritz Henglein, Lasse Nielsen, and Ulrik~Terp
   Rasmussen.

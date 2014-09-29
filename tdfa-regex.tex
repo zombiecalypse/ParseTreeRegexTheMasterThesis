@@ -28,6 +28,7 @@
 \theoremstyle{definition}
 \newtheorem*{notation}{Notation}
 \newtheorem*{defn}{Definition}
+\newtheorem{thm}{Theorem}
 
 % ============================================================
 %% Uncomment the next few lines to get sf URL links:
@@ -1660,7 +1661,7 @@ But first we need to formalize the concept of a correct match and of greediness.
   A \emph{correct DFA state} is a list of coroutines that is ordered in the 
   half-order $<$ such that:
   \begin{description}
-    \item[Simple transition $a\xrightarrow^{x} b$] $a<b$ if $x$ matches the 
+    \item[Simple transition $a\xrightarrow{x} b$] $a<b$ if $x$ matches the 
       string.
     \item[Chain $A\rightarrow B$] $a_{begin}<a_{end}<b_{begin}<b_{end}$
     \item[Greedy loop $A*$] $a_{begin} < a_{end} < a_{middle}$
@@ -1677,10 +1678,10 @@ But first we need to formalize the concept of a correct match and of greediness.
 
 \begin{defn}
   A \emph{correct match} of a well-formed NFA $A$ on a string 
-  $s=\"s_1s_2\dots s_n\"$ is defined inductively:
+  $s="s_1s_2\dots s_n"$ is defined inductively:
 
   \begin{description}
-    \item[Simple transition $a\xrightarrow^{x} b$] if a coroutine ends in $b$, 
+    \item[Simple transition $a\xrightarrow{x} b$] if a coroutine ends in $b$, 
       it will have the memory of the coroutine in $a$ and the only character 
       read will be $x$.
     \item[Chain $A\rightarrow B$] the coroutine at the end of $B$ is the one 
