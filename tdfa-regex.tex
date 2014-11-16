@@ -612,7 +612,7 @@ these steps, finding that the string isn't parsable as a whole.
 
 \section{Packrat parsers}
 The memoization approach can be extended further to so-called \emph{packrat}
-parsing\cite{Mede11a} based on Parsing Expression Grammars (PEG), to optain a
+parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to optain a
 $O(n\,m)$, but the memoization gives a space overhead that is
 $O(n)$, with a big constant\cite{Ford02a} -- or to put it in another way: The
 original string is stored several times over. This makes them flexible and fast
@@ -655,7 +655,7 @@ possible interpretations.
 
 The downside to this is that packrat parsers have a large space overhead that 
 make them infeasible for large 
-inputs\cite{Beck08a}\footnote{\quote{[...] the Java parser generated 
+inputs\cite{Beck08a}\footnote{\quote{[\dots] the Java parser generated 
 by Pappy requires up to 400 bytes of memory for every byte of input.}}.
 
 \section{Automata based extraction of parse trees}\seclabel{parse-trees-related}
@@ -793,7 +793,7 @@ We describe our algorithm in this chapter. Since it is based on previous
 work and especially the lazy DFA compilation algorithm, you should expect to 
 see previously discussed topics to be reiterated.
 
-\section{TNFA}
+\section{TNFA}\label{sec:tnfa}
 
 The algorithm we present is a extension of the non-deterministic finite state
 automaton (NFA) matching algorithm for regular expressions with added logging

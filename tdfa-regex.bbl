@@ -111,12 +111,23 @@ V.~Laurikari.
   2000. Proceedings. Seventh International Symposium on}, pages 181--187. IEEE,
   2000.
 
+\bibitem{Mede12a}
+S{\'e}rgio Medeiros, Fabio Mascarenhas, and Roberto Ierusalimschy.
+\newblock From regexes to parsing expression grammars.
+\newblock {\em Science of Computer Programming}, 2012.
+
 \bibitem{Mein10a}
 Chad~R. Meiners, Jignesh Patel, Eric Norige, Eric Torng, and Alex~X. Liu.
 \newblock Fast regular expression matching using small {TCAMs} for network
   intrusion detection and prevention systems.
 \newblock In {\em Proceedings of the 19th USENIX conference on Security},
   USENIX Security'10, page~8, Berkeley, CA, USA, 2010. USENIX Association.
+
+\bibitem{Norv91a}
+Peter Norvig.
+\newblock Techniques for automatic memoization with applications to
+  context-free parsing.
+\newblock {\em Computational Linguistics}, 17(1):91--98, 1991.
 
 \bibitem{Pike87a}
 R.~Pike.
