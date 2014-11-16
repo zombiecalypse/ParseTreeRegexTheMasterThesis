@@ -404,6 +404,13 @@ hungry, it can only follow transitions that contain the character to be read,
 but the co-routine becomes fed. If a co-routine is fed, it can only 
 follow $\varepsilon$-transitions.
 
+Furthermore the order in which states are expanded will become relevant. For 
+this, the model of the NFA is expanded for allowing transitions with negative 
+priority. An edge with negative priority will only be expanded when there are 
+no more legal transitions with regular priority. The order for high and low
+priorities is depth first\footnote{In an implementation this would imply that 
+a newly seen state is put on a stack.}.
+
 \chapter{Related work}
 \seclabel{related}
 Regular expressions are by no means new and originated with Kleene in the 
@@ -516,13 +523,12 @@ transitions, where the tag consumes the character and sets the memory to
 
 \begin{algorithm*}
   \begin{algorithmic}
-  \Function{$push_{tagged}$}{coroutines}
+  \Function{$run_{tagged}$}{coroutines}
     \For{all $\varepsilon$-transitions from current state to state $s$ with tag $t$}
       \If{no co-routine in state $s$ exists in coroutines}
         \State copy own memory into $m$
         \State \Call{interpret}{$t$, $m$}
         \State add a co-routine $r$ in state $s$ with memory $m$ to coroutines
-        \State \Call{$r.push$}{character, coroutines}
       \EndIf
     \EndFor
   \EndFunction
@@ -531,7 +537,7 @@ transitions, where the tag consumes the character and sets the memory to
 \end{algorithm*}
 
 The instructions of all NFA transitions can be captured and this leads to the 
-compilation to a TDFA. Now not all TDFA states are alike, even if they do contain 
+compilation to a TDFA\@. Now not all TDFA states are alike, even if they do contain 
 the same TNFA states, since they might require very different instructions. 
 This has been addressed by Laurikari\cite{Laur00a} by finding equivalent or
 \emph{mappable} TDFA states. A mapping is an isomorphism of two states that 
