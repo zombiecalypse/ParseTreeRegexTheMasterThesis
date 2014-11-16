@@ -123,6 +123,11 @@ Chad~R. Meiners, Jignesh Patel, Eric Norige, Eric Torng, and Alex~X. Liu.
 \newblock In {\em Proceedings of the 19th USENIX conference on Security},
   USENIX Security'10, page~8, Berkeley, CA, USA, 2010. USENIX Association.
 
+\bibitem{Schwarz:10861}
+Aaron~Karper Niko~Schwarz.
+\newblock O(n m) regular expression parsing library that produces parse trees,
+  2014.
+
 \bibitem{Norv91a}
 Peter Norvig.
 \newblock Techniques for automatic memoization with applications to
