@@ -6,11 +6,11 @@ Arvind Arasu, Surajit Chaudhuri, Zhimin Chen, Kris Ganjam, Raghav Kaushik, and
 \newblock Experiences with using data cleaning technology for bing services.
 \newblock {\em IEEE Data Eng. Bull.}, 35(2):14--23, 2012.
 
-\bibitem{becket2008dcgs}
+\bibitem{Beck08a}
 Ralph Becket and Zoltan Somogyi.
-\newblock Dcgs+ memoing= packrat parsing but is it worth it?
-\newblock In {\em Practical Aspects of Declarative Languages}, pages 182--196.
-  Springer, 2008.
+\newblock {DCGs} + {Memoing} = {Packrat} parsing, but is it worth it?
+\newblock In {\em Practical Aspects of Declarative Languages}, volume LNCS
+  4902, pages 182--196. Springer, January 2008.
 
 \bibitem{Bend02a}
 Michael~A Bender, Richard Cole, Erik~D Demaine, Martin Farach-Colton, and Jack

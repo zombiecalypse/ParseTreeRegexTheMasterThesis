@@ -800,7 +800,25 @@ In comparison, our approach allows full control over greediness, even for
 subexpressions, thus generalizing over all previous approaches, while achieving
 the running time guarantees of regular expression matching. It runs in only one
 pass and supports character ranges, lazy compilation, and compactified DFA
-representation for practical performance.
+representation for practical performance. Further since only a single pass is 
+necessary and the memory overhead is small, our algorithm can be applied to a 
+streaming scenario, as discussed in the next section.
+
+\section{Large scale data analysis of a stream of text}
+Due to its improvements in requiring only a single pass over the input and 
+its memory allocation pattern, our algorithm is especially fitted for a 
+scenario, where the input string is of unknown size or of size to big to fit 
+on a single machine. 
+
+Imagine the task of finding a parse tree of a regular grammar for a text 
+that is stored on machines $M_1, \dots, M_n$. Now in order to parse the 
+string, we set aside a machine $P$, that will do the parsing. We only need the NFA of the 
+pattern to fit on $P$ and can then receive each of the shards 
+from $M_1$ to $M_n$ in turn and discard it afterwards. Even if the parse tree 
+(containing the indices of the beginning and end of the groups) is too large 
+to fit on the machine, we can send the cells to other machines. Because the 
+cells are not touched anymore, there will never be a need for $P$ to retreive 
+old cells.
 
 \chapter{Algorithm} \seclabel{algo}
 We describe our algorithm in this chapter. Since it is based on previous 
