@@ -1884,6 +1884,11 @@ But first we need to formalize the concept of a correct match and of greediness.
 \end{proof}
 
 \section{Execution time}
+The main structure of any NFA based matching algorithm is the nesting of two 
+loops: The outer loop iterating over the $n$ characters of the string, and 
+the inner expanding at most $m$ states. As described in 
+chapter~\ref{cha:data} the update cost of every co-routine is $O(1)$. This 
+gives a total run time of $O(n\, m)$.
 
 \section{Lower bound for time}\seclabel{lower-bound}
 There is no known tight\footnote{A lower bound $l$ is tight, if it is the 
