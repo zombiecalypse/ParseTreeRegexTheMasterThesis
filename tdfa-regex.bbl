@@ -49,11 +49,13 @@ Danny Dub{\'e} and Marc Feeley.
 \newblock Efficiently building a parse tree from a regular expression.
 \newblock {\em Acta Informatica}, 37(2):121--144, 2000.
 
-\bibitem{Fros96a}
-Richard~A Frost and Barbara Szydlowski.
-\newblock Memoizing purely functional top-down backtracking language
-  processors.
-\newblock {\em Science of Computer Programming}, 27(3):263--288, 1996.
+\bibitem{Ford02a}
+Bryan Ford.
+\newblock Packrat parsing: simple, powerful, lazy, linear time, functional
+  pearl.
+\newblock In {\em ICFP 02: Proceedings of the seventh ACM SIGPLAN international
+  conference on Functional programming}, volume 37/9, pages 36--47, New York,
+  NY, USA, 2002. ACM.
 
 \bibitem{Grat13a}
 Niels Bj{\o}rn~Bugge Grathwohl, Fritz Henglein, Lasse Nielsen, and Ulrik~Terp
