@@ -146,6 +146,8 @@
 \setlength{\pdfpageheight}{\paperheight}
 \setlength{\pdfpagewidth}{\paperwidth}
 
+\newcommand{\abs}[1]{\left|#1\right|}
+
 \frenchspacing
 
 \title{Efficient regular expressions that produce parse trees}
@@ -586,10 +588,8 @@ create a memoized function $\hat f$ such that
 \end{algorithmic}
 This means that repeatedly calling the same function with  the same inputs 
 only costs lookup time after the function has been evaluated once.
-\nes{memoization throw in: make anything cubic } 
-%TODO
 
-\section{News} %TODO
+\section{News}
 While there is no shortage of books discussing the usage of regular
 expressions, the implementation side of regular expression has not
 been so lucky. Cox is spot-on when he argues that innovations have
@@ -649,9 +649,10 @@ contains features $f_1, f_2, \dots, f_n$, we would match the document
 against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
 Therefore, in this paper, we consider the state of the art algorithms
 to be quadratic, since both $m$ and $n$ are part of the input to a
-regular expression matcher. There is no known lower bound that would prohibit 
-a sub-quadratic match, so there is still hope to beat this algorithm as well 
-as other NFA based regular expression matchers.
+regular expression matcher. There is a lower bound proven in 
+\Secref{lower-bound} of $\Theta(n\, \min(m, \abs{\Sigma}))$, but this does 
+not prohibit an asymptotic improvement of this algorithm. It is not known if 
+$O(n\, m)$ is the best we can hope for.
 
 Sulzmann and Lu add to the table a new matching strategy that yields
 good practical performance, although the theoretical bounds are considerably
@@ -1136,7 +1137,23 @@ will be further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
 the overall runtime is $O(n\,m\,\log m)$.
 
 \section{Lower bound for time}\seclabel{lower-bound}
-TODO: proof that run time is tight\cite{Ellul05a}
+There is no known tight\footnote{A lower bound $l$ is tight, if it is the 
+asymptotically largest lower bound} lower bound to regular expression matching.
+
+\begin{thm}
+  No algorithm can correctly match regular expressions faster than 
+  $\Theta(n\, \min(m, \abs{\Sigma}))$, where $n$ is the length of the string, 
+  $m$ is the length of the pattern, and $\abs{\Sigma}$ is the size of the alphabet.
+\end{thm}
+\begin{proof}
+  Let $S=a^nx_i$ and $R=\mathtt{[ax_1]*|[ax_2]*|\dots|[ax_m]*}$. Note that 
+  $\abs{S} = \Theta{n}$ and $\abs{R}=\Theta(\min(m, \abs{\Sigma}))$. Let 
+  further \texttt{match} be a valid regular expression matching algorithm, 
+  then $\mathtt{match}(S, R)$ is equivalent to finding 
+  $a^nx_i\stackrel{?}{\in} \{a^nx_1, \dots, a^nx_m\}$. There is no particular order to 
+  $\{a^nx_1, \dots, a^nx_m\}$, so the lower bound for finding this is 
+  $\Theta(\abs{S}\, \abs{R})$.
+\end{proof}
 
 \chapter{Datastructures}
 In the previous chapter, we optained an algorithm with a run-time 
