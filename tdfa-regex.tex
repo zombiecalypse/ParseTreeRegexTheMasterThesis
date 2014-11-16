@@ -685,6 +685,11 @@ references need to be stored to possible parses and since parsers consume at
 least a character, each character in the input string has at most $m$ 
 possible interpretations.
 
+The downside to this is that packrat parsers have a large space overhead that 
+make them infeasible for large 
+inputs\cite{becket2008dcgs}\footnote{\quote{[...] the Java parser generated 
+by Pappy requires up to 400 bytes of memory for every byte of input.}}.
+
 \section{Automata based extraction of parse trees}\seclabel{parse-trees-related}
 Memoization is a powerful tool to achieve fast parsers, but they have a 
 space-overhead in order of the input instead of the parse tree size. The 
