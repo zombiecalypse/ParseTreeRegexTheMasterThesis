@@ -997,105 +997,51 @@ step. There are four kinds of instructions:
 \end{description}
 \end{notation}
 
+Further, in order to write down our algorithm as a special case of the TNFA 
+execution algorithm~\ref{alg:coroutine-tagged}, we describe the transitions 
+that consume characters as $\varepsilon$-transitions tagged with the 
+character and negatively prioritized transitions as tagged with $-$. The 
+actual implementation deviates from this in favour of speed.
+
+With this, the algorithm is simply implementing the fitting $interpret$ 
+function as seen in algorithm~\ref{alg:coroutine-tagged}.
+
 \begin{algorithm*}[htbp]
 \begin{algorithmic}[1]
-\Require{Graph of transitions for an NFA,\\
-	   Input character $a$,\\
-	   Input position $pos$,\\
-	   a list of co-routines $Q = [(q, [h_{1},\dots,h_{n}])]$,
-	     where $q$ is an NFA and $[h_{1},\dots,h_{n}]$ is an array of histories.}
-\Ensure{Set of co-routines $R$.}
-\State $R\leftarrow [\ ]$\;
-\State Initialize empty stack buffer
-\State Initialize empty stack high
-\State Initialize stack low so that $(q, h)\in Q$ are retrieved front to back of $Q$.
-\State Mark all co-routines in low as hungry.
-
-\LineComment{Follow transitions greedily}
-\While{high and low are not both empty}
-	\If{high not empty}
-		\State pop $(q', [h_{1},\dots,h_{n}])$ from high
-	\Else
-		\State pop $(q', [h_{1},\dots,h_{n}])$ from low\;
-		
-		\While{buffer is not empty}
-			\State pop $(q, [h_{1},\dots,h_{n}])$ from buffer and add it to $R$
-		\EndWhile
-	\EndIf
-		
-	\If{current co-routine is marked hungry}
-		\For{$a$-consuming transition $e=q'\rightarrow q''$}
-			\State push $(q'', [h_{1},\dots,h_{n}])$ to high.
-		\EndFor
-		\State jump to top of while.
-	\EndIf
-	
-	\If{$q'$ is marked as seen} \State jump to top of while loop \EndIf
-	\algstore{onestep}
-\end{algorithmic}
-\caption[Compute the follow-up state for DFA state $Q$]{\label{onestep}$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute
-the follow-up state for DFA state $Q$. Continued on page \pageref{oneStep2}.}
-\end{algorithm*}
-\begin{algorithm*}
-\label{oneStep2}
-
-\ContinuedFloat
-\begin{algorithmic}[1]
-	\algrestore{onestep}
-	\State mark $q'$ as seen
-	\State add $(q', [h_{1},\dots,h_{n}])$ to buffer
-	\For{$\varepsilon$ transitions $t$ from $q'$ to $q''$}
-		\If{$q''$ is marked as seen} \State continue for loop \EndIf
-		\If{$t$ is tagged with an open or close tag}
-			\State Choose $i$ such that $h_{i}$ is the history of  $t$'s open tag
-			\State Make a new history $h'$
-			\State $h_{i} \mapsto h'$ \label{algline:old-copy}\Comment{Copy old history}
-			\If{$t$ has a open tag}
-				\State Let newHistories be $[\dots,h_{i-1},h',h_{i+1},\dots]$
-				\State $h' \leftarrow pos+1$ \label{algline:store-after}\Comment{Store position after current}
-			\Else
-				\LineComment{$t$ has a close tag}
-				\State Choose $i'$ such that $h_{i'}$ is the history of  $t$'s open tag 
-				\State Make a new history $h''$
-				\State $h'_{i'} \mapsto h''$ \label{algline:old-copy2}\Comment{Copy old history}
-				\State $h'' \leftarrow pos$\label{algline:store-current}\Comment{Store current position}
-				\State Commit $h'$
-				\State Commit $h''$
-				\State Let newHistories be $[\dots,h_{i-1},h', \dots, h'',h_{i'+1},\dots]$
-			\EndIf
-		\EndIf		
-				
-		\LineComment{Push according to priority of transition:}
-		\If{$t$ has low priority}
-			\State push $(q'', newHistories)$ to low
-		\Else
-			\State push $(q'', newHistories)$ to high
-		\EndIf
-	\EndFor
-\EndWhile
-
-\caption[]{$\mbox{onestep}(\mbox{NFA}, a, \mbox{pos}, Q)$: Compute the follow-up
-state for DFA state $Q$. (continued)}
+  \Function{$interpret$}{$t$, $m$}
+    \If{$t$ is the character $c$}
+      \If{$m$ is not fed and can current character is consumable by $c$}
+      \State become fed
+      \Else
+        \State die
+      \EndIf
+    \EndIf
+    \If{$t$ is $\varepsilon$}
+      \If{$m$ is not fed}
+        \State die
+      \EndIf
+    \EndIf
+    \If{$t$ is $-$}
+      \State schedule coroutine after all high priority coroutines.
+    \EndIf
+    \If{$t$ is open tag of group $i$}
+      \State create new history $h$ as a copy of $m.histories[i]$
+      \State write $index+1$ to history $h$
+      \State create new memory $m'$, where $m'.histories[i] = h$
+    \EndIf
+    \If{$t$ is close tag of group $i$}
+      \State create new history $h$ as a copy of $m.histories[i+1]$
+      \State write $index$ to history $h$
+      \State create new memory $m'$, where $m'.histories[i+1] = h$
+      \State commit $m'.histories[i]$ and $m'.histories[i+1]$
+    \EndIf
+  \EndFunction
 \end{algorithmic}
 \end{algorithm*}
 
-
-Algorithm~\ref{onestep}  takes as input a set of co-routines, an NFA
-transition graph, and an input character, and returns the set of
-co-routines running after the input character has been read. It makes
-sure that if there could be two co-routines with the same NFA state,
-the one that follows greedy matching\footnote{Non-greedy operators
-work the same way, just with reversed priorities. Both greediness profiles
-work correctly even if both occur during the onestep execution.} survives.
-At no point of the algorithm are the two state-memory tuples both present in
-the result and thus in conflict. In a nutshell, the algorithm works as follows:
-The co-routines are scheduled, in order, they eat one input character, and then
-follow only high-priority transitions, saving low-priority transitions on a
-stack.  Once we're out of high-priority transitions, we continue with low
-priority transitions, until all possible transitions have been followed. Then,
-we schedule the next input co-routine.  The starting state is obtained from
-Algorithm~\ref{onestep}, taking the starting NFA state as input, with the
-slight twist that no input character is consumed.
+The states are fed into the algorithm in the order visited, so that the 
+coroutine that got furthest is expanded first when the next character is 
+read.
 
 Note that the ordering of co-routines inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
@@ -1107,7 +1053,8 @@ for state 7, and `captures it'. Thus, the new co-routine of state 7 is
 a fork of the co-routine of state 6, not 3. This matters, since 6 and
 3 may disagree about their histories.
 
-\begin{example} Execution of algorithm \ref{onestep}: \label{ex:oneStep1}
+\begin{example} Execution of algorithm \ref{alg:coroutine-tagged} with the 
+  interpret as above: \label{ex:oneStep1}
 Consider the automaton in figure \ref{fig:example-automaton} is in
 the DFA state\footnote{This is the starting state, except for the omission of
 co-routines that would die immediately after scheduling because there are no
@@ -1807,7 +1754,7 @@ But first we need to formalize the concept of a correct match and of greediness.
 \end{proof}
 
 \begin{lemma}\label{foundat}
-  The algorithm \emph{read} on page~\ref{alg:nfa-string} matches the empty string
+  The algorithm \emph{read} on page~\ref{alg:coroutine-tagged} matches the empty string
   correctly.
 \end{lemma}
 \begin{proof}
