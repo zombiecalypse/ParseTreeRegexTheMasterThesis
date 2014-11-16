@@ -402,45 +402,7 @@ afterwards. In order to model that, we propose an additional state kept in
 the co-routine: it can either be \emph{hungry} or \emph{fed}. If it is 
 hungry, it can only follow transitions that contain the character to be read, 
 but the co-routine becomes fed. If a co-routine is fed, it can only 
-follow $\varepsilon$-transitions. This is formalized in algorithm~\ref{alg:nfa-string}.
-
-
-\begin{algorithm*}
-  \begin{algorithmic}
-  \Function{read}{string, nfa}
-    \State Initialize set of co-routines $coroutines$
-    \State $r\leftarrow$ \emph{fed} co-routine $r$ in starting state of $nfa$
-    \State \Call{$r.push$}{$\varepsilon$, $coroutines$}
-    \For{all characters $c$ in $string$}
-      \State make new set of co-routines $coroutines'$
-      \For{all co-routines $r$ in $coroutines'$}
-        \State remove $r$ from $coroutines$
-        \State \Call{$r.push$}{c, $coroutines'$}
-      \EndFor
-      \State $coroutines \leftarrow coroutines'$
-    \EndFor
-  \EndFunction
-  \Statex
-  \Function{$push_{fed}$}{character, coroutines}
-    \For{all $\varepsilon$-transitions from current state to state $s$}
-      \If{no co-routine in state $s$ exists in coroutines}
-        \State add a \emph{fed} co-routine $r$ in state $s$ to coroutines
-        \State \Call{$r.push$}{character, coroutines}
-      \EndIf
-    \EndFor
-  \EndFunction
-  \Statex
-  \Function{$push_{hungry}$}{character, coroutines}
-    \For{all $character$-transitions from current state to state $s$}
-      \If{no co-routine in state $s$ exists in coroutines}
-        \State add a \emph{fed} co-routine $r$ in state $s$ to coroutines
-        \State \Call{$r.push$}{character, coroutines}
-      \EndIf
-    \EndFor
-  \EndFunction
-  \end{algorithmic}
-  \caption{\label{alg:nfa-string}NFA reading a string}
-\end{algorithm*}
+follow $\varepsilon$-transitions.
 
 \chapter{Related work}
 \seclabel{related}
@@ -1886,11 +1848,11 @@ But first we need to formalize the concept of a correct match and of greediness.
 \section{Execution time}
 The main structure of any NFA based matching algorithm is the nesting of two 
 loops: The outer loop iterating over the $n$ characters of the string, and 
-the inner expanding at most $m$ states. The expansion takes constant time, as 
-the construction described in section~\ref{sec:nfa-match} gives a constant 
-out-degree for each state. As described in 
-chapter~\ref{cha:data} the update cost of every co-routine is $O(1)$. This 
-gives a total run time of $O(n\, m)$.
+the inner expanding at most $m$ states. The expansion makes $O(1)$ updates 
+per state expanded, as the construction described in
+section~\ref{sec:nfa-match} gives a constant out-degree for each state. As
+described in chapter~\ref{cha:data} the update cost of every co-routine is
+$O(1)$. This gives a total run time of $O(n\, m)$.
 
 \section{Lower bound for time}\seclabel{lower-bound}
 There is no known tight\footnote{A lower bound $l$ is tight, if it is the 
