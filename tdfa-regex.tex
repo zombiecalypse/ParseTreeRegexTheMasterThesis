@@ -1886,7 +1886,9 @@ But first we need to formalize the concept of a correct match and of greediness.
 \section{Execution time}
 The main structure of any NFA based matching algorithm is the nesting of two 
 loops: The outer loop iterating over the $n$ characters of the string, and 
-the inner expanding at most $m$ states. As described in 
+the inner expanding at most $m$ states. The expansion takes constant time, as 
+the construction described in section~\ref{sec:nfa-match} gives a constant 
+out-degree for each state. As described in 
 chapter~\ref{cha:data} the update cost of every co-routine is $O(1)$. This 
 gives a total run time of $O(n\, m)$.
 
