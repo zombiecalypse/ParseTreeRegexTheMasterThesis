@@ -687,7 +687,7 @@ possible interpretations.
 
 The downside to this is that packrat parsers have a large space overhead that 
 make them infeasible for large 
-inputs\cite{becket2008dcgs}\footnote{\quote{[...] the Java parser generated 
+inputs\cite{Beck08a}\footnote{\quote{[...] the Java parser generated 
 by Pappy requires up to 400 bytes of memory for every byte of input.}}.
 
 \section{Automata based extraction of parse trees}\seclabel{parse-trees-related}
@@ -1280,26 +1280,7 @@ good explanation in ``Understanding Clojure's Persistent Vectors'',
 is further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
 the overall runtime is $O(n\,m\,\log m)$.
 
-\section{Lower bound for time}\seclabel{lower-bound}
-There is no known tight\footnote{A lower bound $l$ is tight, if it is the 
-asymptotically largest lower bound} lower bound to regular expression matching.
-
-\begin{thm}
-  No algorithm can correctly match regular expressions faster than 
-  $\Theta(n\, \min(m, \abs{\Sigma}))$, where $n$ is the length of the string, 
-  $m$ is the length of the pattern, and $\abs{\Sigma}$ is the size of the alphabet.
-\end{thm}
-\begin{proof}
-  Let $S=a^nx_i$ and $R=\mathtt{[ax_1]*|[ax_2]*|\dots|[ax_m]*}$. Note that 
-  $\abs{S} = \Theta{n}$ and $\abs{R}=\Theta(\min(m, \abs{\Sigma}))$. Let 
-  further \texttt{match} be a valid regular expression matching algorithm, 
-  then $\mathtt{match}(S, R)$ is equivalent to finding 
-  $a^nx_i\stackrel{?}{\in} \{a^nx_1, \dots, a^nx_m\}$. There is no particular order to 
-  $\{a^nx_1, \dots, a^nx_m\}$, so the lower bound for finding this is 
-  $\Theta(\abs{S}\, \abs{R})$.
-\end{proof}
-
-\chapter{Datastructures}
+\chapter{Datastructures}\label{cha:data}
 In the previous chapter, we optained an algorithm with a run-time 
 proportional to the cost of storing updates in a fixed size datastructure 
 with one access and one update. This needs to be fully 
@@ -1904,6 +1885,25 @@ But first we need to formalize the concept of a correct match and of greediness.
 
 \section{Execution time}
 
+\section{Lower bound for time}\seclabel{lower-bound}
+There is no known tight\footnote{A lower bound $l$ is tight, if it is the 
+asymptotically largest lower bound} lower bound to regular expression 
+matching.
+
+\begin{thm}
+  No algorithm can correctly match regular expressions faster than 
+  $\Theta(n\, \min(m, \abs{\Sigma}))$, where $n$ is the length of the string, 
+  $m$ is the length of the pattern, and $\abs{\Sigma}$ is the size of the alphabet.
+\end{thm}
+\begin{proof}
+  Let $S=a^nx_i$ and $R=\mathtt{[ax_1]*|[ax_2]*|\dots|[ax_m]*}$. Note that 
+  $\abs{S} = \Theta{n}$ and $\abs{R}=\Theta(\min(m, \abs{\Sigma}))$. Let 
+  further \texttt{match} be a valid regular expression matching algorithm, 
+  then $\mathtt{match}(S, R)$ is equivalent to finding 
+  $a^nx_i\stackrel{?}{\in} \{a^nx_1, \dots, a^nx_m\}$. There is no particular order to 
+  $\{a^nx_1, \dots, a^nx_m\}$, so the lower bound for finding this is 
+  $\Theta(\abs{S}\, \abs{R})$.
+\end{proof}
 
 \chapter{Implementation}
 While repeatedly calling algorithm \ref{onestep} would be sufficient
