@@ -1692,35 +1692,41 @@ equivalent to memoization in the backtracking procedure: If a higher priority
 state already found a path through this part of the parse, the following 
 parse can be pruned.
 
+Now the parses are analogous for our procedure and $bt$:
+
 \begin{center}
   \begin{tabular}{p{5cm}|p{7cm}}
     \hline \hline
-    $bt(a|b)$:\begin{enumerate}
+    $bt(a|b, s)$:\begin{enumerate}
       \item Check $a$
       \item Check $b$
     \end{enumerate}
-    & %TODO graphic
+    &  \includegraphics[width=3.5cm]{graphs/ror}
     \begin{enumerate}
       \item Check $1\rightarrow a\rightarrow 2$
       \item Check $1\rightarrow b\rightarrow 2$
       \end{enumerate} \\ \hline
-    $bt(r*)$:\begin{enumerate}
+    $bt(r*, s)$:\begin{enumerate}
       \item Check $r$
       \item Check $\varepsilon$
     \end{enumerate}
-    & %TODO graphic
+    & \includegraphics[width=3.5cm]{graphs/rstar}
     \begin{enumerate}
       \item Check $1\rightarrow r\rightarrow 2\rightarrow 1\rightarrow 3$
       \item Check $1\rightarrow 3$
       \end{enumerate}\\
       $$\vdots$$& $$\vdots$$\\
       \hline
+  \end{tabular}
+  \\
+  \begin{tabular}{p{5cm}|p{7cm}}
+    \hline
     $bt(ab, s)$: \begin{enumerate}
       \item Check $a$
       \item Check $b$ on rest
       \item Concatenate the updates
     \end{enumerate}
-    & %TODO graphic
+    & \includegraphics[width=3.5cm]{graphs/rseq}
     \begin{enumerate}
       \item Run through $a$ consuming some characters
       \item Run through $b$
@@ -1732,7 +1738,7 @@ parse can be pruned.
       \item Check $r$
       \item Write position after matching $r$ to changes
     \end{enumerate}
-    & %TODO graphic
+    & \includegraphics[width=3.5cm]{graphs/rgroup}
     \begin{enumerate}
       \item Write current position to changes
       \item Run through $r$
