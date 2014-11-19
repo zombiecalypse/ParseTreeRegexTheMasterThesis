@@ -735,9 +735,11 @@ Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
 used in the text editor sam~\cite{Pike87a}.  While sam was released
 as free software, no description of his regular expression matching,
 besides the source code, was published.  Sam uses Thompson's NFA,
-but adds submatch tracking. Calling TDFA a reinvention of Pike's algorithm
-seems unfair in that Laurikari's allows for far more aggressive reuse of old
-states than Thompson allows. This should lead to Laurikari's TDFA having fewer
+but adds submatch tracking. Calling Laurikari's TDFA a reinvention of Pike's
+algorithm seems unfair in that Laurikari's allows for far more aggressive reuse
+of old states than Thompson, by virtrue of introducing the mapping step 
+described in algorithm~\ref{findmapping}. This should lead to Laurikari's TDFA
+having fewer
 states, and therefore better performance, than even Google's
 RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses Pike's
 algorithm. This is not confirmed by the benchmarks by Sulzmann and Lu
@@ -1807,14 +1809,14 @@ following invariant: it is impossible to ever come across intersecting
 input ranges.
 
 To give us a chance to ever be in a state that is already in the
-transition table, we check, after executing algorithm \ref{alg:coroutine-tagged},
+transition table, we check, after executing algorithm~\ref{alg:coroutine-tagged},
 \texttt{oneStep}, whether there is a known DFA state that is
 \emph{mappable} to the output of \texttt{oneStep}.  If \texttt{oneStep}
 produced a DFA state $Q$, and there is a DFA state $Q'$ that contains
 the same NFA states, in the same order then $Q$ and $Q'$ may be
 mappable.  If they are, then there is a set of instructions that
 move the histories from $Q$ into $Q'$ such that, afterwards, $Q'$
-behaves precisely as $Q$ would have. Algorithm \ref{findmapping}
+behaves precisely as $Q$ would have. Algorithm~\ref{findmapping}
 shows how we can find a mappable state, and the needed instructions.
 The run time of Algorithm~\ref{findmapping} is $O(m)$, where $m$
 is the size of the input NFA.
@@ -1826,7 +1828,7 @@ is the size of the input NFA.
 	The ordered instructions $m$ that reorder the memory 
 		locations of $Q$ to $Q'$ and don't interfere with each other.}
     
-\For{ $Q'$ that contains the same NFA states as $Q$, in the same order}
+\For{$Q'$ that contains the same NFA states as $Q$, in the same order}
 
 	\LineComment{Invariant: For each history $H$ there is at most one $H'$\\ so that $H\leftarrow H'$ is part of the mapping.}
 	\State Initialize empty bimap $m$ \Comment{A bimap is a bijective map.}
