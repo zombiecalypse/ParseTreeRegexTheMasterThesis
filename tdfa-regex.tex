@@ -1,4 +1,4 @@
-\documentclass[11pt]{Thesis}
+\documentclass[11pt,a4paper,twoside,openright]{Thesis}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
@@ -1662,6 +1662,28 @@ If the correct co-routine stops in the end state for all possible
 constructions of the Thompson construction under the assumption that simpler
 automata do the same, it follows that no matter how complex the automata get,
 the algorithm will have the correct output.
+
+To this goal, we will use backtracking as a handy definition of correctnes. 
+We will show that our algorithm will prefer the same paths as an backtracking 
+implementation would. It should be noted that the construction is excactly 
+set up so that it matches bscktracking and in fact this can be seen as a 
+simple derivation of our algorithm.
+
+First we need a simple formalization of the backtracking procedure:
+
+\begin{verbatim}
+bt : Pattern -> String -> (Bool, [Modification], String)
+bt(r*, s) = bt(rr*, s) | bt(\varepsilon, s)
+bt(r*?, s) = bt(\varepsilon, s) | bt(rr*, s)
+bt(r+, s) = bt(rr*, s)
+bt(r+?, s) = bt(rr*?, s)
+bt(r?, s) = bt(r, s) | bt(\varepsilon, s)
+bt(r??, s) =  bt(\varepsilon, s) | bt(r, s)
+bt(a|b, s) = bt(a, s) | bt(b, s)
+bt(ab, s) = bt(a, s) + bt(b, s)
+bt(Group i r, s) = (True, [WriteOpen i current], s) + bt(r, s) + (True, 
+[WriteClose i current], s) 
+\end{verbatim}
 
 The proof will be in three steps:
 \begin{description}
