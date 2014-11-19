@@ -1177,7 +1177,7 @@ $(q_4, H_1)$,  $(q_5, H_1)$, will die as soon as they are scheduled in
 the next iteration of the algorithm, because there are no outgoing
 non-$\varepsilon$ transitions attached to their NFA states.
 
-The overall run time of algorithm \ref{onestep} depends heavily on the 
+The overall run time of algorithm \ref{alg:coroutine-tagged} depends heavily on the 
 forking of co-routines being efficient: In the worst case, it takes
 $O(m\, T_{fork}(m))$ time. A naive solution is a copy-on-write array, for
 which $T_{fork}(m)=m$ gives $O(m^2)$ for every character read, resulting
@@ -1685,142 +1685,6 @@ bt(Group i r, s) = (True, [WriteOpen i current], s) + bt(r, s) + (True,
 [WriteClose i current], s) 
 \end{verbatim}
 
-The proof will be in three steps:
-\begin{description}
-  \item[Foundation] Firstly we will show that a simple path
-    will get the correct indices, i.e. that the indexing of the capture works correctly.
-  \item[Induction] Secondly we will show that an automaton constructed from
-    correct sub-automata is correct.
-  \item[Exhaustion] Thirdly and lastly we will show that every construction
-    of the automata satisfies the induction property and thus that every
-    automaton created by the modified Thompson construction is executed correctly.
-\end{description}
-
-But first we need to formalize the concept of a correct match and of greediness.
-
-\begin{defn}
-  A NFA $A$ is \emph{well-formed} if there is a regular expression $r$ that
-  will be compiled to $A$ via the execution of the Thompson construction 
-  described in section~\ref{sec:tnfa}
-
-  Specifically this means that opening and closing of groups happens in
-  correct order and that there is no path avoiding the closing of the group
-  in case the opening is passed. Further a well-formed automaton can be
-  deconstructed into subautomata corresponding to the Thompson construction.
-\end{defn}
-
-\begin{defn}
-  A NFA $A$ is a \emph{chain} of subautomatons
-  $A_1\rightarrow A_2 \rightarrow \dots \rightarrow A_m$ if it is well-formed
-  and the picture
-  \includegraphics[width=0.8\linewidth]{graphs/chain}
-
-  holds, i.e. the NFA $A_i$ appear in order and there are only 
-  $\varepsilon$-transitions forward.
-\end{defn}
-
-\begin{defn}
-  \includegraphics[width=0.8\linewidth]{graphs/backward}
-
-  An NFA like the one above is called \emph{greedy} if the forward
-  transition is down-prioritized:
-
-  \includegraphics[width=0.8\linewidth]{graphs/backward-greedy}
-
-  It is called non-greedy if the backward transition is down-prioritized:
-
-  \includegraphics[width=0.8\linewidth]{graphs/backward-non}
-\end{defn}
-
-\begin{defn}
-  A \emph{correct DFA state} is a list of coroutines that is ordered in the 
-  half-order $<$ such that:
-  \begin{description}
-    \item[Simple transition $a\xrightarrow{x} b$] $a<b$ if $x$ matches the 
-      string.
-    \item[Chain $A\rightarrow B$] $a_{begin}<a_{end}<b_{begin}<b_{end}$
-    \item[Greedy loop $A*$] $a_{begin} < a_{end} < a_{middle}$
-    \item[Non-greedy loop $A*?$] $a_{begin} < a_{middle} < a_{end}$
-    \item[Alternation $A|B$] $b_{begin} < a_{begin}$ and 
-      $b_{end} < a_{end}$ iff $A$ matches the string.
-  \end{description}
-\end{defn}
-
-\begin{lemma}
-  For a correct DFA state and a character $s_0$ the algorithm \emph{onestep} on
-  page~\ref{onestep} will produce a correct DFA state.
-\end{lemma}
-
-\begin{defn}
-  A \emph{correct match} of a well-formed NFA $A$ on a string 
-  $s="s_1s_2\dots s_n"$ is defined inductively:
-
-  \begin{description}
-    \item[Simple transition $a\xrightarrow{x} b$] if a coroutine ends in $b$, 
-      it will have the memory of the coroutine in $a$ and the only character 
-      read will be $x$.
-    \item[Chain $A\rightarrow B$] the coroutine at the end of $B$ is the one 
-      that first took the longest correct match in $A$ and then a correct 
-      match in $B$.
-    \item[(Non-)greedy loop] the coroutine at the end state is the one that 
-      captured the most (least) letters in the automaton before exiting.
-    \item[Alternation $A|B$] the coroutine at the end is the one through $A$ 
-      if there exists a correct match and the one through $B$ otherwise (if any).
-  \end{description}
-\end{defn}
-
-\begin{lemma}
-  A correct DFA state contains the correct match.
-\end{lemma}
-\begin{proof}
-  TODO
-\end{proof}
-
-\begin{lemma}\label{foundat}
-  The algorithm \emph{read} on page~\ref{alg:coroutine-tagged} matches the empty string
-  correctly.
-\end{lemma}
-\begin{proof}
-  This corresponds to the epsilon transitions working correctly and is itself 
-  best understood as a recursive property.
-
-  \begin{description}
-    \item[Simple transition] There is no correct match and the algorithm 
-      will fail because no transitions are available.
-    \item[Chain $A\rightarrow B$] Assuming that the correct coroutine 
-      finishes $A$, then that is the only entry to $B$. Since there is no 
-      character to capture, length of matches don't matter. Assuming that the 
-      correct coroutine ends $B$, the algorithm will return the correct match.
-    \item[(Non-)greedy loop] Again the length of the iteration doesn't 
-      matter. Since visited states are not examined again, no endless loops 
-      occur and thus no actual loop is taken. The correctness follows from 
-      the correctness of the subautomaton.
-    \item[Alternation $A|B$] If $A$ matches the empty string, then this 
-      coroutines wins since $A$'s start state is put on the high priority stack.
-      If $A$ fails, then the high priority stack must be empty (notice that 
-      we understand the alternation to be the outmost part of the NFA) and 
-      the start state of $B$ is considered.
-  \end{description}
-\end{proof}
-
-\begin{lemma}\label{induc}
-  Given that the NFA executed algorithm \emph{read} on $s=s_1\dots s_{n-1}$ 
-  then executing algorithm \emph{onestep} on $s_{n}$ will give a correct 
-  match for $s\,s_{n}$.
-\end{lemma}
-\begin{proof}
-  This induction step proves that after a single step the coroutines are in 
-  proper order.
-  TODO
-\end{proof}
-
-\begin{thm}
-  Algorithm \emph{read} matches all strings correctly.
-\end{thm}
-\begin{proof} This follows directly from lemma~\ref{foundat} and 
-  lemma~\ref{induc} by induction.
-\end{proof}
-
 \section{Execution time}
 The main structure of any NFA based matching algorithm is the nesting of two 
 loops: The outer loop iterating over the $n$ characters of the string, and 
@@ -1851,7 +1715,7 @@ matching.
 \end{proof}
 
 \chapter{Implementation}
-While repeatedly calling algorithm \ref{onestep} would be sufficient
+While repeatedly calling algorithm \ref{alg:coroutine-tagged} would be sufficient
 to reach the theoretical time bound we claimed, practical performance
 can be dramatically improved by avoiding to construct new states.
 Instead, we build a \emph{transition table} that maps from old DFA
@@ -1880,7 +1744,7 @@ following invariant: it is impossible to ever come across intersecting
 input ranges.
 
 To give us a chance to ever be in a state that is already in the
-transition table, we check, after executing algorithm \ref{onestep},
+transition table, we check, after executing algorithm \ref{alg:coroutine-tagged},
 \texttt{oneStep}, whether there is a known DFA state that is
 \emph{mappable} to the output of \texttt{oneStep}.  If \texttt{oneStep}
 produced a DFA state $Q$, and there is a DFA state $Q'$ that contains
@@ -1934,7 +1798,7 @@ straightforward.  In a nutshell, we see if the current input appears
 in the transition table. Otherwise, we run \texttt{oneStep}. If the
 resulting state is mappable, we map.  More formally, we can see
 this in algorithm~\ref{interpret}. Here, algorithm~\ref{interpret} 
-assumes that algorithm~\ref{onestep} does not immediately execute 
+assumes that algorithm~\ref{alg:coroutine-tagged} does not immediately execute 
 its instructions, but returns them back to the interpreter, both for 
 execution and to feed into the transition table.
 
