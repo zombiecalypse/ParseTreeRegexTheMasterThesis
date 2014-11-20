@@ -564,10 +564,12 @@ this can be avoided by using memoization for context free grammars.  This
 allows for $O(n^3\, m)$ time parsing. While this is significantly higher than
 the $O(n\, m)$ of the automata based approaches, it is also more general,
 because more than just regular grammars can be parsed with this approach.  This
-approach is taken by combinatoric parsers such as the (J)Parsec library.  It
-should be noted however that while this approach has been known for some time
-now and promises exponential speed-up, it is by no means a standard
-optimization for backtracking based regular expression implementations.
+approach is taken by combinatoric parsers such as the Parsec 
+library\footnote{The memoization stems from the common subexpression 
+optimization of Haskell}.  It should be noted however that while this
+approach has been known for some time now and promises exponential
+speed-up, it is by no means a standard optimization for backtracking based
+regular expression implementations.
 
 First let us recapitulate what memoization means: For a function $f$ we can 
 create a memoized function $\hat f$ such that
@@ -604,7 +606,7 @@ The same arguments that make this efficient for context-free grammars however
 also make the memoization approach applicable to the backtracking algorithm 
 for regular expressions.
 
-To see the advantage, lets revise the example that produced exponential runtime
+To see the advantage, let's revise the example that produced exponential runtime
 for regular backtracking: \texttt{(x*)*y} on the string $x^n$. After failing 
 for the first time with greedily consuming the $n$ $x$ characters. This 
 memoizes that $x^{n-1}$ is not parsable, so the recursion stops after only 
@@ -617,7 +619,7 @@ $O(n\,m)$, but the memoization gives a space overhead that is
 $O(n)$, with a big constant\cite{Ford02a} -- or to put it in another way: The
 original string is stored several times over. This makes them flexible and fast
 parsers for small input, but cannot be used for big data sets. To understand
-how they work, lets first look at PEG:
+how they work, let's first look at PEG:
 
 \emph{Parsing Expression Grammars} are grammars similar to context-free 
 grammars with the difference, that they allow no left-recursion and no
@@ -666,9 +668,14 @@ approaches, one of which will be presented in this paper, use tagged finite
 state automata that store the parse tree in some manner, the main differences 
 being the format of the stored tree and the type of automaton running the parse.
 
+The rivaling memory layouts are lists of changes and an array with a cell for 
+each group. The former makes it hard to compile the TNFA to a TDFA with
+aggressive reuse of states via mapping (as described in
+algorithm~\ref{mapping}), but has lower space consumption.
+
 \begin{table}
 \begin{tabular}{c|>{\centering}m{3cm}ccc}
-  Author & Stores & Automaton & Parse time & Space \\
+  Author & Stores & Automaton & Parse time & Space overhead \\
   \hline
   \hline
   Kearns~\cite{Kear91a}& Path choices & NFA & $O(n\,m)$ & $O(n\, m)$ \\
@@ -679,9 +686,9 @@ being the format of the stored tree and the type of automaton running the parse.
   Grathwohl~\cite{Grat13a} \\
   \hline
   Laurikari~\cite{Laur00a}& Capture group in array & DFA & 
-  $O(n+2^m)$ & $O(m)$\\
+  $O(n+2^m)$ & $O(d\, m)$\\
   This paper & Capture group in array of linked lists & lazy DFA 
-  & $O(n\, m)$ & $O(d\, m)$ \\
+  & $O(n\, m)$ & $O(n\, d\, m)$ \\
 \end{tabular}
 \caption{Comparison of automata based approaches to regular expression 
 parsing. $n$ is the length of the string, $m$ is the length of the regular 
@@ -699,7 +706,8 @@ the string as few times as possible. Kearns, Dub\'e, and Nielsen do this in
 three passes to find the beginning and ending of capture groups, whereas 
 Grathwohl only uses two passes. Our algorithm captures the positions of the 
 capture groups in a single pass -- thus allowing streaming of the input 
-string. For access to the content, the original string is still necessary.
+string, as explained in section~\ref{sec:stream}. For access to the content,
+the original string is still necessary.
 
 \section{Discussion}\seclabel{discuss-related}
 While there is no shortage of books discussing the usage of regular
@@ -780,7 +788,7 @@ NFA can be interpreted as DFA and can be matched more efficiently}. However
 our algorithm doesn't require a separate pass for match detection and match 
 extraction, which opens different scenarios.
 
-\section{Large scale data analysis of a stream of text}
+\section{Large scale data analysis of a stream of text}\label{sec:stream}
 Due to its improvements in requiring only a single pass over the input and 
 its memory allocation pattern, our algorithm is especially fitted for a 
 scenario, where the input string is of unknown size or of size to big to fit 
@@ -1406,7 +1414,7 @@ the steps involved to equip an array with such an interface.
 
 The idea behind the conversion is that instead of modifying the array 
 directly, we instead keep a buffer of modifications that is of fixed 
-size. Lets for the moment assume that we have a linear order of modifications 
+size. Let's for the moment assume that we have a linear order of modifications 
 and only add the version tree later.
 
 \subsection{Linear versions}
