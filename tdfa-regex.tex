@@ -467,7 +467,7 @@ correctly, since there is not much overhead, but fails miserably if it guesses
 wrongly early on.
 
 \section{NFA based matching}\label{sec:nfa-match}
-A faster alternative to this approach is to preprocess the regular expression 
+A faster alternative to this approach is to pre-process the regular expression 
 and convert it into a NFA by the rules in \Figref{thompson-construction-simple}.
 
 \begin{figure*}[htb] \includegraphics[width=\linewidth]{graphs/thompson-simple}
@@ -477,7 +477,7 @@ expression and expand the constructs recursively.}
 \label{fig:thompson-construction-simple} 
 \end{figure*}
 
-The NFA thus optained contains $O(m)$ states and to check if a given string 
+The NFA thus obtained contains $O(m)$ states and to check if a given string 
 matches the regular expression, we can now simply run the NFA on it. For each 
 character in the input string, we follow all transitions possible from our 
 current states and save the accessible states as a set. In the next 
@@ -496,7 +496,7 @@ After the compilation is done, matching the string is $O(n)$ time.
 The DFA based matching takes $O(n + 2^m)$, which is no better than backtracking
 if $m$ is not fixed. The power set construction simulates every transition 
 possible in the NFA, but that is actually unnecessary: Instead we can 
-interwining the compilation and the matching to only expand new DFA states that
+intertwining the compilation and the matching to only expand new DFA states that
 are reached when parsing the string. At most one new DFA state is created after
 each character read and if necessary the whole DFA is constructed, after 
 which the algorithm is no different from the eager DFA. The time complexity of
@@ -612,7 +612,7 @@ these steps, finding that the string isn't parsable as a whole.
 
 \section{Packrat parsers}
 The memoization approach can be extended further to so-called \emph{packrat}
-parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to optain a
+parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain a
 $O(n\,m)$, but the memoization gives a space overhead that is
 $O(n)$, with a big constant\cite{Ford02a} -- or to put it in another way: The
 original string is stored several times over. This makes them flexible and fast
@@ -653,7 +653,7 @@ references need to be stored to possible parses and since parsers consume at
 least a character, each character in the input string has at most $m$ 
 possible interpretations.
 
-The downside to this is that packrat parsers have a large space overhead that 
+The downside to this is that Packrat parsers have a large space overhead that 
 make them infeasible for large 
 inputs\cite{Beck08a}\footnote{\quote{[\dots] the Java parser generated 
 by Pappy requires up to 400 bytes of memory for every byte of input.}}.
@@ -732,14 +732,14 @@ leaves the matching strategy entirely open. It was Kuklewicz that
 found out how to get \textsc{Posix}-style matching out of Laurikari's TDFA. 
 
 Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
-used in the text editor sam~\cite{Pike87a}.  While sam was released
-as free software, no description of his regular expression matching,
-besides the source code, was published.  Sam uses Thompson's NFA,
-but adds submatch tracking. Calling Laurikari's TDFA a reinvention of Pike's
-algorithm seems unfair in that Laurikari's allows for far more aggressive reuse
-of old states than Thompson, by virtue of introducing the mapping step 
-described in algorithm~\ref{findmapping}. This should lead to Laurikari's TDFA
-having fewer states, and therefore better performance, than even Google's
+used in the text editor \textsc{sam}~\cite{Pike87a}.  While \textsc{sam} was
+released as free software, no description of his regular expression matching,
+besides the source code, was published.  Sam uses Thompson's NFA, but adds
+submatch tracking. Calling Laurikari's TDFA a reinvention of Pike's algorithm
+seems unfair in that Laurikari's allows for far more aggressive reuse of old
+states than Thompson, by virtue of introducing the mapping step described in
+algorithm~\ref{findmapping}. This should lead to Laurikari's TDFA having fewer
+states, and therefore better performance, than even Google's
 \textsc{RE2}\footnote{\url{https://code.google.com/p/re2/}}, which uses Pike's
 algorithm. This is not confirmed by the benchmarks by Sulzmann and Lu
 \cite{Sulz12a}, but they offer an explanation: in their profiling, they see
@@ -793,7 +793,7 @@ pattern to fit on $P$ and can then receive each of the shards
 from $M_1$ to $M_n$ in turn and discard it afterwards. Even if the parse tree 
 (containing the indices of the beginning and end of the groups) is too large 
 to fit on the machine, we can send the cells to other machines. Because the 
-cells are not touched anymore, there will never be a need for $P$ to retreive 
+cells are not touched anymore, there will never be a need for $P$ to retrieve 
 old cells.
 
 \chapter{Algorithm} \seclabel{algo}
@@ -1207,15 +1207,15 @@ good explanation in ``Understanding Clojure's Persistent Vectors'',
 is further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
 the overall runtime is $O(n\,m\,\log m)$.
 
-\chapter{Datastructures}\label{cha:data}
-In the previous chapter, we optained an algorithm with a run-time 
-proportional to the cost of storing updates in a fixed size datastructure 
+\chapter{data structures}\label{cha:data}
+In the previous chapter, we obtained an algorithm with a run-time 
+proportional to the cost of storing updates in a fixed size data structure 
 with one access and one update. This needs to be fully 
-persistent\footnote{This means that old versions of the datastructure are 
-  still accessible and can be forked so that a new datastructure with only 
+persistent\footnote{This means that old versions of the data structure are 
+  still accessible and can be forked so that a new data structure with only 
 that change applied can be accessed.} in order to allow for co-routine forking.
 
-This chapter presents some possible datastructures, that allow for this.
+This chapter presents some possible data structures, that allow for this.
 
 \section{Fully persistent data structures}	\seclabel{treap}\seclabel{data-structures}
 In order to allow modifications of our list of histories, it is
@@ -1533,7 +1533,7 @@ guarantees and a more involved one, which could offer worst-case guarantees.
 For our purposes the amortized version suffices, as noted by Driscoll et
 al\cite[p. 108]{Dris89a}.
 
-The datastructure keeps so called \emph{tags} $\eta(e)$ for elements, which are 
+The data structure keeps so called \emph{tags} $\eta(e)$ for elements, which are 
 integers that describe the order. In order to query the relative position of 
 two elements, their tags are simply compared, which leaves us with the 
 problem of maintaining tags for all list elements such that 
@@ -1542,7 +1542,7 @@ $\eta(e_1)<\eta(e_2) \Leftarrow index(e_1) < index(e_2)$.
 Compare this to the related problem of list-labeling: in order maintenance we 
 need to be able to compute the full label for each element in constant time, 
 whereas in list-labeling, the node has to contain the full label itself. This 
-insight is key to maintaining order in amortized contant time. For the moment 
+insight is key to maintaining order in amortized constant time. For the moment 
 however we look at the method we can use for list-labeling.
 
 The key to achieve this is to use a doubly linked list of tags with their 
@@ -1554,9 +1554,9 @@ have any space to $\eta(e.next)$. In this case we need to relabel the
 existing nodes.
 
 \subsection{Relabeling}
-The repurpose of the relabeling step is to ensure that there is a gap to fit 
-inthe new element and reduce the potential of a next reordering step. An 
-intutive perspective is shown by Bender et al\cite{Bend02a}:
+The purpose of the relabeling step is to ensure that there is a gap to fit 
+in the new element and reduce the potential of a next reordering step. An 
+intuitive perspective is shown by Bender et al\cite{Bend02a}:
 
 The labels can be thought of a coding of paths in a complete binary tree as 
 visualized in \Figref{labels-bin-tree}. We can then define the 
@@ -1622,7 +1622,7 @@ threshold. In this range, the labels changed to make them equally spaced.}
 With this definition, we can define the region that we relabel to be the 
 first subtree that isn't in overflow -- which means that is is filled 
 sufficiently sparsely to reduce the potential new relabels. In this subtree 
-we spread the the labels equally, which ensures that we will not have to 
+we spread the labels equally, which ensures that we will not have to 
 do any relabeling for another $\floor{1.5^{-i}}$ inserts. Note that a much 
 bigger region might be in overflow, but no checks are done if they are not 
 triggered by an overflow at level 0, i.e.\ placing a node between two adjacent
@@ -1635,14 +1635,14 @@ amortized insert. This can be resolved using a technique known as
 \subsection{Indirection}
 Indirection is a method introduced by Willard\cite{Will82a} to eliminate
 annoying $\log$ factors under certain conditions such as the one just
-encountered.  With it we leave the realm of list-labeling and ceise to store
+encountered.  With it we leave the realm of list-labeling and cease to store
 the full label in each node. Instead we now keep a two-level structure 
 as shown in \Figref{graphs/indirection}.
 
 \begin{figure}[htpb]
   \centering
   \includegraphics[width=0.8\linewidth]{graphs/indirection}
-  \caption{Indirection structure: use a compount index with the high-order 
+  \caption{Indirection structure: use a compound index with the high-order 
   bits being the index for the upper structure and the low-order bits being 
 the index for the lower structure. Since the upper index is stored in the 
 summary structure, $\log u$ items can be relabeled in $O(1)$ time.}
@@ -1659,7 +1659,7 @@ faster by a $\log$-factor. This gives us amortized $O(1)$ updates.
 It can be said that this seems to set a limit on the size of the match: Once 
 our labels are used up, we cannot do $O(1)$ order queries anymore. This is 
 true, but there is a smaller limit already in place: We can't store pointers 
-to a string that doesn't fit into memory. If we ceise to understand positions 
+to a string that doesn't fit into memory. If we cease to understand positions 
 as fixed in size, we would again get a $\log$-factor. This is typically not
 considered.
 
@@ -1674,10 +1674,10 @@ constructions of the Thompson construction under the assumption that simpler
 automata do the same, it follows that no matter how complex the automata get,
 the algorithm will have the correct output.
 
-To this goal, we will use backtracking as a handy definition of correctnes. 
+To this goal, we will use backtracking as a handy definition of correctness. 
 We will show that our algorithm will prefer the same paths as an backtracking 
-implementation would. It should be noted that the construction is excactly 
-set up so that it matches bscktracking and in fact this can be seen as a 
+implementation would. It should be noted that the construction is exactly 
+set up so that it matches backtracking and in fact this can be seen as a 
 simple derivation of our algorithm.
 
 First we need a simple formalization of the backtracking procedure:
@@ -1819,8 +1819,8 @@ input ranges.
 
 To give us a chance to ever be in a state that is already in the
 transition table, we check, after executing algorithm~\ref{alg:coroutine-tagged},
-\texttt{oneStep}, whether there is a known DFA state that is
-\emph{mappable} to the output of \texttt{oneStep}.  If \texttt{oneStep}
+\texttt{run}, whether there is a known DFA state that is
+\emph{mappable} to the output of \texttt{run}.  If \texttt{run}
 produced a DFA state $Q$, and there is a DFA state $Q'$ that contains
 the same NFA states, in the same order then $Q$ and $Q'$ may be
 mappable.  If they are, then there is a set of instructions that
@@ -1869,7 +1869,7 @@ of the regular expression.}
 \section{DFA execution}
 With these ingredients in place, the entire matching algorithm is
 straightforward.  In a nutshell, we see if the current input appears
-in the transition table. Otherwise, we run \texttt{oneStep}. If the
+in the transition table. Otherwise, we run \texttt{run}. If the
 resulting state is mappable, we map.  More formally, we can see
 this in algorithm~\ref{interpret}. Here, algorithm~\ref{interpret} 
 assumes that algorithm~\ref{alg:coroutine-tagged} does not immediately execute 
@@ -1882,10 +1882,10 @@ execution and to feed into the transition table.
 \Ensure{A tree of matching capture groups.}
 \LineComment{Lazily compiles a DFA while matching.}
 
-\State Set $Q$ to startState.
+\State Set $Q$ to \emph{startState}.
 \LineComment{A co-routine is an NFA state, with an array of histories.}
 \State Let $Q$ be all co-routines that are reachable in the NFA transition graph by following $\varepsilon$ transitions only.
-\State Execute instructions described in algorithm oneStep, when walking $\varepsilon$ transitions.
+\State Execute instructions described in algorithm \emph{run}, when walking $\varepsilon$ transitions.
 
 \LineComment{Create the transition map of the DFA.}
 \State Set $T$ to an empty map from state and input to new state and instructions.
@@ -1901,15 +1901,15 @@ execution and to feed into the transition table.
 		\State jump back to start of for loop.
 	\Else
 		\LineComment{lazily compile another DFA state.}
-		\State Run $\mbox{oneStep}(Q,a)$ to find new state $Q'$ and instructions 
+		\State Run $\mbox{run}(Q,a)$ to find new state $Q'$ and instructions 
 		\State Run $\mbox{findMapping}(Q', T)$ to see if Q' can be mapped to an existing state $Q''$
 		\If{$Q''$ was found}
-			\State Append the mapping instructions from findMapping to the instructions found by oneStep\;
+    \State Append the mapping instructions from findMapping to the instructions found by \emph{run}\;
 			\State Execute the instructions.
 			\State Add an entry to $T$, from current state $Q$ and $a$, to new state $Q''$ and instructions.
 			\State Set $Q$ to $Q''$
 		\Else
-			\State Execute the instructions found by oneStep.
+      \State Execute the instructions found by \emph{run}.
 			\State Add an entry to $T$, from current state $Q$ and $a$, to new state $Q'$ and instructions.
 			\State Set $Q$ to $Q'$.
 		\EndIf
@@ -1970,7 +1970,7 @@ to avoid compiling states of it that might never be necessary. This
 allows us to avoid the full power set construction \cite{Sips05a}, which has 
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
-\section{Parsing the regular expression sytnax}  \seclabel{regex-syntax}
+\section{Parsing the regular expression syntax}  \seclabel{regex-syntax}
 Parsing the regular expression into an abstract syntax tree is a detail that
 can easily be missed. Since the algorithm for matching is already very fast,
 preliminary experiments showed that the parsing of the regular expression, even
