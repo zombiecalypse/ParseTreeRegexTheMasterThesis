@@ -169,7 +169,7 @@ all of them. We do this by storing in every co-routine a history of the all
 groups using the flyweight pattern. Thus, we log enough information during
 parsing to build up the complete parse tree after matching in a single pass, 
 making it possible to use our algorithm with strings exceeding the machine's
-memory. This is achieved in  worst case time $O(m\,n)$, providing full parse 
+memory. This is achieved in  worst case time $\Theta(m\,n)$, providing full parse 
 trees with only constant slowdown compared to matching.
 \end{abstract}
 
@@ -218,7 +218,7 @@ Lehrer,1;Alan Turing,2;''}
 \figlabel{our-tree}
 \end{figure}
 
-The worst-case run time of our approach is $O(n\,m)$, the same as the 
+The worst-case run time of our approach is $\Theta(n\,m)$, the same as the 
 algorithm extracting only single matches. It is the first algorithm to achieve
 this bound, while extracting parse trees.
 
@@ -432,7 +432,7 @@ algorithm~\ref{alg:match-bt} is used as is or in a more optimized form in
 many languages, such as Java\footnote{\texttt{java.util.regex}}, 
 Python\footnote{The module \texttt{re}}, or Perl\cite{Cox07a}. For all its 
 advantages and ease of implementation the main problem is that it takes 
-$O(2^n\,m)$ time in the worst case:
+$\Theta(2^n\,m)$ time in the worst case:
 
 \begin{algorithm*}
   \begin{algorithmic}
@@ -739,9 +739,8 @@ but adds submatch tracking. Calling Laurikari's TDFA a reinvention of Pike's
 algorithm seems unfair in that Laurikari's allows for far more aggressive reuse
 of old states than Thompson, by virtue of introducing the mapping step 
 described in algorithm~\ref{findmapping}. This should lead to Laurikari's TDFA
-having fewer
-states, and therefore better performance, than even Google's
-RE2\footnote{\url{https://code.google.com/p/re2/}}, which uses Pike's
+having fewer states, and therefore better performance, than even Google's
+\textsc{RE2}\footnote{\url{https://code.google.com/p/re2/}}, which uses Pike's
 algorithm. This is not confirmed by the benchmarks by Sulzmann and Lu
 \cite{Sulz12a}, but they offer an explanation: in their profiling, they see
 that all Haskell implementations spend considerable time decoding the input
@@ -773,6 +772,13 @@ pass and supports character ranges, lazy compilation, and compactified DFA
 representation for practical performance. Further since only a single pass is 
 necessary and the memory overhead is small, our algorithm can be applied to a 
 streaming scenario, as discussed in the next section.
+
+Compared to \textsc{RE2}, our algorithm doesn't provide many low-level optimizations, 
+such as limiting the TDFA cache size or an analysis of the pattern for common
+simplifications such as optimizing for one-state matches\footnote{unambiguous 
+NFA can be interpreted as DFA and can be matched more efficiently}. However 
+our algorithm doesn't require a separate pass for match detection and match 
+extraction, which opens different scenarios.
 
 \section{Large scale data analysis of a stream of text}
 Due to its improvements in requiring only a single pass over the input and 
@@ -1022,9 +1028,11 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
       \If{$m$ is not fed}
         \State die
       \EndIf
+      \State add new state to \emph{buffer}
     \EndIf
     \If{$t$ is $-$}
       \State schedule coroutine after all high priority coroutines.
+      \State flush \emph{buffer} to the DFA state
     \EndIf
     \If{$t$ is open tag of group $i$}
       \State create new history $h$ as a copy of $m.histories[i]$
@@ -1037,6 +1045,10 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
       \State create new memory $m'$, where $m'.histories[i+1] = h$
       \State commit $m'.histories[i]$ and $m'.histories[i+1]$
     \EndIf
+    \If{$m$ was created by crossing $-$}
+      \State flush \emph{buffer} to DFA state in FILO order.
+    \EndIf
+    \State add new state to \emph{buffer}
   \EndFunction
 \end{algorithmic}
 \label{alg:interpret}
@@ -1044,7 +1056,7 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
 
 The states are fed into the algorithm in the order visited, so that the 
 coroutine that got furthest is expanded first when the next character is 
-read.
+read. The \emph{buffer} variable is a detail that ensures this.
 
 Note that the ordering of co-routines inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
@@ -1056,9 +1068,10 @@ for state 7, and `captures it'. Thus, the new co-routine of state 7 is
 a fork of the co-routine of state 6, not 3. This matters, since 6 and
 3 may disagree about their histories.
 
-\begin{example} Execution of algorithm \ref{alg:coroutine-tagged} with the 
-  interpret as above: \label{ex:oneStep1}
-Consider the automaton in figure \ref{fig:example-automaton} is in
+\begin{example} Execution of algorithm~\ref{alg:coroutine-tagged} with the 
+  interpret as above:
+
+Consider the automaton in figure~\ref{fig:example-automaton} is in
 the DFA state\footnote{This is the starting state, except for the omission of
 co-routines that would die immediately after scheduling because there are no
 consuming transitions attached to their NFA state.}
@@ -1069,13 +1082,13 @@ Q=[
 	\end{align*}
 This is the case after initialization or before any commas are read.
 
-The algorithm uses two stacks, \emph{high} and \emph{low}.
-To find the next transition to follow, we pop one from the \emph{high} stack,
-and only if it is empty do we pop from the \emph{low} stack.
+The algorithm uses a stack \emph{lookat} with the possibility to push a low 
+priority transition below all high priority transitions\footnote{This is 
+easily implemented using two stacks, \emph{high} and \emph{low}.}.
 
 We pretend for clarity that instructions are executed directly
 after they are encountered.  The actual algorithm collects them and
-executes them after the \emph{oneStep} call to allow further
+executes them after the \emph{run} call to allow further
 optimizations and the storage of the instructions.
 
 Further, in the scope of this algorithm, co-routines have one extra bit of
@@ -1083,24 +1096,22 @@ information attached to them: they can be hungry or fed. Hungry co-routines can
 only follow transitions that consume characters, fed co-routines can only
 follow $\varepsilon$ transitions.
 
-This is the execution of \emph{oneStep}(\emph{NFA},
-``,'', $1$, $Q$):
+This is the execution of \emph{run}($Q$):
 
 \begin{enumerate}
-\item Fill the \emph{low} stack with hungry co-routines of all states of $Q$.
-  Now, $\mathit{low}=[(q_6, H_2), (q_3, H_1))]$, where the first element is the
-  head of the stack.
+\item Fill the stack with hungry co-routines of all states of $Q$.
+  Now, $\mathit{lookat}=[(q_6, H_2), (q_3, H_1))]$, where the first element
+  is the head of the stack.
 \item Initialize \emph{buffer} as an empty stack. 
   The \emph{buffer} stack exists because while following high priority
   transitions, states are discovered in an order that is reversed with respect
   to the order in which we would like to output them.
 \item Initialize $R=[\ ]$, the DFA state under construction.
-\item co-routine $(q_6,H_2)$ is popped from the \emph{low} stack, since
-  \emph{high} is empty. It is hungry.
+\item co-routine $(q_6,H_2)$ is popped from the stack. It is hungry.
 \item We iterate all available transitions in the NFA transition graph, and
   find only $q_6\rightarrow q_7$, which can consume character ``,''.
-\item $(q_7, H_2)$ is pushed to \emph{high} as fed, and we continue the main loop.
-\item $(q_7, H_2)$ is taken from the \emph{high} stack. It is fed.
+\item $(q_7, H_2)$ is pushed to the stack as fed, and we continue the main loop.
+\item $(q_7, H_2)$ is taken from the stack. It is fed.
 \item $(q_7, H_2)$ is pushed on \emph{buffer}.
 \item Since $(q_7, H_2)$ is fed, it follows $\varepsilon$ transitions.
 \item The available transition $q_7\rightarrow q_8$ is evaluated:
@@ -1113,40 +1124,38 @@ This is the execution of \emph{oneStep}(\emph{NFA},
     \item 	$h\leftarrow\pos+1$. This is the position after the ``,'', because the comma was eaten before the capture
         group starts.
     \item	Create $H_3 = h_1, h_2, h_7, h_8, h, h_6)$ as a copy of $H_2$, with $h$ in the appropriate position.
-    \item $(q_8, H_3)$ is pushed on the \emph{high} stack.
+    \item $(q_8, H_3)$ is pushed on the stack.
   \end{enumerate}
-\item $(q_8, H_3)$ is taken from the \emph{high} stack.
+\item $(q_8, H_3)$ is taken from the stack.
 \item It is pushed on \emph{buffer}. \emph{buffer}$=[(q_8, H_3), (q_7, H_2)]$
 \item It can follow no further transitions and dies.
-\item We discover that the \emph{high} stack is empty.
+\item $(q_3, H_1)$ is popped from \emph{low}. It is hungry.
 \item We now flush \emph{buffer}:
   $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[\ ]$.  Note that now, $R$
   contains two co-routines in the reverse order in which they were discovered.
-\item $(q_3, H_1)$ is popped from \emph{low}. It is hungry.
 \item  $(q_3, H_1)$ is one of the two co-routines that constitute the
 	input of this algorithm. Note how the other, $(q_6, H_2)$, got a
 	chance to follow all of its transitions before $(q_3, H_1)$ was
 	first popped off the low stack.
 \item The only transition that consumes ``,'' is $q_3\rightarrow q_4$:\begin{enumerate}
-	\item $(q_4, H_1)$ is pushed to \emph{high} as a fed co-routine.
+	\item $(q_4, H_1)$ is pushed to the stack as a fed co-routine.
 \end{enumerate}
-\item $(q_4, H_1)$ is popped from \emph{high}
+\item $(q_4, H_1)$ is popped from the stack
 \item It is pushed to the \emph{buffer}. \emph{buffer}$=(q_4, H_1)$
 \item $q_4\rightarrow q_3$ is visited.
 \begin{enumerate}
-	\item co-routine $(q_3, H_1)$ is pushed to 
-	$ \mbox{low} = (q_3, H_1)$, 
-	because $q_4\rightarrow q_3$ has low priority.
+	\item co-routine $(q_3, H_1)$ is pushed to the stack after all high 
+    priority transitions (but there are none), 
+    because $q_4\rightarrow q_3$ has low priority.
 \end{enumerate}
 \item We flush the \emph{buffer} again: $R=[(q_8, H_3), (q_7, H_2), (q_4, H_1)]$
 	Note how $(q_4, H_1)$ appears \emph{last} in $R$.
-\item $(q_3, H_1)$ is taken from the \emph{low} stack, because \emph{high} is
-  empty.
+\item $(q_3, H_1)$ is taken from the stack.
 \item It is added to \emph{buffer}.
 \item $q_3\rightarrow q_5$ is visited:\begin{enumerate}
-	\item $(q_5, H_1)$ is pushed to \emph{high}.
+	\item $(q_5, H_1)$ is pushed to the stack.
 \end{enumerate}
-\item $(q_5, H_1)$ is taken from the \emph{high} stack.
+\item $(q_5, H_1)$ is taken from the stack.
 \item It is added to \emph{buffer}.
 \item $q_5\rightarrow q_6$ is visited and contains the closing commit of the
   second capture group:\begin{enumerate}
@@ -1161,11 +1170,11 @@ This is the execution of \emph{oneStep}(\emph{NFA},
 	\item $h'\leftarrow\pos$. This is the position of the ``,''.
 	\item Create a new history array, with $h$ and $h'$ in place. 
 		$H_4 = [h_1, h_2, h, h', h_5, h_6]$
-	\item $(q_6, H_4)$ is pushed to \emph{high}.
+	\item $(q_6, H_4)$ is pushed to the stack.
 \end{enumerate}
-\item $(q_6, H_4)$ is taken from the \emph{high} stack.
+\item $(q_6, H_4)$ is taken from the stack.
 \item It is added to the \emph{buffer}.
-\item Both stacks are empty:
+\item The stack is empty.
 \item We flush our \emph{buffer}: 
 \begin{align*}
 R=[&(q_8, H_3), (q_7, H_2), (q_4, H_1),\\ &(q_6, H_4), (q_5, H_1), (q_3, H_1)]
@@ -1181,7 +1190,7 @@ non-$\varepsilon$ transitions attached to their NFA states.
 
 The overall run time of algorithm \ref{alg:coroutine-tagged} depends heavily on the 
 forking of co-routines being efficient: In the worst case, it takes
-$O(m\, T_{fork}(m))$ time. A naive solution is a copy-on-write array, for
+$\Theta(m\, T_{fork}(m))$ time. A naive solution is a copy-on-write array, for
 which $T_{fork}(m)=m$ gives $O(m^2)$ for every character read, resulting
 in a $O(n\,m^2)$ regular expression matching, which is only acceptable
 if we assume $m$ to be fixed.
