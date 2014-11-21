@@ -671,7 +671,8 @@ being the format of the stored tree and the type of automaton running the parse.
 The rivaling memory layouts are lists of changes and an array with a cell for 
 each group. The former makes it hard to compile the TNFA to a TDFA with
 aggressive reuse of states via mapping (as described in
-algorithm~\ref{mapping}), but has lower space consumption.
+algorithm~\ref{mapping}), but has lower space consumption. The mapping in 
+terms of cells for each group is easy, but costs a factor $m$ space overhead.
 
 \begin{table}
 \begin{tabular}{c|>{\centering}m{3cm}ccc}
