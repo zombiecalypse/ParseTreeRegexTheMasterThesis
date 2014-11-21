@@ -671,7 +671,7 @@ being the format of the stored tree and the type of automaton running the parse.
 The rivaling memory layouts are lists of changes and an array with a cell for 
 each group. The former makes it hard to compile the TNFA to a TDFA with
 aggressive reuse of states via mapping (as described in
-algorithm~\ref{mapping}), but has lower space consumption. The mapping in 
+algorithm~\ref{findmapping}), but has lower space consumption. The mapping in 
 terms of cells for each group is easy, but costs a factor $m$ space overhead.
 
 \begin{table}
@@ -923,10 +923,18 @@ commit was used, thus keeping the \emph{history} of each commit.
 After parsing succeeds, the list of all histories can then be used
 to reconstruct all matches of all capture groups.
 
+\begin{figure}[htpb]
+  \centering
+  \includegraphics[height=7cm]{graphs/cells}
+  \caption{Histories are cells of singly linked lists, where only the first 
+  cell can be edited.}
+  \label{fig:cells}
+\end{figure}
+
 We model histories as singly linked lists, where the payload of each node is a
 position.  Only the payload of the \emph{head}, the first node, is mutable, the
 \emph{rest}, all other nodes, are immutable.  Because the rests are immutable,
-they may be shared between histories.  This is an application of the Flyweight
+they may be shared between histories.  This is an application of the flyweight
 pattern, which ensures that all of the following instructions on histories can
 be performed in constant time. Here, the \emph{position} is the current
 position of the matcher.
