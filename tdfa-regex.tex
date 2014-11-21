@@ -507,42 +507,81 @@ This is the best known result for matching\cite{Cox07a,Cox09a,Cox10a}.
 Our algorithm modifies this algorithm by adding instructions to transitions.
 
 \section{Tagged finite state automata}\seclabel{tfsa}
-The algorithms so far did not extract capture groups and looking at the data
-structures involved it's clear that without storing this information in some
-way, we are not able to do so. Here our model of co-routines comes in
-handy, because we can simply add more instructions into the execution of each
-co-routine. A \emph{tagged finite-state automaton}\footnote{First called that by
-Laurikari\cite{Laur00a}} is a more general form of a finite-state automaton,
-where transitions are allowed to contain \emph{tags}. At run-time, the tags
-can be interpreted into modifications of the coroutine's memory. To simplify
-the analysis, only $\varepsilon$-transitions can have tags. This can be seen
-in algorithm~\ref{alg:coroutine-tagged}. To see how this is a generalization
-of the NFA, we can imagine non-$\varepsilon$-transitions as simply tagged
-transitions, where the tag consumes the character and sets the memory to
-\emph{fed}.
+The algorithms so far did not extract capture groups, because they have no
+information about where a capture group starts or ends. In order to extract
+this information, we need to store it in some way, as we traverse the
+automaton.
+
+Remember that NFA interpretation can be thought as competing co-routines.
+This model allows trivially to add more instruction as we pass a transition.
+The solution to keeping track of the capture groups is simply to store the
+information at what position the capture group started or ended in a way in
+the co-routine. This is the idea of the tagged finite state
+automaton\footnote{First called that by Laurikari\cite{Laur00a}}, which
+attaches general \emph{tags} to transitions, that modify the co-routine's
+memory in some way. This way, co-routines can store the complete information,
+where they matched which capture group in their own memory.
+
+Now that side effects of transitions are introduced, it is necessary to make
+each step uniquely prioritized, so that we can't get to a situation, where
+two different paths, that crossed two different lists of tags, lead to the
+same node and that the choice of the winner is arbitrary. This is avoided by
+giving a \emph{negative priority} to one of the transitions, whenever we have
+an out-degree of two\footnote{Note that in the Thompson construction, we have
+an out-degree of at most two.}.
+
+The priorities intuitively mean, that for example in \texttt{.a|..}, we will
+try to follow the path of \texttt{.a} first, before checking \texttt{..}.
+Only if we fail on that track, we will consider the second path.
+
+Implementing this in a backtracking implementation is trivial, but in order
+to keep the co-routines in lock-step, we need to order the NFA states in the
+DFA state, so that the co-routines travelling the left path are always
+scheduled before the routines on the right path.
+
+To complicate things further, we want co-routines that travelled further to 
+have higher priority than the ones that stayed further behind -- in 
+backtracking this would be depth-first-search.
 
 \begin{algorithm*}
   \begin{algorithmic}
   \Function{$run_{tagged}$}{coroutines}
-    \For{all $\varepsilon$-transitions from current state to state $s$ with tag $t$}
-      \If{no co-routine in state $s$ exists in coroutines}
-        \State copy own memory into $m$
-        \State \Call{interpret}{$t$, $m$}
-        \State add a co-routine $r$ in state $s$ with memory $m$ to coroutines
-      \EndIf
-    \EndFor
+    \State Put all coroutines on the stack as negative priority
+    \While{the stack isn't empty}
+      \State Pop $c$ from the stack
+      \For{all $\varepsilon$-transitions from $c$ to state $s$ with tag $t$}
+        \If{no co-routine in state $s$ exists in coroutines}
+          \State copy own memory into $m$
+          \State \Call{interpret}{$t$, $m$}
+        \EndIf
+        \If{transition is normal priority}
+          \State add a co-routine $r$ in state $s$ with memory $m$ to the stack
+        \Else
+          \State add a co-routine $r$ in state $s$ with memory $m$ to the 
+          stack beneath all high priority co-routines.
+        \EndIf
+      \EndFor
+    \EndWhile
   \EndFunction
   \end{algorithmic}
   \caption{\label{alg:coroutine-tagged}Tagged transition execution}
 \end{algorithm*}
 
-The instructions of all NFA transitions can be captured and this leads to the
-compilation to a TDFA\@. Now not all TDFA states are alike, even if they do contain
-the same TNFA states, since they might require very different instructions.
-This has been addressed by Laurikari\cite{Laur00a} by finding equivalent or
-\emph{mappable} TDFA states. A mapping is an isomorphism of two states that
-needs to be found at compilation time. For the details, the interested reader
-needs to wait for the detailed description of our algorithm in chapter~\ref{sec:algo}.
+This scheduling can be done by using a buffer, in which states that are seen 
+are stored and that is flushed into the DFA state in LIFO order if there are no
+more high-priority transitions to follow.
+
+To compile the TNFA to a TDFA we have to capture the modifications that we 
+encounter between reading characters. After doing so, we need to check if 
+we're in a DFA state that we already encountered and that we can create a new 
+connection to. Equality of TDFA states can't be the same as equality between 
+DFA states -- the equality of the contained NFA states doesn't care for the 
+order in which they are visited and further it doesn't respect that two 
+expansions might have different executed instructions. This has been addressed
+by Laurikari\cite{Laur00a} by finding equivalent or \emph{mappable} TDFA
+states. A mapping is an bijection of two states that needs to be found at
+compilation time. For the details, the interested reader needs to wait for the
+detailed description of our algorithm in chapter~\ref{sec:algo}.
 
 The idea of adding other instructions to the co-routines in the automaton
 that is the finite state machine (be it NFA or DFA) isn't new. The first
@@ -551,11 +590,9 @@ his text editor \textsc{sam}. He used a pure tagged NFA algorithm to find one
 match for each capture group quite similar to our or Laurikari's approach. This
 was only published in source code, to a great loss for the academic community.
 
-So far the description doesn't address the greediness of the match however and
-our algorithm in chapter~\ref{sec:algo} addresses this. This close control
-over greediness was implemented by Kuklewicz\cite{Kukl07a} for the Haskell
-implementation of Laurikari's algorithm. This too was only published in source
-code, to a great loss for the academic community.
+This close control over greediness was implemented by Kuklewicz\cite{Kukl07a}
+for the Haskell implementation of Laurikari's algorithm. This too was only
+published in source code, to a great loss for the academic community.
 
 \section{Revisiting backtracking}\seclabel{revise-backtrack}
 As seen earlier, backtracking makes for easy implementations, but exponential
@@ -787,7 +824,9 @@ such as limiting the TDFA cache size or an analysis of the pattern for common
 simplifications such as optimizing for one-state matches\footnote{unambiguous
 NFA can be interpreted as DFA and can be matched more efficiently}. However
 our algorithm doesn't require a separate pass for match detection and match
-extraction, which opens different scenarios.
+extraction, which opens different scenarios. Further the inclusion of the
+mapping allows to use our TDFA better and keep it smaller. \textsc{RE2} on
+the other hand only allows the trivial mapping.
 
 \section{Large scale data analysis of a stream of text}\label{sec:stream}
 Due to its improvements in requiring only a single pass over the input and
