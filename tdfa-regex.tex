@@ -1179,7 +1179,7 @@ This is the execution of \emph{run}($Q$):
     \item 	$h_5 \mapsto h$. Note that this is constant time, no matter how many entries $h_5$ already has.
     \item 	$h\leftarrow\pos+1$. This is the position after the ``,'', because the comma was eaten before the capture
         group starts.
-    \item	Create $H_3 = h_1, h_2, h_7, h_8, h, h_6)$ as a copy of $H_2$, with $h$ in the appropriate position.
+    \item	Create $H_3 = [h_1, h_2, h_7, h_8, h, h_6]$ as a copy of $H_2$, with $h$ in the appropriate position.
     \item $(q_8, H_3)$ is pushed on the stack.
   \end{enumerate}
 \item $(q_8, H_3)$ is taken from the stack.
@@ -1220,7 +1220,7 @@ This is the execution of \emph{run}($Q$):
     not corrupt the memory.
 	\item A new history $h$ is for the opening of the capture group.
 	\item A new history $h'$ is created for the closing position.
-  \item $h_3 \mapsto h$. See the definition of $Q$ above, to see that $h3$ is
+  \item $h_3 \mapsto h$. See the definition of $Q$ above, to see that $h_3$ is
     the opening capture group position of $H_1$.
 	\item $h_4 \mapsto h'$.
 	\item $h'\leftarrow\pos$. This is the position of the ``,''.
@@ -1263,7 +1263,7 @@ good explanation in ``Understanding Clojure's Persistent Vectors'',
 is further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
 the overall runtime is $O(n\,m\,\log m)$.
 
-\chapter{data structures}\label{cha:data}
+\chapter{Data structures}\label{cha:data}
 In the previous chapter, we obtained an algorithm with a run-time
 proportional to the cost of storing updates in a fixed size data structure
 with one access and one update. This needs to be fully
