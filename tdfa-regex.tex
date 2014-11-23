@@ -363,6 +363,7 @@ of the inner group is kept. In tree regular expressions, all occurrences are kep
 in a tree structure: The outer capture group contains $bcbccc$ and both inner
 matches $bc$ and $bccc$.
 
+\paragraph{Greediness}
 The relevance of greedy and non-greedy matches becomes apparent now: The
 regular expression \texttt{a(.*)c?} on the string $abc$ captures $bc$ in
 the group, while \texttt{a(.*?)c?} captures only $b$. This is because
