@@ -369,62 +369,6 @@ the group, while \texttt{a(.*?)c?} captures only $b$. This is because
 the parsing is ambiguous without specifying the greediness of the match -- both
 $b$ and $bc$ would be valid.
 
-\section{(Non-)deterministic finite-state automata}
-As they are heavily used throughout this paper, let us recall what
-non-deterministic finite-state automata (NFA) and deterministic finite-state
-automata (DFA) are. A DFA is a state machine that walks over a finite
-transition graph, one step for every input character. The choice of transition
-is limited by the transition's character range. A transition can only be
-followed if the current input character is inside transition's character
-range. The possible character ranges are assumed to be disjoint, so that in
-every step at most one transition can be followed.
-
-NFA differ from DFA in that for some input character and some state, there
-may be more than one applicable transition and some transitions can be
-traversed without consuming a character, called $\varepsilon$-transitions.  If
-there is a transition that leads to the accepting state eventually, an NFA
-finds it, by trying the alternatives in lock-step.
-\autoref{fig:example-automaton} shows an example of an NFA's transition graph.
-
-An simple way to think about the process of reading input with a NFA is that
-of \emph{co-routines}. A co-routine is a procedure that has the ability to
-suspend itself and continue later -- it is similar to a thread, but they
-don't need to be executed in parallel. In order to resume their work later,
-they contain some kind of memory that is specific to them.
-
-In the context of NFAs, a co-routine contains the current state and has access
-to the transition graph. When reading a
-string, the NFA maintains a set of co-routines and advance them in
-lock-step. This means that each co-routine reads the current character and
-spawn new co-routines for all possible transitions. When reading a character,
-a co-routine must consume it, but might follow $\varepsilon$-transitions
-afterwards. In order to model that, we propose an additional state kept in
-the co-routine: it can either be \emph{hungry} or \emph{fed}. If it is
-hungry, it can only follow transitions that contain the character to be read,
-but the co-routine becomes fed. If a co-routine is fed, it can only
-follow $\varepsilon$-transitions.
-
-Furthermore the order in which states are expanded will become relevant. For
-this, the model of the NFA is expanded for allowing transitions with negative
-priority. An edge with negative priority will only be expanded when there are
-no more legal transitions with regular priority. The order for high and low
-priorities is depth first\footnote{In an implementation this would imply that
-a newly seen state is put on a stack.}.
-
-\chapter{Related work}
-\seclabel{related}
-Regular expressions are by no means new and originated with Kleene in the
-1950ies\cite{Sips05a}. This chapter first introduces some standard
-procedures for regular expression matching (without extracting any
-information), such as Backtracking in \Secref{backtracking} and various
-automata based approaches in sections~\ref{sec:nfa-match}, \ref{sec:dfa-match},
-and \ref{sec:lazy-dfa-match}. In \Secref{tfsa} we discuss an addition to
-the automata based approaches called \emph{tags} that allows for the extraction
-of sub-matches. We show that backtracking based approaches are not the
-straw man that one could believe them to be in \Secref{revise-backtrack}.
-Even though we first believed ourselves to be, we are actually not the first
-to produce parse trees in competitive time, as seen in \Secref{parse-trees-related}.
-
 \section{Backtracking}\seclabel{backtracking}
 An intuitive and extensible algorithm for determining whether a string
 matches a regular expression is backtracking. This
@@ -466,9 +410,69 @@ steps to end in the $no\ match$ case.  Backtracking is fast if it guesses
 correctly, since there is not much overhead, but fails miserably if it guesses
 wrongly early on.
 
+Because it is so intuitive we will use it as the definition of a correct 
+behaviour throughout this article.
+
+\section{(Non-)deterministic finite-state automata}
+As they are heavily used throughout this paper, let us recall what
+non-deterministic finite-state automata (NFA) and deterministic finite-state
+automata (DFA) are. A DFA is a state machine that walks over a finite
+transition graph, one step for every input character. The choice of transition
+is limited by the transition's character range. A transition can only be
+followed if the current input character is inside transition's character
+range. The possible character ranges are assumed to be disjoint, so that in
+every step at most one transition can be followed.
+
+NFA differ from DFA in that for some input character and some state, there
+may be more than one applicable transition and some transitions can be
+traversed without consuming a character, called $\varepsilon$-transitions.  If
+there is a transition that leads to the accepting state eventually, an NFA
+finds it, by trying the alternatives in lock-step.
+\autoref{fig:example-automaton} shows an example of an NFA's transition graph.
+
+An simple way to think about the process of reading input with an NFA is that
+of \emph{co-routines}. A co-routine is a procedure that has the ability to
+suspend itself and continue later -- it is similar to a thread, but they
+don't need to be executed in parallel. In order to resume their work later,
+they contain some kind of memory that is specific to them.
+
+In the context of NFAs, a co-routine contains the current state and has access
+to the transition graph. When reading a
+string, the NFA maintains a set of co-routines and advance them in
+lock-step. This means that each co-routine reads the current character and
+spawn new co-routines for all possible transitions. When reading a character,
+a co-routine must consume it, but might follow $\varepsilon$-transitions
+afterwards. In order to model that, we propose an additional state kept in
+the co-routine: it can either be \emph{hungry} or \emph{fed}. If it is
+hungry, it can only follow transitions that contain the character to be read,
+but the co-routine becomes fed. If a co-routine is fed, it can only
+follow $\varepsilon$-transitions.
+
+Furthermore the order in which states are expanded will become relevant. For
+this, the model of the NFA is expanded for allowing transitions with negative
+priority. An edge with negative priority will only be expanded when there are
+no more legal transitions with regular priority. The order for high and low
+priorities is depth first\footnote{In an implementation this would imply that
+a newly seen state is put on a stack.}.
+
+\chapter{Related work}
+\seclabel{related}
+Regular expressions are by no means new and originated with Kleene in the
+1950ies\cite{Sips05a}. This chapter first introduces some standard
+procedures for regular expression matching (without extracting any
+information), such as Backtracking in \Secref{backtracking} and various
+automata based approaches in sections~\ref{sec:nfa-match}, \ref{sec:dfa-match},
+and \ref{sec:lazy-dfa-match}. In \Secref{tfsa} we discuss an addition to
+the automata based approaches called \emph{tags} that allows for the extraction
+of sub-matches. We show that backtracking based approaches are not the
+straw man that one could believe them to be in \Secref{revise-backtrack}.
+Even though we first believed ourselves to be, we are actually not the first
+to produce parse trees in competitive time, as seen in \Secref{parse-trees-related}.
+
 \section{NFA based matching}\label{sec:nfa-match}
-A faster alternative to this approach is to pre-process the regular expression
-and convert it into a NFA by the rules in \Figref{thompson-construction-simple}.
+A faster alternative to the backtracking approach discussed in
+\Secref{backtracking} is to pre-process the regular expression and convert it
+into an NFA by the rules in \Figref{thompson-construction-simple}.
 
 \begin{figure*}[htb] \includegraphics[width=\linewidth]{graphs/thompson-simple}
   \caption[Thompson construction]{Thompson~\cite{Thom68a} construction of the
@@ -579,7 +583,7 @@ DFA states -- the equality of the contained NFA states doesn't care for the
 order in which they are visited and further it doesn't respect that two 
 expansions might have different executed instructions. This has been addressed
 by Laurikari\cite{Laur00a} by finding equivalent or \emph{mappable} TDFA
-states. A mapping is an bijection of two states that needs to be found at
+states. A mapping is a bijection of two states that needs to be found at
 compilation time. For the details, the interested reader needs to wait for the
 detailed description of our algorithm in chapter~\ref{sec:algo}.
 
@@ -651,7 +655,7 @@ these steps, finding that the string isn't parsable as a whole.
 
 \section{Packrat parsers}
 The memoization approach can be extended further to so-called \emph{packrat}
-parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain a
+parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain
 $O(n\,m)$, but the memoization gives a space overhead that is
 $O(n)$, with a big constant\cite{Ford02a} -- or to put it in another way: The
 original string is stored several times over. This makes them flexible and fast
@@ -852,7 +856,7 @@ see previously discussed topics to be reiterated.
 
 \section{TNFA}\label{sec:tnfa}
 
-The algorithm we present is a extension of the non-deterministic finite state
+The algorithm we present is an extension of the non-deterministic finite state
 automaton (NFA) matching algorithm for regular expressions with added logging
 of the start and end of capture groups, as introduced by
 Laurikari\cite{Laur00a}. We first present the algorithm for matching,
@@ -957,7 +961,7 @@ expression and expand the constructs recursively.}
 To model capture groups in the NFA, we add \emph{commit tags} to
 the transition graph. The transition into a capture group is tagged
 by a commit, the transition to leave a capture group is tagged by
-a another commit. We distinguish opening and closing commits. The
+another commit. We distinguish opening and closing commits. The
 NFA keeps track of all times that a transition with an attached
 commit was used, thus keeping the \emph{history} of each commit.
 After parsing succeeds, the list of all histories can then be used
@@ -984,7 +988,7 @@ position of the matcher.
 
 \section{TDFA}	\seclabel{dfa}
 
-As discussed earlier, a useful metaphor for regular expression matching is that of
+As discussed earlier, an useful metaphor for regular expression matching is that of
 threads\cite{Cox07a} or co-routines (for clarity we use
 co-routine, because our algorithm is not parallel).
 Whenever we aren't sure which transition to take,
@@ -1168,7 +1172,7 @@ This is the execution of \emph{run}($Q$):
 \item Since $(q_7, H_2)$ is fed, it follows $\varepsilon$ transitions.
 \item The available transition $q_7\rightarrow q_8$ is evaluated:
   \begin{enumerate}
-    \item 	This transition has a opening tag for capture group 3 on it, and so we'd like to change $h_5$,
+    \item 	This transition has an opening tag for capture group 3 on it, and so we'd like to change $h_5$,
       the relevant history (see definition of $Q$ above). However, since we're \emph{spawning} a new co-routine, we cannot change $h_5$ itself.
       Instead, we copy $h_5$, and change the copy.
     \item	A new history $h$ is created.
@@ -1244,7 +1248,7 @@ The overall run time of algorithm \ref{alg:coroutine-tagged} depends heavily on 
 forking of co-routines being efficient: In the worst case, it takes
 $\Theta(m\, T_{fork}(m))$ time. A naive solution is a copy-on-write array, for
 which $T_{fork}(m)=m$ gives $O(m^2)$ for every character read, resulting
-in a $O(n\,m^2)$ regular expression matching, which is only acceptable
+in $O(n\,m^2)$ regular expression matching, which is only acceptable
 if we assume $m$ to be fixed.
 
 Since at most two histories are actually changed, much of the
@@ -1271,7 +1275,7 @@ This chapter presents some possible data structures, that allow for this.
 
 \section{Fully persistent data structures}	\seclabel{treap}\seclabel{data-structures}
 In order to allow modifications of our list of histories, it is
-necessary to build a data structure that provides the interface an guarantees
+necessary to build a data structure that provides the interface a guarantees
 of a copy-on-write array:
 
 \begin{definition}
@@ -1545,7 +1549,7 @@ For the moment let us assume that we have a linear data structure, that
 \end{enumerate}
 
 With this we can flatten the tree to a list by adding a $b_t$ beginning
-element and a $e_t$ closing element to the list as seen in
+element and an $e_t$ closing element to the list as seen in
 \Figref{flattening-tree}.
 
 \begin{figure}[htpb]
@@ -1727,7 +1731,7 @@ automata do the same, it follows that no matter how complex the automata get,
 the algorithm will have the correct output.
 
 To this goal, we will use backtracking as a handy definition of correctness.
-We will show that our algorithm will prefer the same paths as an backtracking
+We will show that our algorithm will prefer the same paths as a backtracking
 implementation would. It should be noted that the construction is exactly
 set up so that it matches backtracking and in fact this can be seen as a
 simple derivation of our algorithm.
