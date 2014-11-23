@@ -1087,10 +1087,6 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
       \EndIf
       \State add new state to \emph{buffer}
     \EndIf
-    \If{$t$ is $-$}
-      \State schedule coroutine after all high priority coroutines.
-      \State flush \emph{buffer} to the DFA state
-    \EndIf
     \If{$t$ is open tag of group $i$}
       \State create new history $h$ as a copy of $m.histories[i]$
       \State write $index+1$ to history $h$
@@ -1102,10 +1098,6 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
       \State create new memory $m'$, where $m'.histories[i+1] = h$
       \State commit $m'.histories[i]$ and $m'.histories[i+1]$
     \EndIf
-    \If{$m$ was created by crossing $-$}
-      \State flush \emph{buffer} to DFA state in FILO order.
-    \EndIf
-    \State add new state to \emph{buffer}
   \EndFunction
 \end{algorithmic}
 \label{alg:interpret}
