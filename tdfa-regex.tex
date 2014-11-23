@@ -499,7 +499,7 @@ possible in the NFA, but that is actually unnecessary: Instead we can
 intertwining the compilation and the matching to only expand new DFA states that
 are reached when parsing the string. At most one new DFA state is created after
 each character read and if necessary the whole DFA is constructed, after
-which the algorithm is no different from the eager DFA. The time complexity of
+which the algorithm is no different from the eager DFA\@. The time complexity of
 the match is then $O(\min(n\, m, n+2^m))$.
 
 This is the best known result for matching\cite{Cox07a,Cox09a,Cox10a}.
@@ -966,8 +966,11 @@ to reconstruct all matches of all capture groups.
 \begin{figure}[htpb]
   \centering
   \includegraphics[height=7cm]{graphs/cells}
-  \caption{Histories are cells of singly linked lists, where only the first
-  cell can be edited.}
+  \caption{Histories are cells of singly linked lists, where only the first 
+    (here bottom-most) cell can be edited. This is a view of the automaton in 
+    \Figref{example-automaton} after the string ``Tom Lehrer,1;Alan 
+  Turing,'' has been consumed. Only the cell for the closing of the second 
+capture group is shown.}
   \label{fig:cells}
 \end{figure}
 
