@@ -824,9 +824,10 @@ such as limiting the TDFA cache size or an analysis of the pattern for common
 simplifications such as optimizing for one-state matches\footnote{unambiguous
 NFA can be interpreted as DFA and can be matched more efficiently}. However
 our algorithm doesn't require a separate pass for match detection and match
-extraction, which opens different scenarios. Further the inclusion of the
-mapping allows to use our TDFA better and keep it smaller. \textsc{RE2} on
-the other hand only allows the trivial mapping.
+extraction, which opens different scenarios. \textsc{RE2} only considers the
+DFA states equivalent, if the instructions write to the same positions and are
+ordered the same. Our algorithm adds the mapping phase from Laurikari, which 
+allows us to find DFA states that can be made equivalent by some additional writes.
 
 \section{Large scale data analysis of a stream of text}\label{sec:stream}
 Due to its improvements in requiring only a single pass over the input and
