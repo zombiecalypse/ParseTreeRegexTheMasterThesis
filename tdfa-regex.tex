@@ -543,7 +543,7 @@ automaton.
 Remember that NFA interpretation can be thought as competing co-routines.
 This model allows trivially to add more instruction as we pass a transition.
 The solution to keeping track of the capture groups is simply to store the
-information at what position the capture group started or ended in a way in
+information at what position the capture group started or ended in some way in
 the co-routine. This is the idea of the tagged finite state
 automaton\footnote{First called that by Laurikari\cite{Laur00a}}, which
 attaches general \emph{tags} to transitions, that modify the co-routine's
@@ -561,6 +561,18 @@ an out-degree of at most two.}.
 The priorities intuitively mean, that for example in \texttt{.a|..}, we will
 try to follow the path of \texttt{.a} first, before checking \texttt{..}.
 Only if we fail on that track, we will consider the second path.
+
+Closely related to priorities is greediness control: Consider again the regular
+expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question mark sets the
+\texttt{.*} part of the regular expression to \emph{non-greedy}, which means
+that it matches as little as possible while still producing a valid match, if
+any.  Without provisioning \texttt{.*} to be non-greedy, a matching against
+input \texttt{``Tom Lehrer,1;Alan Turing,2;''} would match as much as possible
+into the first capture group, including the record separator `,'.  Thus, the
+first capture group would suddenly contain only one entry, and it would contain
+more than just names, namely ``Tom Lehrer,1;Alan Turing''.  This is, of course,
+not what we expect.  Non-greediness, here, ensures that we get ``Tom Lehrer'',
+then ``Alan Turing'' as the matches of the first capture group.
 
 Implementing this in a backtracking implementation is trivial, but in order
 to keep the co-routines in lock-step, we need to order the NFA states in the
@@ -827,25 +839,24 @@ see previously discussed topics to be reiterated.
 
 \section{TNFA}\label{sec:tnfa}
 
-The algorithm we present is an extension of the non-deterministic finite state
-automaton (NFA) matching algorithm for regular expressions with added logging
-of the start and end of capture groups, as introduced by
-Laurikari\cite{Laur00a}. We first present the algorithm for matching,
-which is $O(n\, m\, u(m))$, where $u(m)$ describes the amortized cost of
-logging a single opening or closing of a capture group. We then show a
+The algorithm we present is specific case of the tagged non-deterministic
+finite state automaton (TNFA) matching algorithm for regular expressions with
+added logging of the start and end of capture groups, as described in
+\Secref{tfsa}. We first present the algorithm for matching, which is $O(n\, m\,
+u(m))$, where $u(m)$ describes the amortized cost of logging a single opening
+or closing of a capture group. We then show a
 simple data structure that allows us to achieve $u(m) = \log m$ and
 continue to present a way to improve this to $u(m) = 1$ following Driscoll et
 al\cite{Dris89a}. This gives us $O(n\, m)$ run time for the
-complete algorithm, which is the best known run time for NFA algorithms. Since
-this is not a purely theoretical paper, there are also practical considerations
-such as caching current results, just-in-time compilation, and compact memory
-usage.
+complete algorithm, which is the best known run time for NFA algorithms. We 
+also consider practical problems such as caching current results, just-in-time
+compilation, and compact memory usage.
 
 Conceptually, our approach is the following pipeline of four stages:
 \begin{enumerate}
   \item Parse the regular expression string into an AST (\Secref{regex-syntax}).
   \item Transform the AST to an NFA (\Secref{thompson}).
-  \item Transform the NFA to a DFA (\Secref{dfa}).
+  \item Transform the NFA to a DFA (\Secref{tnfa}).
   \item Compactify the DFA (\Secref{compact}).
 \end{enumerate}
 
@@ -857,29 +868,10 @@ we start with them and proceed see 1 and 4 as part of the implementation.
 
 \section{Thompson's construction} 	\seclabel{thompson}
 
-We transform the abstract syntax tree (AST) of the regular expression into an NFA,
-in a modified version of Thompson's NFA construction. To
-control greediness, or discern capture groups, our approach adds tagged
-$\varepsilon$ transitions to the transition graph. An
-$\varepsilon$ transition has no input range assigned, and can thus always
-be used. It does not consume an input character. Tagged transitions
-mark the beginning or end of capture groups or control the prioritization.
-The additions are needed for greediness control and capture groups.
-Let's look at both, in turn.
-
-To see the importance of greediness control, consider again the regular
-expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question
-mark sets the \texttt{.*} part of the regular expression to
-\emph{non-greedy}, which means that it matches as little as
-possible while still producing a valid match, if any.  Without
-provisioning \texttt{.*} to be non-greedy, a matching against input
-\texttt{``Tom Lehrer,1;Alan Turing,2;''} would match as much as
-possible into the first capture group, including the record separator
-`,'.  Thus, the first capture group would suddenly contain only one
-entry, and it would contain more than just names, namely ``Tom
-Lehrer,1;Alan Turing''.  This is, of course, not what we expect.
-Non-greediness, here, ensures that we get ``Tom Lehrer'', then
-``Alan Turing'' as the matches of the first capture group.
+We transform the abstract syntax tree (AST) of the regular expression into a
+TNFA, in a modified version of Thompson's NFA construction. Tagged transitions
+mark the beginning or end of capture groups or control the prioritization.  The
+additions are needed for greediness control and capture groups.
 
 \begin{figure}[htp]
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
@@ -890,7 +882,6 @@ In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the
 opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing
 tag for capture group $n$.}
 \end{figure}
-
 
 In the NFA, we model greedy repetition or non-greedy repetition of
 an expression in two steps:
@@ -918,9 +909,7 @@ prefer to match any character repeatedly.
 \end{enumerate}
 
 More generally, the NFA prefers to follow transitions of normal
-priority over those of low priority. Rather than formalize this
-notion of preference on NFAs, we come back to prioritized transitions when
-discussing the transformation from NFA states to DFA states.
+priority over those of low priority\footnote{See \Secref{tfsm}}.
 
 \begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
   \caption[Modified Thompson construction]{Modified Thompson~\cite{Thom68a} construction of the
@@ -928,6 +917,12 @@ automaton: Descend into the abstract syntax tree of the regular
 expression and expand the constructs recursively.}
 \label{fig:thompson-construction}
 \end{figure*}
+
+\section{TNFA}	\seclabel{tnfa}
+
+Our algorithm is directly based on algorithm~\ref{alg-coroutine-tagged}, so 
+this section lays out the storage required by the co-routines and the
+interpretation of the tags that we introduced in the previous section.
 
 To model capture groups in the NFA, we add \emph{commit tags} to
 the transition graph. The transition into a capture group is tagged
@@ -957,33 +952,7 @@ pattern, which ensures that all of the following instructions on histories can
 be performed in constant time. Here, the \emph{position} is the current
 position of the matcher.
 
-\section{TDFA}	\seclabel{dfa}
-
-As discussed earlier, an useful metaphor for regular expression matching is that of
-threads\cite{Cox07a} or co-routines (for clarity we use
-co-routine, because our algorithm is not parallel).
-Whenever we aren't sure which transition to take,
-we ``fork'' a co-routine for every option that we have. This way, when
-the input is over, there must be at least one co-routine that guessed
-correctly at all times.
-
-The key insight is that we keep all co-routines in lock-step. To achieve this,
-we must be very specific about what constitutes the state of a co-routine.
-Since every co-routine effectively simulates a different NFA run, the state
-inside of a co-routine contains exactly two items: the NFA state it simulates
-and the history for every tag. Now, the following would be a correct, although
-slow, implementation of an NFA interpreter without thaumaturgical component:
-whenever an input character is read, we can iterate over all co-routines, kill
-the ones that have no legal transition for the input character, and fork more
-co-routines as needed.
-
-Trouble starts when we want to fork a co-routine for an NFA state that
-is already running. Not only is an explosion of co-routines bad for
-performance, it would also lead to ambiguity: if the two co-routines
-after reading the whole string disagree on the histories, which one is correct?
-
 \begin{notation}
-
 We use the following vocabulary.
 
 \begin{description}
@@ -1040,12 +1009,6 @@ step. There are four kinds of instructions:
 \end{description}
 \end{notation}
 
-Further, in order to write down our algorithm as a special case of the TNFA
-execution algorithm~\ref{alg:coroutine-tagged}, we describe the transitions
-that consume characters as $\varepsilon$-transitions tagged with the
-character and negatively prioritized transitions as tagged with $-$. The
-actual implementation deviates from this in favour of speed.
-
 With this, the algorithm is simply implementing the fitting $interpret$
 function as seen in algorithm~\ref{alg:coroutine-tagged}.
 
@@ -1081,7 +1044,7 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
 \label{alg:interpret}
 \end{algorithm*}
 
-The states are fed into the algorithm in the order visited, so that the
+The states are given to the algorithm in the order visited, so that the
 coroutine that got furthest is expanded first when the next character is
 read. The \emph{buffer} variable is a detail that ensures this.
 
