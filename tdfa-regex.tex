@@ -458,6 +458,13 @@ a newly seen state is put on a stack.}.
 
 \chapter{Related work}
 \seclabel{related}
+While there is no shortage of books discussing the usage of regular
+expressions, the implementation side of regular expression has not
+been so lucky. Cox is spot-on when he argues that innovations have
+repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}, in 
+part, not least because the publication medium of source code without
+accompanying article was chosen.
+
 Regular expressions are by no means new and originated with Kleene in the
 1950ies\cite{Sips05a}. This chapter first introduces some standard
 procedures for regular expression matching (without extracting any
@@ -469,6 +476,22 @@ of sub-matches. We show that backtracking based approaches are not the
 straw man that one could believe them to be in \Secref{revise-backtrack}.
 Even though we first believed ourselves to be, we are actually not the first
 to produce parse trees in competitive time, as seen in \Secref{parse-trees-related}.
+
+A problematic aspect of the literature is that many authors perceive regular 
+expression parsing a linear problem -- linear in the length of the string 
+with a constant for the pattern size. This limits the applications, because 
+this means that an algorithm that takes $O(2^m+n)$ time seems very 
+competitive for a fixed $m$, but is prohibitively expensive for large $m$. 
+The argument that the pattern is typically small seems circular to the 
+authors, because would the implementation focus on allowing large patterns, 
+new applications using large patterns would arise\footnote{To check if a document
+contains features $f_1, f_2, \dots, f_n$, we would match the document
+against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
+
+In this paper, we will consider the best known algorithms quadratic. It is 
+not known if there is any algorithm that beats the $O(n\, m)$ matching, but 
+in \Secref{lower-bound}, a lower bound of $\Theta(n\, \min(m, \abs{\Sigma}))$ 
+is proven.
 
 \section{NFA based matching}\label{sec:nfa-match}
 A faster alternative to the backtracking approach discussed in
@@ -596,8 +619,32 @@ match for each capture group quite similar to our or Laurikari's approach. This
 was only published in source code, to a great loss for the academic community.
 
 This close control over greediness was implemented by Kuklewicz\cite{Kukl07a}
-for the Haskell implementation of Laurikari's algorithm. This too was only
+for the Haskell implementation\footnote{Or free interpretation, since 
+Laurikari leaves the matching strategy open.} of Laurikari's algorithm. This too was only
 published in source code, to a great loss for the academic community.
+
+Cox calls Laurikari's TDFA a reinvention of Pike's algorithm, but while that 
+is in parts true, Laurikari introduces the mapping step described in 
+algorithm~\ref{findmapping}. This leads Laurikari's algorithm to contain 
+fewer states and one would hope that this leads to a better run-time than 
+Google's \textsc{RE2}\footnote{\url{https://code.google.com/p/re2/}},
+which is based on Pike's algorithm. 
+
+This is not confirmed by the benchmarks by Sulzmann and Lu
+\cite{Sulz12a}, but they offer an explanation: in their profiling, they see
+that all Haskell implementations spend considerable time decoding the input
+strings. In other words, the measured performance is more of an artifact of the
+programming environment used.
+
+Compared to \textsc{RE2}, our algorithm doesn't provide many low-level optimizations,
+such as limiting the TDFA cache size or an analysis of the pattern for common
+simplifications such as optimizing for one-state matches\footnote{unambiguous
+NFA can be interpreted as DFA and can be matched more efficiently}. However
+our algorithm doesn't require a separate pass for match detection and match
+extraction, which opens different scenarios. \textsc{RE2} only considers the
+DFA states equivalent, if the instructions write to the same positions and are
+ordered the same. Our algorithm adds the mapping phase from Laurikari, which 
+allows us to find DFA states that can be made equivalent by some additional writes.
 
 \section{Revisiting backtracking}\seclabel{revise-backtrack}
 As seen earlier, backtracking makes for easy implementations, but exponential
@@ -668,7 +715,7 @@ grammars with the difference, that they allow no left-recursion and no
 ambiguity, each expression has exactly one correct parse tree and consumes at
 least one character. In this they are similar to regular expressions, but
 capture more than just regular languages.  Such an expression can contain
-literals, recursive subexpressions, ordered choice , repetitions and
+literals, recursive subexpressions, ordered choice, repetitions and
 non-consuming predicates:
 
 \begin{description}
@@ -748,91 +795,14 @@ Finally when dealing with large $n$, one might be interested in passing over
 the string as few times as possible. Kearns, Dub\'e, and Nielsen do this in
 three passes to find the beginning and ending of capture groups, whereas
 Grathwohl only uses two passes. Our algorithm captures the positions of the
-capture groups in a single pass -- thus allowing streaming of the input
-string, as explained in section~\ref{sec:stream}. For access to the content,
-the original string is still necessary.
+capture groups in a single pass. This might seem like a negligible 
+improvement, but certain scenarios only open up with this, such as the 
+possibility to efficiently parse a string larger than a single machine, as 
+described in \Secref{stream}.
 
-\section{Discussion}\seclabel{discuss-related}
-While there is no shortage of books discussing the usage of regular
-expressions, the implementation side of regular expression has not
-been so lucky. Cox is spot-on when he argues that innovations have
-repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}.
-
-This paper is no exception. The authors of this paper had set out to implement
-Laurikari's TDFA algorithm \cite{Laur00a}, only to discover that Laurikari's
-description of a TDFA is so far from complete that it can rightfully only be
-called the sketch for an algorithm. Only late in the process did we discover
-that the blanks had already been filled by Kuklewicz in the course of his
-implementation of TDFAs in Haskell \cite{Kukl07a}. Kuklewicz enshrined his
-added insight into Haskell library, but never published the algorithm as a
-whole. If the history of regular expressions is evidence of one thing, it is
-that source code is a terrible medium to convey algorithms.
-
-The situation dramatically improved with Cox's simple and concise
-explanation of regular expression matching \cite{Cox07a}. It seems
-ironic that this well-versed author published this influential work
-on his website.
-
-When the practitioners acknowledge each other's work, we can't
-help but disagree almost universally with the characterizations they
-produce. Sulzmann and Lu \cite{Sulz12a} call Kuklewicz's
-work an ``implementation'' of Laurikari's algorithm, although Laurikari's
-algorithm is far too incomplete for that statement to be fair. Laurikari's
-algorithm is referred to as a \textsc{Posix}-style automaton. In truth, Laurikari
-leaves the matching strategy entirely open. It was Kuklewicz that
-found out how to get \textsc{Posix}-style matching out of Laurikari's TDFA.
-
-Cox says that Laurikari's TDFA is a reinvention of Pike's algorithm,
-used in the text editor \textsc{sam}~\cite{Pike87a}.  While \textsc{sam} was
-released as free software, no description of his regular expression matching,
-besides the source code, was published.  Sam uses Thompson's NFA, but adds
-submatch tracking. Calling Laurikari's TDFA a reinvention of Pike's algorithm
-seems unfair in that Laurikari's allows for far more aggressive reuse of old
-states than Thompson, by virtue of introducing the mapping step described in
-algorithm~\ref{findmapping}. This should lead to Laurikari's TDFA having fewer
-states, and therefore better performance, than even Google's
-\textsc{RE2}\footnote{\url{https://code.google.com/p/re2/}}, which uses Pike's
-algorithm. This is not confirmed by the benchmarks by Sulzmann and Lu
-\cite{Sulz12a}, but they offer an explanation: in their profiling, they see
-that all Haskell implementations spend considerable time decoding the input
-strings. In other words, the measured performance is more of an artifact of the
-programming environment used.
-
-Another mistake that permeates the parsing literature is to call
-regular expression matching linear. As Sedgewick points out correctly
-\cite{Sedg90a}, Thompson's NFA matching is of complexity $O(m\, n)$,
-where $m$ is the size of the input NFA, and $n$ is the size of the
-input string. To call this linear means to assume that $m$ is fixed,
-which is not justified. It may well be true that, at present, $m$
-tends to be small. But that is a natural consequence of the algorithms for
-parsing not scaling very well with $m$. If they did, that would allow for
-fast feature extracting from text\footnote{To check if a document
-contains features $f_1, f_2, \dots, f_n$, we would match the document
-against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
-Therefore, in this paper, we consider the state of the art algorithms
-to be quadratic, since both $m$ and $n$ are part of the input to a
-regular expression matcher. There is a lower bound proven in
-\Secref{lower-bound} of $\Theta(n\, \min(m, \abs{\Sigma}))$, but this does
-not prohibit an asymptotic improvement of this algorithm. It is not known if
-$O(n\, m)$ is the best we can hope for.
-
-In comparison, our approach allows full control over greediness, even for
-subexpressions, thus generalizing over all previous approaches, while achieving
-the running time guarantees of regular expression matching. It runs in only one
-pass and supports character ranges, lazy compilation, and compactified DFA
-representation for practical performance. Further since only a single pass is
-necessary and the memory overhead is small, our algorithm can be applied to a
-streaming scenario, as discussed in the next section.
-
-Compared to \textsc{RE2}, our algorithm doesn't provide many low-level optimizations,
-such as limiting the TDFA cache size or an analysis of the pattern for common
-simplifications such as optimizing for one-state matches\footnote{unambiguous
-NFA can be interpreted as DFA and can be matched more efficiently}. However
-our algorithm doesn't require a separate pass for match detection and match
-extraction, which opens different scenarios. \textsc{RE2} only considers the
-DFA states equivalent, if the instructions write to the same positions and are
-ordered the same. Our algorithm adds the mapping phase from Laurikari, which 
-allows us to find DFA states that can be made equivalent by some additional writes.
+In addition, since this is not a purely theoretical analysis, our algorithm
+adds practical optimizations such as compactifications, lazy compilation, and
+character ranges.
 
 \section{Large scale data analysis of a stream of text}\label{sec:stream}
 Due to its improvements in requiring only a single pass over the input and
