@@ -510,15 +510,18 @@ matches the regular expression, we can now simply run the NFA on it. For each
 character in the input string, we follow all transitions possible from our
 current states and save the accessible states as a set. In the next
 iteration, we consider the transitions from any of these states. This allows
-us to match in $O(n\, m^2)$ time.
+us to match in $O(n\, m)$ time\footnote{Note that the number of branches per 
+state is $O(1)$}.
 
 \section{DFA based matching}\label{sec:dfa-match}
-Dissatisfied with the $O(m^2)$ overhead, we can construct a DFA from the NFA
+Dissatisfied with the $O(m)$ overhead, we can construct a DFA from the NFA
 before matching. This is done by the power set construction\cite{Sips05a},
 which has time complexity $O(2^m)$. The idea is to replace all states by the
 set reachable from it with only $\varepsilon$-transitions. The transitions
 simulate a step in the original NFA, so they point to another set of states.
 After the compilation is done, matching the string is $O(n)$ time.
+
+This can be very useful, if the regular expression is statically known.
 
 \section{Lazy DFA compilation}\label{sec:lazy-dfa-match}
 The DFA based matching takes $O(n + 2^m)$, which is no better than backtracking
@@ -532,7 +535,11 @@ the match is then $O(\min(n\, m, n+2^m))$.
 
 This is the best known result for matching\cite{Cox07a,Cox09a,Cox10a}.
 
-Our algorithm modifies this algorithm by adding instructions to transitions.
+Note however that for many matches, $n\, m$ is at least as good as $n+2^m$, 
+and in those cases, this gives no improvement over the NFA matching.
+
+Our algorithm modifies this algorithm by adding instructions to transitions, 
+but the core part is the modification of the NFA construction.
 
 \section{Tagged finite state automata}\seclabel{tfsa}
 The algorithms so far did not extract capture groups, because they have no
@@ -790,7 +797,7 @@ terms of cells for each group is easy, but costs a factor $m$ space overhead.
   Laurikari~\cite{Laur00a}& Capture group in array & DFA &
   $O(n+2^m)$ & $O(d\, m)$\\
   This paper & Capture group in array of linked lists & lazy DFA
-  & $O(n\, m)$ & $O(n\, d\, m)$ \\
+  & $O(n\, m)$ & $O(n\, d + m)$ \\
 \end{tabular}
 \caption{Comparison of automata based approaches to regular expression
 parsing. $n$ is the length of the string, $m$ is the length of the regular
