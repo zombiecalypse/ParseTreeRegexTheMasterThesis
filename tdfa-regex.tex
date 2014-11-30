@@ -458,42 +458,13 @@ no more legal transitions with regular priority. The order for high and low
 priorities is depth first\footnote{In an implementation this would imply that
 a newly seen state is put on a stack.}.
 
-\chapter{Related work}
-\seclabel{related}
-While there is no shortage of books discussing the usage of regular
-expressions, the implementation side of regular expression has not
-been so lucky. Cox is spot-on when he argues that innovations have
-repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}, in 
-part, not least because the publication medium of source code without
-accompanying article was chosen.
-
-Regular expressions are by no means new and originated with Kleene in the
-1950ies\cite{Sips05a}. This chapter first introduces some standard
-procedures for regular expression matching (without extracting any
-information), such as Backtracking in \Secref{backtracking} and various
-automata based approaches in sections~\ref{sec:nfa-match}, \ref{sec:dfa-match},
-and \ref{sec:lazy-dfa-match}. In \Secref{tfsa} we discuss an addition to
-the automata based approaches called \emph{tags} that allows for the extraction
-of sub-matches. We show that backtracking based approaches are not the
-straw man that one could believe them to be in \Secref{revise-backtrack}.
-Even though we first believed ourselves to be, we are actually not the first
-to produce parse trees in competitive time, as seen in \Secref{parse-trees-related}.
-
-A problematic aspect of the literature is that many authors perceive regular 
-expression parsing a linear problem -- linear in the length of the string 
-with a constant for the pattern size. This limits the applications, because 
-this means that an algorithm that takes $O(2^m+n)$ time seems very 
-competitive for a fixed $m$, but is prohibitively expensive for large $m$. 
-The argument that the pattern is typically small seems circular to the 
-authors, because would the implementation focus on allowing large patterns, 
-new applications using large patterns would arise\footnote{To check if a document
-contains features $f_1, f_2, \dots, f_n$, we would match the document
-against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
-
-In this paper, we will consider the best known algorithms quadratic. It is 
-not known if there is any algorithm that beats the $O(n\, m)$ matching, but 
-in \Secref{lower-bound}, a lower bound of $\Theta(n\, \min(m, \abs{\Sigma}))$ 
-is proven.
+\chapter{Algorithm} \seclabel{algo}
+With the basic definition of regular expression matching available, we will 
+dive directly into finding an algorithm to solve the problem in a less 
+wasteful way. First we will discuss how matching without match extraction 
+works with finite state automata, then we will discuss how one can add 
+match extraction to get an automata based algorithm equivalent to backtracking.
+Finally we will discuss how to generate parse trees instead of flat matches.
 
 \section{NFA based matching}\label{sec:nfa-match}
 A faster alternative to the backtracking approach discussed in
@@ -554,15 +525,15 @@ Remember that NFA interpretation can be thought as competing co-routines.
 This model already implies that some form of instruction is executed on a 
 transition, so it is possible to add other instructions that allow us to 
 store the capture groups.
-
-Specifically we can store the position of the start and end of each 
-match in the memory of the co-routine, whenever we encounter a transition 
-that corresponds to the start or end of a capture group. 
 This is the idea of the tagged finite state
 automaton\footnote{First called that by Laurikari\cite{Laur00a}}, which
 attaches general \emph{tags} to transitions, that modify the co-routine's
 memory in some way. This way, co-routines can store the complete information,
 where they matched which capture group in their own memory.
+
+Specifically we can store the position of the start and end of each 
+match in the memory of the co-routine, whenever we encounter a transition 
+that corresponds to the start or end of a capture group. 
 
 Now that side effects of transitions are introduced, it is necessary to make
 each step uniquely prioritized, so that we can't get to a situation, where
@@ -692,185 +663,6 @@ opens different scenarios -- the reason we can avoid this is that we are able
 to collect the instructions and incorporate them into the lazy DFA state
 compilation. Our algorithm adds the mapping phase from Laurikari, which allows
 us to find DFA states that can be made equivalent by some additional writes.
-
-\section{Revisiting backtracking}\seclabel{revise-backtrack}
-As seen earlier, backtracking makes for easy implementations, but exponential
-run-time in the worst case for many patterns. Norvig\cite{Norv91a} showed that
-this can be avoided by using memoization for context free grammars.  This
-allows for $O(n^3\, m)$ time parsing. While this is significantly higher than
-the $O(n\, m)$ of the automata based approaches, it is also more general,
-because more than just regular grammars can be parsed with this approach.  This
-approach is taken by combinatoric parsers such as the Parsec
-library\footnote{The memoization stems from the common subexpression
-optimization of Haskell}.  It should be noted however that while this
-approach has been known for some time now and promises exponential
-speed-up, it is by no means a standard optimization for backtracking based
-regular expression implementations.
-
-First let us recapitulate what memoization means: For a function $f$ we can
-create a memoized function $\hat f$ such that
-\begin{algorithmic}
-  \State Initialize hash map $cache$
-  \Function{$\hat f$}{*args}
-  \If{args not in $cache$}
-  \State $val\leftarrow f(*args)$
-  \State $cache[args] = val$
-  \EndIf
-  \State \Return $cache[args]$
-  \EndFunction
-\end{algorithmic}
-This means that repeatedly calling the same function with  the same inputs
-only costs lookup time after the function has been evaluated once.
-
-The parser presented by Norvig inherently produces parse trees, because it
-tries to reduce the list of tokens into all possible expansions of the base
-symbol. For example \texttt{a*a*} would be converted to a grammar
-
-\begin{center}
-\begin{tabular}{ccc}
-A& $\rightarrow$ & $a$\\
-ASTAR & $\rightarrow$ & A ASTAR \\
-ASTAR & $\rightarrow$ & $\varepsilon$ \\
-FULL & $\rightarrow$ & ASTAR ASTAR \\
-\end{tabular}
-\end{center}
-
-Now we can memoize the result for a non-terminal symbol and the remainder of
-the string, which avoids exponentially many trial and error parses.
-
-The same arguments that make this efficient for context-free grammars however
-also make the memoization approach applicable to the backtracking algorithm
-for regular expressions.
-
-To see the advantage, let's revise the example that produced exponential runtime
-for regular backtracking: \texttt{(x*)*y} on the string $x^n$. After failing
-for the first time with greedily consuming the $n$ $x$ characters. This
-memoizes that $x^{n-1}$ is not parsable, so the recursion stops after only
-these steps, finding that the string isn't parsable as a whole.
-
-\section{Packrat parsers}
-The memoization approach can be extended further to so-called \emph{packrat}
-parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain
-$O(n\,m)$, but the memoization gives a space overhead that is
-$O(n)$, with a big constant\cite{Ford02a} -- or to put it in another way: The
-original string is stored several times over. This makes them flexible and fast
-parsers for small input, but cannot be used for big data sets. To understand
-how they work, let's first look at PEG:
-
-\emph{Parsing Expression Grammars} are grammars similar to context-free
-grammars with the difference, that they allow no left-recursion and no
-ambiguity, each expression has exactly one correct parse tree and consumes at
-least one character. In this they are similar to regular expressions, but
-capture more than just regular languages.  Such an expression can contain
-literals, recursive subexpressions, ordered choice, repetitions and
-non-consuming predicates:
-
-\begin{description}
-  \item[recursive subexpressions] allow for recursive repetition of a
-    pattern, for example
-    \[\mathtt{S} \rightarrow \mathtt{'('}\quad \mathtt{S}\quad \mathtt{')'}\quad \mathtt{/} \varepsilon \]
-    or
-    \[ \mathtt{S} \rightarrow \mathtt{'if'}\quad P\quad \mathtt{'\{'}\quad S\quad \mathtt{'\}'}\]
-  \item[ordered choice] gives two options, but the left path will be checked
-    first and if it matches already, the right path will not even be considered.
-  \item[repetitions] The operators \texttt{*}, \texttt{+}, and \texttt{?}
-    with their meaning identical to their usage in regular expressions.
-  \item[non-consuming predicates] The operator \texttt{\&} will only match and
-    return the left-hand side, if the right-hand side would also match. The
-    right-hand side doesn't consume any characters however. Similarly the
-    operator \texttt{!} only matches the left-hand side, if the right-hand
-    side does not match (without consuming any characters for the right-hand side).
-\end{description}
-
-The implementation of these grammars as recursive descent/backtracking
-parsers is quite simple. The corresponding Packrat parser is the straight
-forward memoization of this. This is in principle nothing new, the
-memoization approach to context-free grammars uses the same approach, but the
-restriction to PEG make the problem solved easier: without ambiguity less
-references need to be stored to possible parses and since parsers consume at
-least a character, each character in the input string has at most $m$
-possible interpretations.
-
-The downside to this is that Packrat parsers have a large space overhead that
-make them infeasible for large
-inputs\cite{Beck08a}\footnote{\quote{[\dots] the Java parser generated
-by Pappy requires up to 400 bytes of memory for every byte of input.}}.
-
-\section{Automata based extraction of parse trees}\seclabel{parse-trees-related}
-Memoization is a powerful tool to achieve fast parsers, but they have a
-space-overhead in order of the input instead of the parse tree size. The
-other approach to parsing -- finite state automata -- offers a remedy. These
-approaches, one of which will be presented in this paper, use tagged finite
-state automata that store the parse tree in some manner, the main differences
-being the format of the stored tree and the type of automaton running the parse.
-
-The rivaling memory layouts are lists of changes and an array with a cell for
-each group. The former makes it hard to compile the TNFA to a TDFA with
-aggressive reuse of states via mapping (as described in
-algorithm~\ref{findmapping}), but has lower space consumption. The mapping in
-terms of cells for each group is easy, but costs a factor $m$ space overhead.
-
-\begin{table}
-\begin{tabular}{c|>{\centering}m{3cm}ccc}
-  Author & Stores & Automaton & Parse time & Space overhead \\
-  \hline
-  \hline
-  Kearns~\cite{Kear91a}& Path choices & NFA & $O(n\,m)$ & $O(n\, m)$ \\
-  \hline
-  Dub\'e, Feeley~\cite{Dube00a}& Capture groups in linked
-  list & NFA & $O(n\,m)$ & $O(n\, m^2)$\\
-  Nielsen, Henglein~\cite{Niel11a} & Bit-coded trees of capture groups  & & $O(n\, m\, \log(m))$ \\
-  Grathwohl~\cite{Grat13a} \\
-  \hline
-  Laurikari~\cite{Laur00a}& Capture group in array & DFA &
-  $O(n+2^m)$ & $O(d\, m)$\\
-  This paper & Capture group in array of linked lists & lazy DFA
-  & $O(n\, m)$ & $O(n\, d + m)$ \\
-\end{tabular}
-\caption{Comparison of automata based approaches to regular expression
-parsing. $n$ is the length of the string, $m$ is the length of the regular
-expression, and $d$ is the number of subexpressions. Note that
-Laurikari~\cite{Laur00a} does not produce parse trees.}
-\end{table}
-
-Another problem is that of greediness. Kearns, Dub\'e, and Nielsen can't
-guarantee the greediness of the winning parse. Grathwohl's contribution
-allows Dub\'e's algorithm to run with greedy parses. Our priorities allow for
-arbitrary mixes of greedy and non-greedy operators.
-
-Finally when dealing with large $n$, one might be interested in passing over
-the string as few times as possible. Kearns, Dub\'e, and Nielsen do this in
-three passes to find the beginning and ending of capture groups, whereas
-Grathwohl only uses two passes. Our algorithm captures the positions of the
-capture groups in a single pass. This might seem like a negligible 
-improvement, but certain scenarios only open up with this, such as the 
-possibility to efficiently parse a string larger than a single machine, as 
-described in \Secref{stream}.
-
-In addition, since this is not a purely theoretical analysis, our algorithm
-adds practical optimizations such as compactifications, lazy compilation, and
-character ranges.
-
-\section{Large scale data analysis of a stream of text}\label{sec:stream}
-Due to its improvements in requiring only a single pass over the input and
-its memory allocation pattern, our algorithm is especially fitted for a
-scenario, where the input string is of unknown size or of size to big to fit
-on a single machine.
-
-Consider the task of finding a parse tree of a regular grammar for a text
-that is stored on machines $M_1, \dots, M_n$. Now in order to parse the
-string, we set aside a machine $P$, that will do the parsing. We only need the NFA of the
-pattern to fit on $P$ and can then receive each of the shards
-from $M_1$ to $M_n$ in turn and discard it afterwards. Even if the parse tree
-(containing the indices of the beginning and end of the groups) is too large
-to fit on the machine, we can send the cells to other machines. Because the
-cells are not touched anymore, there will never be a need for $P$ to retrieve
-old cells.
-
-\chapter{Algorithm} \seclabel{algo}
-We describe our algorithm in this chapter. Since it is based on previous
-work and especially the lazy DFA compilation algorithm, you should expect to
-see previously discussed topics to be reiterated.
 
 \section{TNFA}\label{sec:tnfa}
 
@@ -2016,6 +1808,217 @@ figure~\Figref{regex-syntax-parsing} (note the log plot).
 regular expression syntax. Since the measurements are very noisy, the median
 with the MAD (median absolute deviation) are plotted.}
 \end{figure}
+
+\chapter{Related work}
+\seclabel{related}
+While there is no shortage of books discussing the usage of regular
+expressions, the implementation side of regular expression has not
+been so lucky. Cox is spot-on when he argues that innovations have
+repeatedly been ignored and later reinvented \cite{Cox07a,Cox09a,Cox10a}, in 
+part, not least because the publication medium of source code without
+accompanying article was chosen.
+
+Regular expressions are by no means new and originated with Kleene in the
+1950ies\cite{Sips05a}. This chapter first introduces some standard
+procedures for regular expression matching (without extracting any
+information), such as Backtracking in \Secref{backtracking} and various
+automata based approaches in sections~\ref{sec:nfa-match}, \ref{sec:dfa-match},
+and \ref{sec:lazy-dfa-match}. In \Secref{tfsa} we discuss an addition to
+the automata based approaches called \emph{tags} that allows for the extraction
+of sub-matches. We show that backtracking based approaches are not the
+straw man that one could believe them to be in \Secref{revise-backtrack}.
+Even though we first believed ourselves to be, we are actually not the first
+to produce parse trees in competitive time, as seen in \Secref{parse-trees-related}.
+
+A problematic aspect of the literature is that many authors perceive regular 
+expression parsing a linear problem -- linear in the length of the string 
+with a constant for the pattern size. This limits the applications, because 
+this means that an algorithm that takes $O(2^m+n)$ time seems very 
+competitive for a fixed $m$, but is prohibitively expensive for large $m$. 
+The argument that the pattern is typically small seems circular to the 
+authors, because would the implementation focus on allowing large patterns, 
+new applications using large patterns would arise\footnote{To check if a document
+contains features $f_1, f_2, \dots, f_n$, we would match the document
+against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
+
+In this paper, we will consider the best known algorithms quadratic. It is 
+not known if there is any algorithm that beats the $O(n\, m)$ matching, but 
+in \Secref{lower-bound}, a lower bound of $\Theta(n\, \min(m, \abs{\Sigma}))$ 
+is proven.
+
+\section{Revisiting backtracking}\seclabel{revise-backtrack}
+As seen earlier, backtracking makes for easy implementations, but exponential
+run-time in the worst case for many patterns. Norvig\cite{Norv91a} showed that
+this can be avoided by using memoization for context free grammars.  This
+allows for $O(n^3\, m)$ time parsing. While this is significantly higher than
+the $O(n\, m)$ of the automata based approaches, it is also more general,
+because more than just regular grammars can be parsed with this approach.  This
+approach is taken by combinatoric parsers such as the Parsec
+library\footnote{The memoization stems from the common subexpression
+optimization of Haskell}.  It should be noted however that while this
+approach has been known for some time now and promises exponential
+speed-up, it is by no means a standard optimization for backtracking based
+regular expression implementations.
+
+First let us recapitulate what memoization means: For a function $f$ we can
+create a memoized function $\hat f$ such that
+\begin{algorithmic}
+  \State Initialize hash map $cache$
+  \Function{$\hat f$}{*args}
+  \If{args not in $cache$}
+  \State $val\leftarrow f(*args)$
+  \State $cache[args] = val$
+  \EndIf
+  \State \Return $cache[args]$
+  \EndFunction
+\end{algorithmic}
+This means that repeatedly calling the same function with  the same inputs
+only costs lookup time after the function has been evaluated once.
+
+The parser presented by Norvig inherently produces parse trees, because it
+tries to reduce the list of tokens into all possible expansions of the base
+symbol. For example \texttt{a*a*} would be converted to a grammar
+
+\begin{center}
+\begin{tabular}{ccc}
+A& $\rightarrow$ & $a$\\
+ASTAR & $\rightarrow$ & A ASTAR \\
+ASTAR & $\rightarrow$ & $\varepsilon$ \\
+FULL & $\rightarrow$ & ASTAR ASTAR \\
+\end{tabular}
+\end{center}
+
+Now we can memoize the result for a non-terminal symbol and the remainder of
+the string, which avoids exponentially many trial and error parses.
+
+The same arguments that make this efficient for context-free grammars however
+also make the memoization approach applicable to the backtracking algorithm
+for regular expressions.
+
+To see the advantage, let's revise the example that produced exponential runtime
+for regular backtracking: \texttt{(x*)*y} on the string $x^n$. After failing
+for the first time with greedily consuming the $n$ $x$ characters. This
+memoizes that $x^{n-1}$ is not parsable, so the recursion stops after only
+these steps, finding that the string isn't parsable as a whole.
+
+\section{Packrat parsers}
+The memoization approach can be extended further to so-called \emph{packrat}
+parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain
+$O(n\,m)$, but the memoization gives a space overhead that is
+$O(n)$, with a big constant\cite{Ford02a} -- or to put it in another way: The
+original string is stored several times over. This makes them flexible and fast
+parsers for small input, but cannot be used for big data sets. To understand
+how they work, let's first look at PEG:
+
+\emph{Parsing Expression Grammars} are grammars similar to context-free
+grammars with the difference, that they allow no left-recursion and no
+ambiguity, each expression has exactly one correct parse tree and consumes at
+least one character. In this they are similar to regular expressions, but
+capture more than just regular languages.  Such an expression can contain
+literals, recursive subexpressions, ordered choice, repetitions and
+non-consuming predicates:
+
+\begin{description}
+  \item[recursive subexpressions] allow for recursive repetition of a
+    pattern, for example
+    \[\mathtt{S} \rightarrow \mathtt{'('}\quad \mathtt{S}\quad \mathtt{')'}\quad \mathtt{/} \varepsilon \]
+    or
+    \[ \mathtt{S} \rightarrow \mathtt{'if'}\quad P\quad \mathtt{'\{'}\quad S\quad \mathtt{'\}'}\]
+  \item[ordered choice] gives two options, but the left path will be checked
+    first and if it matches already, the right path will not even be considered.
+  \item[repetitions] The operators \texttt{*}, \texttt{+}, and \texttt{?}
+    with their meaning identical to their usage in regular expressions.
+  \item[non-consuming predicates] The operator \texttt{\&} will only match and
+    return the left-hand side, if the right-hand side would also match. The
+    right-hand side doesn't consume any characters however. Similarly the
+    operator \texttt{!} only matches the left-hand side, if the right-hand
+    side does not match (without consuming any characters for the right-hand side).
+\end{description}
+
+The implementation of these grammars as recursive descent/backtracking
+parsers is quite simple. The corresponding Packrat parser is the straight
+forward memoization of this. This is in principle nothing new, the
+memoization approach to context-free grammars uses the same approach, but the
+restriction to PEG make the problem solved easier: without ambiguity less
+references need to be stored to possible parses and since parsers consume at
+least a character, each character in the input string has at most $m$
+possible interpretations.
+
+The downside to this is that Packrat parsers have a large space overhead that
+make them infeasible for large
+inputs\cite{Beck08a}\footnote{\quote{[\dots] the Java parser generated
+by Pappy requires up to 400 bytes of memory for every byte of input.}}.
+
+\section{Automata based extraction of parse trees}\seclabel{parse-trees-related}
+Memoization is a powerful tool to achieve fast parsers, but they have a
+space-overhead in order of the input instead of the parse tree size. The
+other approach to parsing -- finite state automata -- offers a remedy. These
+approaches, one of which will be presented in this paper, use tagged finite
+state automata that store the parse tree in some manner, the main differences
+being the format of the stored tree and the type of automaton running the parse.
+
+The rivaling memory layouts are lists of changes and an array with a cell for
+each group. The former makes it hard to compile the TNFA to a TDFA with
+aggressive reuse of states via mapping (as described in
+algorithm~\ref{findmapping}), but has lower space consumption. The mapping in
+terms of cells for each group is easy, but costs a factor $m$ space overhead.
+
+\begin{table}
+\begin{tabular}{c|>{\centering}m{3cm}ccc}
+  Author & Stores & Automaton & Parse time & Space overhead \\
+  \hline
+  \hline
+  Kearns~\cite{Kear91a}& Path choices & NFA & $O(n\,m)$ & $O(n\, m)$ \\
+  \hline
+  Dub\'e, Feeley~\cite{Dube00a}& Capture groups in linked
+  list & NFA & $O(n\,m)$ & $O(n\, m^2)$\\
+  Nielsen, Henglein~\cite{Niel11a} & Bit-coded trees of capture groups  & & $O(n\, m\, \log(m))$ \\
+  Grathwohl~\cite{Grat13a} \\
+  \hline
+  Laurikari~\cite{Laur00a}& Capture group in array & DFA &
+  $O(n+2^m)$ & $O(d\, m)$\\
+  This paper & Capture group in array of linked lists & lazy DFA
+  & $O(n\, m)$ & $O(n\, d + m)$ \\
+\end{tabular}
+\caption{Comparison of automata based approaches to regular expression
+parsing. $n$ is the length of the string, $m$ is the length of the regular
+expression, and $d$ is the number of subexpressions. Note that
+Laurikari~\cite{Laur00a} does not produce parse trees.}
+\end{table}
+
+Another problem is that of greediness. Kearns, Dub\'e, and Nielsen can't
+guarantee the greediness of the winning parse. Grathwohl's contribution
+allows Dub\'e's algorithm to run with greedy parses. Our priorities allow for
+arbitrary mixes of greedy and non-greedy operators.
+
+Finally when dealing with large $n$, one might be interested in passing over
+the string as few times as possible. Kearns, Dub\'e, and Nielsen do this in
+three passes to find the beginning and ending of capture groups, whereas
+Grathwohl only uses two passes. Our algorithm captures the positions of the
+capture groups in a single pass. This might seem like a negligible 
+improvement, but certain scenarios only open up with this, such as the 
+possibility to efficiently parse a string larger than a single machine, as 
+described in \Secref{stream}.
+
+In addition, since this is not a purely theoretical analysis, our algorithm
+adds practical optimizations such as compactifications, lazy compilation, and
+character ranges.
+
+\section{Large scale data analysis of a stream of text}\label{sec:stream}
+Due to its improvements in requiring only a single pass over the input and
+its memory allocation pattern, our algorithm is especially fitted for a
+scenario, where the input string is of unknown size or of size to big to fit
+on a single machine.
+
+Consider the task of finding a parse tree of a regular grammar for a text
+that is stored on machines $M_1, \dots, M_n$. Now in order to parse the
+string, we set aside a machine $P$, that will do the parsing. We only need the NFA of the
+pattern to fit on $P$ and can then receive each of the shards
+from $M_1$ to $M_n$ in turn and discard it afterwards. Even if the parse tree
+(containing the indices of the beginning and end of the groups) is too large
+to fit on the machine, we can send the cells to other machines. Because the
+cells are not touched anymore, there will never be a need for $P$ to retrieve
+old cells.
 
 \chapter{Benchmark}
 \seclabel{benchmarks}
