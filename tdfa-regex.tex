@@ -664,7 +664,7 @@ to collect the instructions and incorporate them into the lazy DFA state
 compilation. Our algorithm adds the mapping phase from Laurikari, which allows
 us to find DFA states that can be made equivalent by some additional writes.
 
-\section{TNFA}\label{sec:tnfa}
+\section{Pipeline}\label{sec:tnfa}
 
 The algorithm we present is specific case of the tagged non-deterministic
 finite state automaton (TNFA) matching algorithm for regular expressions with
@@ -745,7 +745,7 @@ expression and expand the constructs recursively.}
 \label{fig:thompson-construction}
 \end{figure*}
 
-\section{TNFA}	\seclabel{tnfa}
+\section{Logging capture groups in a TNFA}\seclabel{tnfa}
 
 Our algorithm is directly based on algorithm~\ref{alg-coroutine-tagged}, so 
 this section lays out the storage required by the co-routines and the
