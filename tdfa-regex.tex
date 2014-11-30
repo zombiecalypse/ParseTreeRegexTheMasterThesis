@@ -160,17 +160,19 @@ the text that they're parsing.  We describe a technique for building up the
 complete parse tree resulting from matching a text against a regular
 expression.
 
-In standard tagged deterministic finite-state automaton (TDFA) matching, all
-paths through the non-deterministic finite-state automaton (NFA) are walked
-simultaneously, in different co-routines, where inside each co-routine, it is
-fully known when which capture group was entered or left. We extend this model
-to keep track of not just the last opening and closing of capture groups, but
-all of them. We do this by storing in every co-routine a history of the all
-groups using the flyweight pattern. Thus, we log enough information during
-parsing to build up the complete parse tree after matching in a single pass,
-making it possible to use our algorithm with strings exceeding the machine's
-memory. This is achieved in  worst case time $\Theta(m\,n)$, providing full parse
-trees with only constant slowdown compared to matching.
+In previous tagged deterministic finite-state automaton (TDFA) matching
+implementations, all paths through the non-deterministic finite-state automaton
+(NFA) are walked simultaneously, in different co-routines, where inside each
+co-routine, it is fully known when which capture group was entered or left. We
+extend this model to keep track of not just the last opening and closing of
+capture groups, but all of them. We do this by storing in every co-routine a
+history of the all groups using the flyweight pattern. Thus, we log enough
+information during parsing to build up the complete parse tree after matching
+in a single pass, making it possible to use our algorithm with strings
+exceeding the machine's memory. Further we construct the automata such that a
+simulation of backtracking like behaviour is possible. This is achieved in
+worst case time $\Theta(m\,n)$, providing full parse trees with only constant
+slowdown compared to matching.
 \end{abstract}
 
 \tableofcontents
@@ -549,10 +551,14 @@ this information, we need to store it in some way, as we traverse the
 automaton.
 
 Remember that NFA interpretation can be thought as competing co-routines.
-This model allows trivially to add more instruction as we pass a transition.
-The solution to keeping track of the capture groups is simply to store the
-information at what position the capture group started or ended in some way in
-the co-routine. This is the idea of the tagged finite state
+This model already implies that some form of instruction is executed on a 
+transition, so it is possible to add other instructions that allow us to 
+store the capture groups.
+
+Specifically we can store the position of the start and end of each 
+match in the memory of the co-routine, whenever we encounter a transition 
+that corresponds to the start or end of a capture group. 
+This is the idea of the tagged finite state
 automaton\footnote{First called that by Laurikari\cite{Laur00a}}, which
 attaches general \emph{tags} to transitions, that modify the co-routine's
 memory in some way. This way, co-routines can store the complete information,
@@ -562,13 +568,13 @@ Now that side effects of transitions are introduced, it is necessary to make
 each step uniquely prioritized, so that we can't get to a situation, where
 two different paths, that crossed two different lists of tags, lead to the
 same node and that the choice of the winner is arbitrary. This is avoided by
-giving a \emph{negative priority} to one of the transitions, whenever we have
-an out-degree of two\footnote{Note that in the Thompson construction, we have
-an out-degree of at most two.}.
+giving a \emph{negative priority} to one of the transitions or require one to 
+consume a character, whenever we have an out-degree of two\footnote{Note that
+in the Thompson construction, we have an out-degree of at most two.}.
 
-The priorities intuitively mean, that for example in \texttt{.a|..}, we will
-try to follow the path of \texttt{.a} first, before checking \texttt{..}.
-Only if we fail on that track, we will consider the second path.
+The priorities intuitively mean that for example in \texttt{.a|..} we will
+try to follow the path of \texttt{.a} first before checking \texttt{..}.
+Only if we fail on that track we will consider the second path.
 
 Closely related to priorities is greediness control: Consider again the regular
 expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question mark sets the
@@ -591,22 +597,39 @@ To complicate things further, we want co-routines that travelled further to
 have higher priority than the ones that stayed further behind -- in 
 backtracking this would be depth-first-search.
 
+The next section will explain how this can be simulated in TNFA interpretation,
+which is an original contribution of this paper.
+
+\subsection{Simulating backtracking for regular expressions}
+
+In order to simulate backtracking correctly, we need that all paths reachable 
+from the state after the prioritized transition is processed first, even if
+interrupted by the need to consume another character. This scheduling can be
+done by using a buffer, in which states that are seen are stored and that is
+flushed into the DFA state in LIFO order if there are no more high-priority
+transitions to follow.
+
 \begin{algorithm*}
   \begin{algorithmic}
   \Function{$run_{tagged}$}{coroutines}
     \State Put all coroutines on the stack as negative priority
     \While{the stack isn't empty}
-      \State Pop $c$ from the stack
+      \If{$high$ is not empty}
+        \State Pop $c$ from the $high$ stack
+      \Else
+        \State Pop $c$ from the $low$ stack
+      \EndIf
       \For{all $\varepsilon$-transitions from $c$ to state $s$ with tag $t$}
         \If{no co-routine in state $s$ exists in coroutines}
           \State copy own memory into $m$
           \State \Call{interpret}{$t$, $m$}
         \EndIf
         \If{transition is normal priority}
-          \State add a co-routine $r$ in state $s$ with memory $m$ to the stack
+          \State add a co-routine $r$ in state $s$ with memory $m$ to the 
+          $high$ stack
         \Else
           \State add a co-routine $r$ in state $s$ with memory $m$ to the 
-          stack beneath all high priority co-routines.
+          $low$ stack
         \EndIf
       \EndFor
     \EndWhile
@@ -615,9 +638,12 @@ backtracking this would be depth-first-search.
   \caption{\label{alg:coroutine-tagged}Tagged transition execution}
 \end{algorithm*}
 
-This scheduling can be done by using a buffer, in which states that are seen 
-are stored and that is flushed into the DFA state in LIFO order if there are no
-more high-priority transitions to follow.
+Without the buffer, the routines are scheduled in the order in which the 
+states are seen. This gives wrong results, if the state further behind can 
+catch up to one further down, for example in \texttt{(a*?)(a*?)}, the second 
+group should contain the match.
+
+\subsection{Conversion to tagged DFA}
 
 To compile the TNFA to a TDFA we have to capture the modifications that we 
 encounter between reading characters. After doing so, we need to check if 
@@ -659,12 +685,13 @@ programming environment used.
 Compared to \textsc{RE2}, our algorithm doesn't provide many low-level optimizations,
 such as limiting the TDFA cache size or an analysis of the pattern for common
 simplifications such as optimizing for one-state matches\footnote{unambiguous
-NFA can be interpreted as DFA and can be matched more efficiently}. However
-our algorithm doesn't require a separate pass for match detection and match
-extraction, which opens different scenarios. \textsc{RE2} only considers the
-DFA states equivalent, if the instructions write to the same positions and are
-ordered the same. Our algorithm adds the mapping phase from Laurikari, which 
-allows us to find DFA states that can be made equivalent by some additional writes.
+NFA can be interpreted as DFA and can be matched more efficiently}. Further 
+it's algorithm to simulate the backtracking is simpler. However our algorithm
+doesn't require a separate pass for match detection and match extraction, which
+opens different scenarios -- the reason we can avoid this is that we are able
+to collect the instructions and incorporate them into the lazy DFA state
+compilation. Our algorithm adds the mapping phase from Laurikari, which allows
+us to find DFA states that can be made equivalent by some additional writes.
 
 \section{Revisiting backtracking}\seclabel{revise-backtrack}
 As seen earlier, backtracking makes for easy implementations, but exponential
@@ -2100,7 +2127,9 @@ where data is extracted this way. If such data is structured
 instead of flat, a parser that produces trees is superior to a standard
 regular expression parser. We provide such an algorithm with modern
 optimizations applied using results from persistent data-structures to avoid
-unnecessary memory consumption and the slow-down that this would produce.
+unnecessary memory consumption and the slow-down that this would produce. 
+This algorithm is able to provide the same semantics as backtracking, but 
+without an exponential worst case.
 
 Our approach can produce entire parse trees from matching regular expressions
 in a single pass over the string and do so asymptotically no slower than
