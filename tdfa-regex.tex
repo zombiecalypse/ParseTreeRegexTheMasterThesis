@@ -514,12 +514,13 @@ us to match in $O(n\, m)$ time\footnote{Note that the number of branches per
 state is $O(1)$}.
 
 \section{DFA based matching}\label{sec:dfa-match}
-Dissatisfied with the $O(m)$ overhead, we can construct a DFA from the NFA
-before matching. This is done by the power set construction\cite{Sips05a},
-which has time complexity $O(2^m)$. The idea is to replace all states by the
-set reachable from it with only $\varepsilon$-transitions. The transitions
-simulate a step in the original NFA, so they point to another set of states.
-After the compilation is done, matching the string is $O(n)$ time.
+Dissatisfied with the multiplicative $O(m)$ overhead, we can construct a DFA
+from the NFA before matching. This is done by the power set
+construction\cite{Sips05a}, which has time complexity $O(2^m)$. The idea is to
+replace all states by the set reachable from it with only
+$\varepsilon$-transitions. The transitions simulate a step in the original NFA,
+so they point to another set of states.  After the compilation is done,
+matching the string is $O(n)$ time.
 
 This can be very useful, if the regular expression is statically known.
 
