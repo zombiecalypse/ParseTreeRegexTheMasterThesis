@@ -449,14 +449,27 @@ afterwards. In order to model that, we propose an additional state kept in
 the co-routine: it can either be \emph{hungry} or \emph{fed}. If it is
 hungry, it can only follow transitions that contain the character to be read,
 but the co-routine becomes fed. If a co-routine is fed, it can only
-follow $\varepsilon$-transitions.
+follow $\varepsilon$-transitions. This is one of the possible ways to model
+the fact that each routine can consume a character exactly once during each
+turn. Other approaches are to have a co-routine only enter the next scheduling
+cycle if they consume the character read and not proceed expanding the
+co-routine after consuming. This method however requires special handling of
+the initial expansion, i.e.\ if there is no character in the string. We don't
+allow hungry co-routines to walk over $\varepsilon$-transitions, because the
+previous scheduling cycle already expanded the $\varepsilon$-transitions
+available.
 
-Furthermore the order in which states are expanded will become relevant. For
-this, the model of the NFA is expanded for allowing transitions with negative
-priority. An edge with negative priority will only be expanded when there are
-no more legal transitions with regular priority. The order for high and low
-priorities is depth first\footnote{In an implementation this would imply that
-a newly seen state is put on a stack.}.
+Furthermore the order in which states are expanded will become relevant: a
+transition that crossed a tag and one that doesn't cross a tag can end in the
+same state -- depending on the order the memory of the coroutine in the state
+differs. Since we still store at most one co-routine in any NFA-state, the
+co-routines compete to capture a state. The winner -- that is the first
+co-routine to enter a state -- will define the memory of all following states.
+For this, the model of the NFA is expanded for allowing transitions with
+negative priority. An edge with negative priority will only be expanded when
+there are no more legal transitions with regular priority. The order for high
+and low priorities is depth first\footnote{In an implementation this would
+  imply that a newly seen state is put on a stack.}.
 
 \chapter{Algorithm} \seclabel{algo}
 With the basic definition of regular expression matching available, we will 
@@ -535,10 +548,13 @@ Specifically we can store the position of the start and end of each
 match in the memory of the co-routine, whenever we encounter a transition 
 that corresponds to the start or end of a capture group. 
 
-Now that side effects of transitions are introduced, it is necessary to make
-each step uniquely prioritized, so that we can't get to a situation, where
-two different paths, that crossed two different lists of tags, lead to the
-same node and that the choice of the winner is arbitrary. This is avoided by
+Side effects, such as storing the current location, make co-routines using
+different routes to the same state differ in meaning. Consider the regular
+expression \texttt{(a)|(.)} reading the string $a$: depending on the path
+chosen, our capture groups will either contain $a$ in the first or
+second capture group. This requires us to define a unique order for expanding
+co-routines on each state, so that we can avoid this ambiguity.
+This is avoided by
 giving a \emph{negative priority} to one of the transitions or require one to 
 consume a character, whenever we have an out-degree of two\footnote{Note that
 in the Thompson construction, we have an out-degree of at most two.}.
