@@ -15,6 +15,8 @@
 \usepackage{xcolor}
 \usepackage{tikz}
 \usepackage{mathtools}
+\usepackage{listings}
+\usepackage[toc,page]{appendix}
 
 \usetikzlibrary{arrows,automata,shapes,positioning,fit}
 \usepackage{algpseudocode}
@@ -46,6 +48,7 @@
 \usepackage[normalem]{ulem} % for \sout
 \usepackage{xcolor}
 \newcommand{\ra}{$\rightarrow$}
+\newcommand{\regex}[1]{\ensuremath{\mathtt{/#1/}}}
 \newboolean{showedits}
 \setboolean{showedits}{false} % toggle to show or hide edits
 
@@ -192,7 +195,7 @@ expression can easily describe that a text matches a comma separated values
 file, but it is unable to extract all the values.  Instead it only gives a
 single instance of values:
 
-\texttt{((.*?),(\textbackslash d+);)+} might describe a dataset of ASCII names
+\regex{((.*?),(\textbackslash d+);)+} might describe a dataset of ASCII names
 with their numeric label. Matching the regular expression on \texttt{``Tom
 Lehrer,1;Alan Turing,2;''} confirms that the list is well formed, but the
 match contains only \texttt{``Tom Lehrer''} for the second capture group
@@ -203,7 +206,7 @@ and \texttt{``1''} for the third. That is, the parse tree found by the
 \centering
 \includegraphics[width=.75\linewidth]{graphs/posix_parse}
 \caption[Posix parse tree]{\figlabel{lehrer-posix} Parse tree produced by
-\textsc{Posix}-compatible matching \texttt{((.*?),(\textbackslash d+);)+}
+\textsc{Posix}-compatible matching \regex{((.*?),(\textbackslash d+);)+}
 against input ``Tom Lehrer,1;Alan Turing,2;''.}
 \figlabel{posix}
 \end{figure}
@@ -215,7 +218,7 @@ tree after the matching phase is done, as seen in \Figref{our-tree}.
 \centering
 \includegraphics[width=.75\linewidth]{graphs/full_parse}
 \caption[Full parse tree]{\figlabel{lehrer-tree} Parse tree produced by our approach matching
-regular expression \texttt{((.*?),(\textbackslash d+);)+} against input ``Tom
+regular expression \regex{((.*?),(\textbackslash d+);)+} against input ``Tom
 Lehrer,1;Alan Turing,2;''}
 \figlabel{our-tree}
 \end{figure}
@@ -238,8 +241,8 @@ using a regular expression engine, even though it is regular.
 Consider a file of semicolon-terminated records, each record consisting
 of a comma-separated pair of entries, and each entry can be escaped
 to contain semicolons, as in the regular expression
-\texttt{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}. Here, expression
-\texttt{.*?} is a non-greedy match which will be discussed in more
+\regex{((".*?"|[a-z]*),(".*?"|[a-z]*);)+}. Here, expression
+\regex{.*?} is a non-greedy match which will be discussed in more
 detail in \Secref{algo}.  This language contains, for example, the
 string: ``"h;i",there;"h;,i",Paul;''.  It is easy to see that, in
 order to extract all four capture group matches, it is insufficient
@@ -287,78 +290,78 @@ extract information.
   \begin{tabular}{c|c|c|>{\centering\arraybackslash}m{5cm}}
     Name & Example & Repetitions & Description \\
     \hline
-    literal & \texttt{a} & 1 & \\
-    character ranges & \texttt{[a-z]} & 1 & any of the characters in the range
+    literal & \regex{a} & 1 & \\
+    character ranges & \regex{[a-z]} & 1 & any of the characters in the range
                                             match \\
-    negated character ranges & \texttt{[\string^a-z]} & 1 & anything except for the
+    negated character ranges & \regex{[\string^a-z]} & 1 & anything except for the
     characters in the range match \\
     \hline
-    \texttt{?} operator & \texttt{a?} & 0 or 1 & \\
-    \texttt{*} operator & \texttt{a*} & $0-\infty$ & Prefer more matched \\
-    \texttt{+} operator & \texttt{a+} & $1-\infty$ & \\
+    \texttt{?} operator & \regex{a?} & 0 or 1 & \\
+    \texttt{*} operator & \regex{a*} & $0-\infty$ & Prefer more matched \\
+    \texttt{+} operator & \regex{a+} & $1-\infty$ & \\
     \hline
-    \texttt{??} operator & \texttt{a??} & 0 or 1 & \\
-    \texttt{*?} operator & \texttt{a*?} & $0-\infty$ & Prefer less matched \\
-    \texttt{+?} operator & \texttt{a+?} & $1-\infty$ & \\
+    \texttt{??} operator & \regex{a??} & 0 or 1 & \\
+    \texttt{*?} operator & \regex{a*?} & $0-\infty$ & Prefer less matched \\
+    \texttt{+?} operator & \regex{a+?} & $1-\infty$ & \\
     \hline
-    alternation operator & \texttt{a|b} & 1 & match one or the other, prefer left \\
+    alternation operator & \regex{a|b} & 1 & match one or the other, prefer left \\
     \hline
-    capture groups & \texttt{(a)} & 1 & treat pattern as single element,
+    capture groups & \regex{(a)} & 1 & treat pattern as single element,
     extract match \\
   \end{tabular}
   \caption{Summary of regular expression elements}
 \end{table}
 
 \paragraph{Literals} The simplest option are literal characters like
-\texttt{a}.
+\regex{a}.
 
 \paragraph{Character ranges} Instead of matching only a single character, a
 regular expression might match any of a range of characters. This is denoted
-with brackets. For example \texttt{[a-z]} would match any lowercase ASCII
-letter, \texttt{[abc]} would only match the letters a, b, or c, and
-\texttt{[a-gk-t]} would match any letter between a and g, or between k and t.
-There is also the special character range \texttt{.} that matches any character.
+with brackets. For example \regex{[a-z]} would match any lowercase ASCII
+letter, \regex{[abc]} would only match the letters a, b, or c, and
+\regex{[a-gk-t]} would match any letter between a and g, or between k and t.
+There is also the special character range \regex{.} that matches any character.
 
-\paragraph{Negated character ranges} Ranges of the form \texttt{[\string^\dots]}
-negate their content, so \texttt{[\string^a-g]} would match anything except a through g.
+\paragraph{Negated character ranges} Ranges of the form \regex{[\string^\dots]}
+negate their content, so \regex{[\string^a-g]} would match anything except a through g.
 
 \paragraph{Concatenation} Two constructs put after each other have to match
-the string in order. For example \texttt{a[bc]} matches a followed by either
+the string in order. For example \regex{a[bc]} matches a followed by either
 b or c.
 
-\paragraph{Option operator} The option operator denoted by \texttt{?} allows
+\paragraph{Option operator} The option operator denoted by \regex{?} allows
 either zero or one repetitions of the preceding element, preferring to have
-one repetition. This means \texttt{a?} will match the empty string or $a$, but nothing else.
+one repetition. This means \regex{a?} will match the empty string or $a$, but nothing else.
 
 \paragraph{Star operator} The star operator \texttt{*} allows for arbitrary
 repetition of the preceding element, including zero repetitions, preferring as
-many repetitions as possible. For example \texttt{a*} matches the empty string,
+many repetitions as possible. For example \regex{a*} matches the empty string,
 ``a'', ``aa'', and so on.
 
 \paragraph{Plus operator} The plus operator \texttt{+} is similar, but
-requires at least one repetition. This leads to $a+$ and $aa*$ matching the
+requires at least one repetition. This leads to \regex{a+} and \regex{aa*} matching the
 same strings.
 
 \paragraph{Non-greedy operators} The option, the star, and the plus operators
 also have corresponding non-greedy operators, which are \texttt{??},
-\texttt{*?}, and \texttt{+?} respectively. These operators prefer to match as
+\regex{*?}, and \regex{+?} respectively. These operators prefer to match as
 few repetitions as possible. In back-tracking implementation, guessing the
 right path is an important efficiency feature and for all capturing
 implementation the path taken influences the captured groups.
 
 \paragraph{Alternation} Patters separated by the pipe symbol \texttt{|} can
 either match the left part or the right part. This binds weaker than
-concatenation. Therefore \texttt{abc|xyz} would match $abc$ or $xyz$, but not
+concatenation. Therefore \regex{abc|xyz} would match $abc$ or $xyz$, but not
 $abxyz$.
 
 \subsection{Capture groups}
 Patterns enclosed by parens are treated as a single element, thus
-\texttt{(ab)*} captures $ab$, but not $aba$. More importantly for us is that
-after the match, the capture groups can be extracted: \texttt{a(b*)c} when
+\regex{(ab)*} captures $ab$, but not $aba$. More importantly for us is that
+after the match, the capture groups can be extracted: \regex{a(b*)c} when
 matching $abbbc$ can extract $bbb$ and the empty string when matching $ac$.
 Note that the capture groups can be nested and the semantics differ for
 \textsc{Posix} and tree regular expressions: In \textsc{Posix} the regular expression
-\texttt{a((bc+)+)} on the string $abcbccc$ gives $bcbccc$ for the outer
+\regex{a((bc+)+)} on the string $abcbccc$ gives $bcbccc$ for the outer
 capture group and $bc$ for the inner capture group -- the leftmost occurrence of
 outer capture groups is kept and within that substring, the leftmost occurrence
 of the inner group is kept. In tree regular expressions, all occurrences are kept and returned
@@ -367,8 +370,8 @@ matches $bc$ and $bccc$.
 
 \paragraph{Greediness}
 The relevance of greedy and non-greedy matches becomes apparent now: The
-regular expression \texttt{a(.*)c?} on the string $abc$ captures $bc$ in
-the group, while \texttt{a(.*?)c?} captures only $b$. This is because
+regular expression \regex{a(.*)c?} on the string $abc$ captures $bc$ in
+the group, while \regex{a(.*?)c?} captures only $b$. This is because
 the parsing is ambiguous without specifying the greediness of the match -- both
 $b$ and $bc$ would be valid.
 
@@ -403,10 +406,10 @@ $\Theta(2^n\,m)$ time in the worst case:
   \caption{\label{alg:match-bt}Overview of backtracking}
 \end{algorithm*}
 
-If we have the pattern \texttt{(x*)*y} matching against the
+If we have the pattern \regex{(x*)*y} matching against the
 string\footnote{$x^n$ means $x$ repeated $n$ times} $x^n$, we see that it
 cannot match, but it takes exponential time doing so. In each step there
-are two options, either to collect the $x$ in \texttt{x*}, or to step over it
+are two options, either to collect the $x$ in \regex{x*}, or to step over it
 and try again. Unfortunately that means that the algorithm branches in each
 character in the string and never succeeding keeps on trying, so it takes $2^n$
 steps to end in the $no\ match$ case.  Backtracking is fast if it guesses
@@ -485,7 +488,7 @@ A faster alternative to the backtracking approach discussed in
 into an NFA by the rules in \Figref{thompson-construction-simple}.
 
 \begin{figure*}[htb] \includegraphics[width=\linewidth]{graphs/thompson-simple}
-  \caption[Thompson construction]{Thompson~\cite{Thom68a} construction of the
+  \caption[Thompson construction]{\label{thompson-simple}Thompson~\cite{Thom68a} construction of the
 automaton: Descend into the abstract syntax tree of the regular
 expression and expand the constructs recursively.}
 \label{fig:thompson-construction-simple}
@@ -550,7 +553,7 @@ that corresponds to the start or end of a capture group.
 
 Side effects, such as storing the current location, make co-routines using
 different routes to the same state differ in meaning. Consider the regular
-expression \texttt{(a)|(.)} reading the string $a$: depending on the path
+expression \regex{(a)|(.)} reading the string $a$: depending on the path
 chosen, our capture groups will either contain $a$ in the first or
 second capture group. This requires us to define a unique order for expanding
 co-routines on each state, so that we can avoid this ambiguity.
@@ -559,15 +562,15 @@ giving a \emph{negative priority} to one of the transitions or require one to
 consume a character, whenever we have an out-degree of two\footnote{Note that
 in the Thompson construction, we have an out-degree of at most two.}.
 
-The priorities intuitively mean that for example in \texttt{.a|..} we will
-try to follow the path of \texttt{.a} first before checking \texttt{..}.
+The priorities intuitively mean that for example in \regex{.a|..} we will
+try to follow the path of \regex{.a} first before checking \regex{..}.
 Only if we fail on that track we will consider the second path.
 
 Closely related to priorities is greediness control: Consider again the regular
-expression \texttt{((.*?),(\textbackslash{}d+);)+}. The question mark sets the
-\texttt{.*} part of the regular expression to \emph{non-greedy}, which means
+expression \regex{((.*?),(\textbackslash{}d+);)+}. The question mark sets the
+\regex{.*} part of the regular expression to \emph{non-greedy}, which means
 that it matches as little as possible while still producing a valid match, if
-any.  Without provisioning \texttt{.*} to be non-greedy, a matching against
+any.  Without provisioning \regex{.*} to be non-greedy, a matching against
 input \texttt{``Tom Lehrer,1;Alan Turing,2;''} would match as much as possible
 into the first capture group, including the record separator `,'.  Thus, the
 first capture group would suddenly contain only one entry, and it would contain
@@ -587,7 +590,7 @@ backtracking this would be depth-first-search.
 The next section will explain how this can be simulated in TNFA interpretation,
 which is an original contribution of this paper.
 
-\subsection{Simulating backtracking for regular expressions}
+\subsection{Simulating backtracking for regular expressions}\seclabel{tfsm}
 
 In order to simulate backtracking correctly, we need that all paths reachable 
 from the state after the prioritized transition is processed first, even if
@@ -599,8 +602,8 @@ transitions to follow.
 \begin{algorithm*}
   \begin{algorithmic}
   \Function{$run_{tagged}$}{coroutines}
-    \State Put all coroutines on the stack as negative priority
-    \While{the stack isn't empty}
+    \State Put all coroutines on the $low$ stack
+    \While{the stacks aren't both empty}
       \If{$high$ is not empty}
         \State Pop $c$ from the $high$ stack
       \Else
@@ -608,8 +611,8 @@ transitions to follow.
       \EndIf
       \For{all $\varepsilon$-transitions from $c$ to state $s$ with tag $t$}
         \If{no co-routine in state $s$ exists in coroutines}
-          \State copy own memory into $m$
-          \State \Call{interpret}{$t$, $m$}
+          \State copy the co-routine $c$ to $c'$
+          \State \Call{interpret}{$t$, $c'$}
         \EndIf
         \If{transition is normal priority}
           \State add a co-routine $r$ in state $s$ with memory $m$ to the 
@@ -627,7 +630,7 @@ transitions to follow.
 
 Without the buffer, the routines are scheduled in the order in which the 
 states are seen. This gives wrong results, if the state further behind can 
-catch up to one further down, for example in \texttt{(a*?)(a*?)}, the second 
+catch up to one further down, for example in \regex{(a*?)(a*?)}, the second 
 group should contain the match.
 
 \subsection{Conversion to tagged DFA}
@@ -719,8 +722,8 @@ additions are needed for greediness control and capture groups.
 \begin{figure}[htp]
 \includegraphics[width=\linewidth]{graphs/lehrer_automaton}
 
-\caption[NFA for \texttt{((.*?),(\textbackslash{}d+);)+}]{\label{fig:example-automaton}
-Automaton for \texttt{((.*?),(\textbackslash{}d+);)+}
+\caption[NFA for \regex{((.*?),(\textbackslash{}d+);)+}]{\label{fig:example-automaton}
+Automaton for \regex{((.*?),(\textbackslash{}d+);)+}
 In the diagram, ``$-$'' stands for low priority. $\tau_n\uparrow$ is the
 opening tag for capture group $n$, likewise, $\tau_1\downarrow$ is the closing
 tag for capture group $n$.}
@@ -732,9 +735,9 @@ an expression in two steps:
 \begin{enumerate}
 \item We construct an NFA graph for the expression, without any
 repetition.  \autoref{fig:example-automaton} shows how this plays
-out in our running example, which contains the expression \texttt{.*?}.
-An automaton for expression~\texttt{.} is constructed. The expression
-\texttt{.} is modeled as just two nodes labeled 3 and 4, and a
+out in our running example, which contains the expression \regex{.*?}.
+An automaton for expression~\regex{.} is constructed. The expression
+\regex{.} is modeled as just two nodes labeled 3 and 4, and a
 transition labeled ``any'' between them.
 
 \item We add prioritized transitions to model repetition. In our
@@ -757,7 +760,12 @@ priority over those of low priority\footnote{See \Secref{tfsm}}.
 \begin{figure*}[tb] \includegraphics[width=\linewidth]{graphs/thompson}
   \caption[Modified Thompson construction]{Modified Thompson~\cite{Thom68a} construction of the
 automaton: Descend into the abstract syntax tree of the regular
-expression and expand the constructs recursively.}
+expression and expand the constructs recursively. In comparison to the simple 
+construction in figure~\ref{thompson-simple}, the forward transitions from 
+the top state in the star operators should be surprising, but they are
+necessary if $S$ has a prioritized path that captures the empty string: We
+cannot return to the start state, because we expanded it already, but we can proceed
+anyway.}
 \label{fig:thompson-construction}
 \end{figure*}
 
@@ -823,7 +831,7 @@ We use the following vocabulary.
 	$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
 \end{description}
 
-Take for example the regular expression \texttt{(..)+} matching
+Take for example the regular expression \regex{(..)+} matching
 pairs of characters, on the input string ``abcd''. The history array of the
 finishing co-routine  is $[h_1=[0], h_2=[3], h_3=[2,0], h_4=[3,1]]$.
 Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0
@@ -857,31 +865,31 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
 
 \begin{algorithm*}[htbp]
 \begin{algorithmic}[1]
-  \Function{$interpret$}{$t$, $m$}
-    \If{$t$ is the character $c$}
-      \If{$m$ is not fed and can current character is consumable by $c$}
-      \State become fed
+  \Function{$interpret$}{$t$, $c$}
+    \LineComment{$t$ is a tag, $c$ is a co-routine}
+    \If{$t$ is the character $a$}
+      \LineComment{We can only pass the edge if we can consume the character}
+      \If{$c$ is not fed and can current character is consumable by $a$}
+        \State become fed
       \Else
         \State die
       \EndIf
     \EndIf
     \If{$t$ is $\varepsilon$}
-      \If{$m$ is not fed}
+      \LineComment{If we're hungry, we can't cross $\varepsilon$-transitions}
+      \If{$c$ is not fed}
         \State die
       \EndIf
-      \State add new state to \emph{buffer}
     \EndIf
     \If{$t$ is open tag of group $i$}
-      \State create new history $h$ as a copy of $m.histories[i]$
-      \State write $index+1$ to history $h$
-      \State create new memory $m'$, where $m'.histories[i] = h$
+      \LineComment{Don't commit, in case we pass edge again}
+      \State $set(index+1, c.histories[i])$ \Comment{See \Secref{data-structures}}
     \EndIf
     \If{$t$ is close tag of group $i$}
-      \State create new history $h$ as a copy of $m.histories[i+1]$
-      \State write $index$ to history $h$
-      \State create new memory $m'$, where $m'.histories[i+1] = h$
-      \State commit $m'.histories[i]$ and $m'.histories[i+1]$
+      \State $set(index, c.histories[i+1])$
+      \State commit $c.histories[i]$ and $c.histories[i+1]$
     \EndIf
+    \State add new state to \emph{buffer}
   \EndFunction
 \end{algorithmic}
 \label{alg:interpret}
@@ -896,7 +904,7 @@ In \Figref{example-automaton}, after reading only one comma as an
 input, state 7 can be reached from two co-routines: either from the
 co-routine in state 3, via 4, or from the co-routine in state 6. The two
 co-routines are `racing' to capture state 7. Since in the starting
-state, the co-routine of state 6 is listed first, he `wins the race'
+state, the co-routine of state 6 is listed first, it `wins the race'
 for state 7, and `captures it'. Thus, the new co-routine of state 7 is
 a fork of the co-routine of state 6, not 3. This matters, since 6 and
 3 may disagree about their histories.
@@ -912,10 +920,10 @@ consuming transitions attached to their NFA state.}
 Q=[
 	(q_6, H_2=(&h_1, h_2, h_7,  h_8, h_5, h_6)), \\
 	(q_3, H_1=(&h_1, h_2, h_3,  h_4, h_5, h_6))]
-	\end{align*}
+\end{align*}
 This is the case after initialization or before any commas are read.
 
-The algorithm uses a stack \emph{lookat} with the possibility to push a low
+The algorithm uses a \emph{stack} with the possibility to push a low
 priority transition below all high priority transitions\footnote{This is
 easily implemented using two stacks, \emph{high} and \emph{low}.}.
 
@@ -933,7 +941,7 @@ This is the execution of \emph{run}($Q$):
 
 \begin{enumerate}
 \item Fill the stack with hungry co-routines of all states of $Q$.
-  Now, $\mathit{lookat}=[(q_6, H_2), (q_3, H_1))]$, where the first element
+  Now, $\mathit{stack}=[(q_6, H_2), (q_3, H_1))]$, where the first element
   is the head of the stack.
 \item Initialize \emph{buffer} as an empty stack.
   The \emph{buffer} stack exists because while following high priority
@@ -964,8 +972,9 @@ This is the execution of \emph{run}($Q$):
 \item It can follow no further transitions and dies.
 \item $(q_3, H_1)$ is popped from \emph{low}. It is hungry.
 \item We now flush \emph{buffer}:
-  $R=[(q_8, H_3), (q_7, H_2)]$, \emph{buffer}$=[\ ]$.  Note that now, $R$
-  contains two co-routines in the reverse order in which they were discovered.
+  The DFA state to be constructed is $R=[(q_8, H_3), (q_7, H_2)]$,
+  the \emph{buffer}$=[\ ]$.  Note that now, $R$ contains two co-routines in the
+  reverse order in which they were discovered.
 \item  $(q_3, H_1)$ is one of the two co-routines that constitute the
 	input of this algorithm. Note how the other, $(q_6, H_2)$, got a
 	chance to follow all of its transitions before $(q_3, H_1)$ was
@@ -981,7 +990,8 @@ This is the execution of \emph{run}($Q$):
     priority transitions (but there are none),
     because $q_4\rightarrow q_3$ has low priority.
 \end{enumerate}
-\item We flush the \emph{buffer} again: $R=[(q_8, H_3), (q_7, H_2), (q_4, H_1)]$
+\item We flush the \emph{buffer} again: The DFA state to be constructed 
+  becomes $R=[(q_8, H_3), (q_7, H_2), (q_4, H_1)]$
 	Note how $(q_4, H_1)$ appears \emph{last} in $R$.
 \item $(q_3, H_1)$ is taken from the stack.
 \item It is added to \emph{buffer}.
@@ -1749,7 +1759,8 @@ execution and to feed into the transition table.
 	\EndIf
 \EndFor
 \end{algorithmic}
-\caption{interpret(input): Interpretation and lazy compilation of the NFA.}
+\caption{interpret(input): Interpretation and lazy compilation of the NFA. 
+  See appendix~\ref{python-match} for an implementation in Python}
 \label{interpret}
 \end{algorithm*}
 
@@ -1855,7 +1866,7 @@ The argument that the pattern is typically small seems circular to the
 authors, because would the implementation focus on allowing large patterns, 
 new applications using large patterns would arise\footnote{To check if a document
 contains features $f_1, f_2, \dots, f_n$, we would match the document
-against regular expression \texttt{($f_1$)|($f_2$)|$\dots$|($f_n$)}.}.
+against regular expression \regex{(f_1)|(f_2)|\dots|(f_n)}.}.
 
 In this paper, we will consider the best known algorithms quadratic. It is 
 not known if there is any algorithm that beats the $O(n\, m)$ matching, but 
@@ -1893,7 +1904,7 @@ only costs lookup time after the function has been evaluated once.
 
 The parser presented by Norvig inherently produces parse trees, because it
 tries to reduce the list of tokens into all possible expansions of the base
-symbol. For example \texttt{a*a*} would be converted to a grammar
+symbol. For example \regex{a*a*} would be converted to a grammar
 
 \begin{center}
 \begin{tabular}{ccc}
@@ -1912,7 +1923,7 @@ also make the memoization approach applicable to the backtracking algorithm
 for regular expressions.
 
 To see the advantage, let's revise the example that produced exponential runtime
-for regular backtracking: \texttt{(x*)*y} on the string $x^n$. After failing
+for regular backtracking: \regex{(x*)*y} on the string $x^n$. After failing
 for the first time with greedily consuming the $n$ $x$ characters. This
 memoizes that $x^{n-1}$ is not parsable, so the recursion stops after only
 these steps, finding that the string isn't parsable as a whole.
@@ -2105,8 +2116,8 @@ java.util.regex & 1,992\tabularnewline
 Ours & 5,332\tabularnewline
 \bottomrule
 \end{tabular}
-\caption[Matching times regular expression \texttt{((a+b)+c)+} against input $(a^{200}bc)^{2000}$]{
-  Matching regular expression \texttt{((a+b)+c)+} against input
+\caption[Matching times regular expression \regex{((a+b)+c)+} against input $(a^{200}bc)^{2000}$]{
+  Matching regular expression \regex{((a+b)+c)+} against input
 $(a^{200}bc)^{2000}$, where $a^{200}$ denotes 200 times character `a'. Time in
 microseconds.}
 \tablabel{abc}
@@ -2134,7 +2145,7 @@ Ours & 8,047\tabularnewline
 \end{tabular}
 \caption[Matching times for finding all java class names]{Runtimes, in microseconds, for finding all java class names in all
   .java files in the project itself. The regular expression used is
-  \texttt{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
+  \regex{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
 Runtime in microseconds}
 \tablabel{real}
 \end{table}
@@ -2160,6 +2171,19 @@ though our approach produces the full parse tree, and the backtracking
 implementation doesn't. All source code and all benchmarks are available under
 a free license on Github\cite{Schwarz:10861} at
 \url{https://github.com/nes1983/tree-regex}.
+
+\begin{appendices}
+  \chapter{Minimal python implementation}
+
+  This chapter shows a small implementation of our TNFA interpretation 
+  algorithm written in Python:
+  \section{Construction}
+  This doesn't include the parsing of the regular expression grammar, but
+  instead constructs the automaton from an S-expression.
+  \lstinputlisting[language=Python]{tnfa-construct.py}
+  \section{Matching}\label{python-match}
+  \lstinputlisting[language=Python]{tnfa-interpret.py}
+\end{appendices}
 
 \bibliographystyle{plain}
 \bibliography{biblio}
