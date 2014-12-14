@@ -550,9 +550,10 @@ chosen, our capture groups will either contain \str{a} in the first or
 second capture group. This requires us to define a unique order for expanding
 co-routines on each state, so that we can avoid this ambiguity.
 This is avoided by
-giving a \emph{negative priority} to one of the transitions or require one to 
-consume a character, whenever we have an out-degree of two\footnote{Note that
-in the Thompson construction, we have an out-degree of at most two.}.
+giving a \emph{negative priority}\footnote{See also Laurikari\cite{Laur00a}} to
+one of the transitions or require one to consume a character, whenever we have
+an out-degree of two\footnote{Note that in the Thompson construction, we have
+an out-degree of at most two.}.
 
 The priorities intuitively mean that for example in \regex{.a|..} we will
 try to follow the path of \regex{.a} first before checking \regex{..}.
