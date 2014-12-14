@@ -441,18 +441,20 @@ finds it, by trying the alternatives in lock-step.
 An simple way to think about the process of reading input with an NFA is that
 of \emph{co-routines}. A co-routine is a procedure that has the ability to
 suspend itself and continue later -- it is similar to a thread, but they
-don't need to be executed in parallel. In order to resume their work later,
-they contain some kind of memory that is specific to them.
+don't need to be executed in parallel and are usually manually scheduled. In
+order to resume their work later, they contain some kind of memory that is
+specific to them.
 
 In the context of NFAs, a co-routine contains the current state and has access
-to the transition graph. When reading a
-string, the NFA maintains a set of co-routines and advance them in
-lock-step. This means that each co-routine reads the current character and
-spawn new co-routines for all possible transitions. When reading a character,
-a co-routine must consume it, but might follow $\varepsilon$-transitions
-before. We model this by following $\varepsilon$-transitions in order, and 
-whenever we encounter a transition that can consume the current character, 
-the state following it is added to the next scheduling cycle.
+to the transition graph\footnote{Later more memory will be added to store the
+sub-matches.}. When reading a string, the NFA maintains a set of co-routines
+and advance them in lock-step. This means that each co-routine reads the
+current character and spawn new co-routines for all possible transitions. When
+reading a character, a co-routine must consume it, but might follow
+$\varepsilon$-transitions before. We model this by following
+$\varepsilon$-transitions in order, and whenever we encounter a transition that
+can consume the current character, the state following it is added to the next
+scheduling cycle.
 
 Furthermore the order in which states are expanded will become relevant: a
 transition that crossed a tag and one that doesn't cross a tag can end in the
@@ -499,9 +501,9 @@ Dissatisfied with the multiplicative $O(m)$ overhead, we can construct a DFA
 from the NFA before matching. This is done by the power set
 construction\cite{Sips05a}, which has time complexity $O(2^m)$. The idea is to
 replace all states by the set reachable from it with only
-$\varepsilon$-transitions. The transitions simulate a step in the original NFA,
-so they point to another set of states.  After the compilation is done,
-matching the string is $O(n)$ time.
+$\varepsilon$-transitions -- therefore a DFA state is a set of NFA states. The
+transitions simulate a step in the original NFA, so they point to another set
+of states.  After the compilation is done, matching the string is $O(n)$ time.
 
 This can be very useful, if the regular expression is statically known.
 
@@ -529,7 +531,10 @@ information about where a capture group starts or ends. In order to extract
 this information, we need to store it in some way, as we traverse the
 automaton.
 
-Remember that NFA interpretation can be thought as competing co-routines.
+Remember that NFA interpretation can be thought as competing co-routines, 
+running in lock-step with each step consuming exactly one character of the 
+input string\footnote{The empty string can be modelled as containing only the 
+`\textbackslash 0' character.}
 This model already implies that some form of instruction is executed on a 
 transition, so it is possible to add other instructions that allow us to 
 store the capture groups.
@@ -580,7 +585,7 @@ To complicate things further, we want co-routines that travelled further to
 have higher priority than the ones that stayed further behind -- in 
 backtracking this would be depth-first-search.
 
-The next section will explain how this can be simulated in TNFA interpretation,
+Section~\ref{sec:tfsm} will explain how this can be simulated in TNFA interpretation,
 which is an original contribution of this paper.
 
 \subsection{Simulating backtracking for regular expressions}\seclabel{tfsm}
@@ -592,7 +597,7 @@ done by using a buffer, in which states that are seen are stored and that is
 flushed into the DFA state in LIFO order if there are no more high-priority
 transitions to follow.
 
-\begin{algorithm*}
+\begin{algorithm}
   \begin{algorithmic}
   \Function{$run_{tagged}$}{coroutines, char}
     \State Put all coroutines on the $low$ stack
@@ -623,67 +628,17 @@ transitions to follow.
         \EndIf
       \EndFor
     \EndWhile
-    \Return $R$
+    \State \Return $R$
   \EndFunction
   \end{algorithmic}
   \caption{\label{alg:coroutine-tagged}Tagged transition execution. See 
   appendix~\ref{python-match} for an actual implementation in Python.}
-\end{algorithm*}
+\end{algorithm}
 
 Without the buffer, the routines are scheduled in the order in which the 
 states are seen. This gives wrong results, if the state further behind can 
 catch up to one further down, for example in \regex{(a*?)(a*?)}, the second 
 group should contain the match.
-
-\subsection{Conversion to tagged DFA}
-
-To compile the TNFA to a TDFA we have to capture the modifications that we 
-encounter between reading characters. After doing so, we need to check if 
-we're in a DFA state that we already encountered and that we can create a new 
-connection to. Equality of TDFA states can't be the same as equality between 
-DFA states -- the equality of the contained NFA states doesn't care for the 
-order in which they are visited and further it doesn't respect that two 
-expansions might have different executed instructions. This has been addressed
-by Laurikari\cite{Laur00a} by finding equivalent or \emph{mappable} TDFA
-states. A mapping is a bijection of two states that needs to be found at
-compilation time. For the details, the interested reader needs to wait for the
-detailed description of our algorithm in chapter~\ref{sec:algo}.
-
-The idea of adding other instructions to the co-routines in the automaton
-that is the finite state machine (be it NFA or DFA) isn't new. The first
-implementation using this to the authors' knowledge is Pike\cite{Pike87a} in
-his text editor \textsc{sam}. He used a pure tagged NFA algorithm to find one
-match for each capture group quite similar to our or Laurikari's approach. This
-was only published in source code, to a great loss for the academic community.
-
-This close control over greediness was implemented by Kuklewicz\cite{Kukl07a}
-for the Haskell implementation\footnote{Or free interpretation, since Laurikari
-leaves the matching strategy open.} of Laurikari's algorithm. This too was only
-published in source code, to a great loss for the academic community.
-
-Cox calls Laurikari's TDFA a reinvention of Pike's algorithm, but while that 
-is in parts true, Laurikari introduces the mapping step described in 
-algorithm~\ref{findmapping}. This leads Laurikari's algorithm to contain 
-fewer states and one would hope that this leads to a better run-time than 
-Google's \textsc{RE2}\footnote{\url{https://code.google.com/p/re2/}},
-which is based on Pike's algorithm. 
-
-This is not confirmed by the benchmarks by Sulzmann and Lu
-\cite{Sulz12a}, but they offer an explanation: in their profiling, they see
-that all Haskell implementations spend considerable time decoding the input
-strings. In other words, the measured performance is more of an artifact of the
-programming environment used.
-
-Compared to \textsc{RE2}, our algorithm doesn't provide many low-level optimizations,
-such as limiting the TDFA cache size or an analysis of the pattern for common
-simplifications such as optimizing for one-state matches\footnote{unambiguous
-NFA can be interpreted as DFA and can be matched more efficiently}. Further 
-it's algorithm to simulate the backtracking is simpler. However our algorithm
-doesn't require a separate pass for match detection and match extraction, which
-opens different scenarios -- the reason we can avoid this is that we are able
-to collect the instructions and incorporate them into the lazy DFA state
-compilation. Our algorithm adds the mapping phase from Laurikari, which allows
-us to find DFA states that can be made equivalent by some additional writes.
 
 \section{Pipeline}\label{sec:tnfa}
 
@@ -817,7 +772,8 @@ We use the following vocabulary.
 	histories $(([0], [12]), ([9, 1], [10, 2]))$ and another co-routine in NFA state
 	$q_2$ with the histories $(([0], []), ([1], [2]), ([1], [2]))$.
 	Note that histories can be shared across co-routines if they
-	have the same matches.
+	have the same matches. The order of the co-routines is relevant and a DFA 
+  state is thus a list of NFA states.
 \item[Histories] are linked list, where each node stores a position in the
   input text.  The head is mutable, the rest is immutable. Therefore, histories
   can share any node except their heads. We write $h=[x_1, \dots, x_m]$ to
@@ -828,7 +784,8 @@ We use the following vocabulary.
   of $2n$ histories. In an array of histories $((h_1, h_2), \dots
   (h_{2n-1}, h_{2n}))$, history $h_1$ is the history of the openings
 	of the first capture group, $h_2$ is the history of the closings of
-	the first capture group, and so on.
+  the first capture group, and so on. The visual pairing of the histories is in
+  order to visualize which histories denote start and end of which capture group.
 \item[Transitions] are  understood to be between NFA states,
 	$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
 \end{description}
@@ -865,7 +822,7 @@ step. There are four kinds of instructions:
 With this, the algorithm is simply implementing the fitting $interpret$
 function as seen in algorithm~\ref{alg:coroutine-tagged}.
 
-\begin{algorithm*}[htbp]
+\begin{algorithm}[htbp]
 \begin{algorithmic}[1]
   \Function{$interpret$}{$t$, $c$}
     \LineComment{$t$ is a tag, $c$ is a co-routine}
@@ -879,8 +836,8 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
     \EndIf
   \EndFunction
 \end{algorithmic}
-\label{alg:interpret}
-\end{algorithm*}
+\caption{ \label{alg:interpret} Interpretation of the tags.}
+\end{algorithm}
 
 The states are given to the algorithm in the order visited, so that the
 coroutine that got furthest is expanded first when the next character is
@@ -913,6 +870,52 @@ We pretend for clarity that instructions are executed directly
 after they are encountered.  The actual algorithm collects them and
 executes them after the \emph{run} call to allow further
 optimizations and the storage of the instructions.
+
+\begin{algorithm*}
+  \begin{algorithmic}
+  \Function{$run_{tnfa}$}{coroutines, char}
+    \State Put all coroutines on the $low$ stack
+    \State Initialize empty $buffer$ stack
+    \State Initialize empty stack $R$
+    \While{the stacks aren't both empty}
+      \If{$high$ is not empty}
+        \State Pop $c$ from the $high$ stack
+      \Else
+        \State Pop $c$ from the $low$ stack
+        \State Flush $buffer$ into $R$, thus reversing the order
+      \EndIf
+      \For{all transitions that consume $char$ from $c$ to state $s$}
+        \LineComment{We remember the state for the next turn}
+        \State push $s$ to $buffer$
+      \EndFor
+      \For{all $\varepsilon$-transitions from $c$ to state $s$ with tag $t$}
+        \If{no co-routine in state $s$ exists in coroutines}
+          \State copy the co-routine $c$ to $c'$
+          \If{$t$ is open tag of group $i$}
+            \State $set(index+1, c'.histories[i].left)$
+          \EndIf
+          \If{$t$ is close tag of group $i$}
+            \State $set(index, c'.histories[i].right)$
+            \State commit $c'.histories[i].left$ and $c'.histories[i+1].right$
+          \EndIf
+        \EndIf
+        \If{transition is normal priority}
+          \State add a co-routine $r$ in state $s$ with memory $m$ to the 
+          $high$ stack
+        \Else
+          \State add a co-routine $r$ in state $s$ with memory $m$ to the 
+          $low$ stack
+        \EndIf
+      \EndFor
+    \EndWhile
+    \State \Return $R$
+  \EndFunction
+  \end{algorithmic}
+  \caption{\label{alg:coroutine-tagged-complete}Complete transition execution 
+    as implemented by us. This is algorithm~\ref{alg:coroutine-tagged} with 
+    algorithm~\ref{alg:interpret} inlined. See appendix~\ref{python-match} for an actual
+    implementation in Python.}
+\end{algorithm*}
 
 This is the execution of \emph{run}($Q$, \str{,}):
 
@@ -1001,6 +1004,57 @@ good explanation in ``Understanding Clojure's Persistent Vectors'',
 \url{http://hypirion.com/musings/understanding-persistent-vector-pt-1}.} and
 is further elaborated upon in \Secref{treap}. With $T_{fork}=O(\log m)$,
 the overall runtime is $O(n\,m\,\log m)$.
+
+\subsection{Conversion to tagged DFA}
+
+To compile the TNFA to a TDFA we have to capture the modifications that we 
+encounter between reading characters. After doing so, we need to check if 
+we're in a DFA state that we already encountered and that we can create a new 
+connection to. Equality of TDFA states can't be the same as equality between 
+DFA states -- the equality of the contained NFA states doesn't care for the 
+order in which they are visited and further it doesn't respect that two 
+expansions might have different executed instructions. This has been addressed
+by Laurikari\cite{Laur00a} by finding equivalent or \emph{mappable} TDFA
+states. A mapping is a bijection of two states that needs to be found at
+compilation time. For the details, the interested reader needs to wait for the
+detailed description of our algorithm in chapter~\ref{sec:algo}.
+
+The idea of adding other instructions to the co-routines in the automaton
+that is the finite state machine (be it NFA or DFA) isn't new. The first
+implementation using this to the authors' knowledge is Pike\cite{Pike87a} in
+his text editor \textsc{sam}. He used a pure tagged NFA algorithm to find one
+match for each capture group quite similar to our or Laurikari's approach. This
+was only published in source code, to a great loss for the academic community.
+
+The correct handling of greediness (not of non-greediness) was implemented by
+Kuklewicz\cite{Kukl07a} for the Haskell implementation\footnote{Or free
+interpretation, since Laurikari leaves the matching strategy open.} of
+Laurikari's algorithm. This too was only published in source code, to a great
+loss for the academic community.
+
+Cox calls Laurikari's TDFA a reinvention of Pike's algorithm, but while that 
+is in parts true, Laurikari introduces the mapping step described in 
+algorithm~\ref{findmapping}. This leads Laurikari's algorithm to contain 
+fewer states and one would hope that this leads to a better run-time than 
+Google's \textsc{RE2}\footnote{\url{https://code.google.com/p/re2/}},
+which is based on Pike's algorithm. 
+
+This is not confirmed by the benchmarks by Sulzmann and Lu
+\cite{Sulz12a}, but they offer an explanation: in their profiling, they see
+that all Haskell implementations spend considerable time decoding the input
+strings. In other words, the measured performance is more of an artifact of the
+programming environment used.
+
+Compared to \textsc{RE2}, our algorithm doesn't provide many low-level optimizations,
+such as limiting the TDFA cache size or an analysis of the pattern for common
+simplifications such as optimizing for one-state matches\footnote{unambiguous
+NFA can be interpreted as DFA and can be matched more efficiently}. Further 
+it's algorithm to simulate the backtracking is simpler. However our algorithm
+doesn't require a separate pass for match detection and match extraction, which
+opens different scenarios -- the reason we can avoid this is that we are able
+to collect the instructions and incorporate them into the lazy DFA state
+compilation. Our algorithm adds the mapping phase from Laurikari, which allows
+us to find DFA states that can be made equivalent by some additional writes.
 
 \chapter{Data structures}\label{cha:data}
 In the previous chapter, we obtained an algorithm with a run-time
@@ -1493,10 +1547,28 @@ Second we notice that the algorithm preserves the order of the co-routines
 after each character read. This means that basically a depth first search
 is performed, with priorities formalizing what option is to be taken first.
 
+The correct parse is found if and only if after reading the whole string,
+\begin{enumerate}
+  \item the co-routine in the end state consumed all characters of the string
+    (and only those) in order and \label{correct-consume}
+  \item there is no co-routine that fulfills \ref{correct-consume} that took 
+    ``later'' low-priority edges. This corresponds to the depth-first search of
+    backtracking.
+\end{enumerate} 
+
 That certain paths are cut off, because the state has already been seen is
 equivalent to memoization in the backtracking procedure: If a higher priority
 state already found a path through this part of the parse, the following
 parse can be pruned.
+
+There is the possibilities of circles, so that the depth-first solution would 
+loop. This can be seen for example in the regular expression \regex{(a*?)*}, 
+where the preferred route in the graph is actually to capture an empty 
+repetition of \regex{a}. We tweak the Thompson construction for this 
+scenario, by giving a path to the logically next state after the automaton 
+with the same priority as from the start node for the star-operator, because 
+it is the only automaton where the start state competes with a complete run 
+through the pattern. 
 
 Now the parses are analogous for our procedure and $bt$:
 
