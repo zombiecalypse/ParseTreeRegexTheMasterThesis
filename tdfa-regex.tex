@@ -599,10 +599,13 @@ transitions to follow.
 
 \begin{algorithm}
   \begin{algorithmic}
+  \LineComment{Returns a list of co-routines that consumed the character}
   \Function{$run_{tagged}$}{coroutines, char}
+  \LineComment{$coroutines$ is a list of co-routines in order as returned here.}
+  \LineComment{$char$ is a character}
     \State Put all coroutines on the $low$ stack
     \State Initialize empty $buffer$ stack
-    \State Initialize empty stack $R$
+    \State Initialize empty list $R$ \Comment{the returned list of co-routines}
     \While{the stacks aren't both empty}
       \If{$high$ is not empty}
         \State Pop $c$ from the $high$ stack
@@ -824,6 +827,7 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
 
 \begin{algorithm}[htbp]
 \begin{algorithmic}[1]
+  \LineComment{Update the co-routine, interpreting the tag}
   \Function{$interpret$}{$t$, $c$}
     \LineComment{$t$ is a tag, $c$ is a co-routine}
     \If{$t$ is open tag of group $i$}
