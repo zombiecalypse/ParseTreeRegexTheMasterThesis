@@ -187,8 +187,8 @@ Regular expressions give us a concise language to describe patterns in
 strings and can be used for log analysis, natural language processing, and
 many other tasks involving structured data in strings. Their efficiency make
 them useful even for large data sets. Standard algorithms run in
-$\mathcal{n\, m}$, where $n$ is the length of the string to be matched
-against and $m$ is the length of the pattern\cite{Sedg90a}.
+$O(n\, m)$, where $n$ is the length of the string to be matched
+against and $m$ is the length of the pattern~\cite{Sedg90a}.
 
 A short-coming of standard regular expression engines is that they can
 extract only a limited amount of information from the string. A regular
@@ -257,12 +257,12 @@ the regular expression in at most $O(n\,m)$ time.
 
 A first step of processing large data sets is often to parse strings in order
 to obtain a more manageable format. As an example, consider log files.  As
-Jacobs\cite{Jaco09a} noted, ``What makes most big data big is repeated
+Jacobs~\cite{Jaco09a} noted, ``What makes most big data big is repeated
 observations over time and/ or space,'' and thus log files grow large
 frequently. At the same time, they provide important insight into the process
 that they are logging, so their parsing and understanding is important.
 
-Regular expressions make for scalable and efficient lightweight parsers\cite{Kart96a}.
+Regular expressions make for scalable and efficient lightweight parsers~\cite{Kart96a}.
 
 The parsing abilities of regular expression have provoked Meiners to declare
 that for intrusion detection, ``fast and scalable RE matching is
@@ -283,7 +283,7 @@ constructs need to be supported by our algorithm.
 
 Regular expressions have some constructs specific to them and literal
 character matches. They are typically described in a string describing the pattern.
-They can describe any regular language\cite{Sips05a} if one only
+They can describe any regular language~\cite{Sips05a} if one only
 considers \emph{match} vs \emph{non-match} though they are typically used to
 extract information.
 
@@ -313,8 +313,8 @@ extract information.
   \caption{Summary of regular expression elements}
 \end{table}
 
-\paragraph{Literals} The simplest option are literal characters like
-\regex{a}.
+\paragraph{Literals} The simplest form of regular expressions are literal
+characters like \regex{a}.
 
 \paragraph{Character ranges} Instead of matching only a single character, a
 regular expression might match any of a range of characters. This is denoted
@@ -327,8 +327,8 @@ There is also the special character range \regex{.} that matches any character.
 negate their content, so \regex{[\string^a-g]} would match anything except a through g.
 
 \paragraph{Concatenation} Two constructs put after each other have to match
-the string in order. For example \regex{a[bc]} matches a followed by either
-b or c.
+the string in order. For example \regex{a[bc]} matches \str{a} followed by either
+\str{b} or \str{c}.
 
 \paragraph{Option operator} The option operator denoted by \regex{?} allows
 either zero or one repetitions of the preceding element, preferring to have
@@ -351,13 +351,13 @@ few repetitions as possible. In back-tracking implementation, guessing the
 right path is an important efficiency feature and for all capturing
 implementation the path taken influences the captured groups.
 
-\paragraph{Alternation} Patters separated by the pipe symbol \texttt{|} can
+\paragraph{Alternation} Patterns separated by the pipe symbol \texttt{|} can
 either match the left part or the right part. This binds weaker than
 concatenation. Therefore \regex{abc|xyz} would match \str{abc} or \str{xyz}, but not
 \str{abxyz}.
 
 \subsection{Capture groups}
-Patterns enclosed by parens are treated as a single element, thus
+Patterns enclosed by parentheses are treated as a single element, thus
 \regex{(ab)*} captures \str{ab}, but not \str{aba}. More importantly for us is that
 after the match, the capture groups can be extracted: \regex{a(b*)c} when
 matching \str{abbbc} can extract \str{bbb} and the empty string when matching \str{ac}.
@@ -382,7 +382,7 @@ An intuitive and extensible algorithm for determining whether a string
 matches a regular expression is backtracking. This
 algorithm~\ref{alg:match-bt} is used as is or in a more optimized form in
 many languages, such as Java\footnote{\texttt{java.util.regex}},
-Python\footnote{The module \texttt{re}}, or Perl\cite{Cox07a}. For all its
+Python\footnote{The module \texttt{re}}, or Perl~\cite{Cox07a}. For all its
 advantages and ease of implementation the main problem is that it takes
 $\Theta(2^n\,m)$ time in the worst case:
 
@@ -418,8 +418,8 @@ steps to end in the $no\ match$ case.  Backtracking is fast if it guesses
 correctly, since there is not much overhead, but fails miserably if it guesses
 wrongly early on.
 
-Because it is so intuitive we will use it as the definition of a correct 
-behaviour throughout this article.
+Because backtracking is so intuitive we will use it as the definition of a
+correct behaviour throughout this thesis.
 
 \section{(Non-)deterministic finite-state automata}
 As they are heavily used throughout this paper, let us recall what
@@ -439,8 +439,8 @@ finds it, by trying the alternatives in lock-step.
 \autoref{fig:example-automaton} shows an example of an NFA's transition graph.
 
 An simple way to think about the process of reading input with an NFA is that
-of \emph{co-routines}. A co-routine is a procedure that has the ability to
-suspend itself and continue later -- it is similar to a thread, but they
+of \emph{co-routines}. Co-routines are procedures that has the ability to
+suspend themselves and continue later -- they are similar to threads, but co-routines
 don't need to be executed in parallel and are usually manually scheduled. In
 order to resume their work later, they contain some kind of memory that is
 specific to them.
@@ -448,8 +448,8 @@ specific to them.
 In the context of NFAs, a co-routine contains the current state and has access
 to the transition graph\footnote{Later more memory will be added to store the
 sub-matches.}. When reading a string, the NFA maintains a set of co-routines
-and advance them in lock-step. This means that each co-routine reads the
-current character and spawn new co-routines for all possible transitions. When
+and run them in lock-step. This means that each co-routine reads the
+current character and spawns new co-routines for all possible transitions. When
 reading a character, a co-routine must consume it, but might follow
 $\varepsilon$-transitions before. We model this by following
 $\varepsilon$-transitions in order, and whenever we encounter a transition that
@@ -499,7 +499,7 @@ state is $O(1)$}.
 \section{DFA based matching}\label{sec:dfa-match}
 Dissatisfied with the multiplicative $O(m)$ overhead, we can construct a DFA
 from the NFA before matching. This is done by the power set
-construction\cite{Sips05a}, which has time complexity $O(2^m)$. The idea is to
+construction~\cite{Sips05a}, which has time complexity $O(2^m)$. The idea is to
 replace all states by the set reachable from it with only
 $\varepsilon$-transitions -- therefore a DFA state is a set of NFA states. The
 transitions simulate a step in the original NFA, so they point to another set
@@ -511,13 +511,13 @@ This can be very useful, if the regular expression is statically known.
 The DFA based matching takes $O(n + 2^m)$, which is no better than backtracking
 if $m$ is not fixed. The power set construction simulates every transition
 possible in the NFA, but that is actually unnecessary: Instead we can
-intertwining the compilation and the matching to only expand new DFA states that
+intertwine the compilation and the matching to only expand new DFA states that
 are reached when parsing the string. At most one new DFA state is created after
 each character read and if necessary the whole DFA is constructed, after
 which the algorithm is no different from the eager DFA\@. The time complexity of
 the match is then $O(\min(n\, m, n+2^m))$.
 
-This is the best known result for matching\cite{Cox07a,Cox09a,Cox10a}.
+This is the best known result for matching~\cite{Cox07a,Cox09a,Cox10a}.
 
 Note however that for many matches, $n\, m$ is at least as good as $n+2^m$, 
 and in those cases, this gives no improvement over the NFA matching.
@@ -535,12 +535,12 @@ Remember that NFA interpretation can be thought as competing co-routines,
 running in lock-step with each step consuming exactly one character of the 
 input string\footnote{The empty string can be modelled as containing only the 
 `\textbackslash 0' character.}
-This model already implies that some form of instruction is executed on a 
-transition, so it is possible to add other instructions that allow us to 
+This model already implies that some form of instructions are executed on a
+transition, so it is possible to add other instructions that allow us to
 store the capture groups.
 This is the idea of the tagged finite state
-automaton\footnote{First called that by Laurikari\cite{Laur00a}}, which
-attaches general \emph{tags} to transitions, that modify the co-routine's
+automaton\footnote{First called that by Laurikari~\cite{Laur00a}}, which
+attaches general \emph{tags} to transitions that modify the co-routine's
 memory in some way. This way, co-routines can store the complete information,
 where they matched which capture group in their own memory.
 
@@ -551,11 +551,11 @@ that corresponds to the start or end of a capture group.
 Side effects, such as storing the current location, make co-routines using
 different routes to the same state differ in meaning. Consider the regular
 expression \regex{(a)|(.)} reading the string \str{a}: depending on the path
-chosen, our capture groups will either contain \str{a} in the first or
+chosen our capture groups will either contain \str{a} in the first or
 second capture group. This requires us to define a unique order for expanding
 co-routines on each state, so that we can avoid this ambiguity.
 This is avoided by
-giving a \emph{negative priority}\footnote{See also Laurikari\cite{Laur00a}} to
+giving a \emph{negative priority}\footnote{See also Laurikari~\cite{Laur00a}} to
 one of the transitions or require one to consume a character, whenever we have
 an out-degree of two\footnote{Note that in the Thompson construction, we have
 an out-degree of at most two.}.
@@ -592,10 +592,8 @@ which is an original contribution of this paper.
 
 In order to simulate backtracking correctly, we need that all paths reachable 
 from the state after the prioritized transition is processed first, even if
-interrupted by the need to consume another character. This scheduling can be
-done by using a buffer, in which states that are seen are stored and that is
-flushed into the DFA state in LIFO order if there are no more high-priority
-transitions to follow.
+interrupted by the need to consume another character. This prioritization is 
+achieved by using a buffer, that reverses the order of high-priority runs.
 
 \begin{algorithm}
   \begin{algorithmic}
@@ -653,7 +651,7 @@ u(m))$, where $u(m)$ describes the amortized cost of logging a single opening
 or closing of a capture group. We then show a
 simple data structure that allows us to achieve $u(m) = \log m$ and
 continue to present a way to improve this to $u(m) = 1$ following Driscoll et
-al\cite{Dris89a}. This gives us $O(n\, m)$ run time for the
+al~\cite{Dris89a}. This gives us $O(n\, m)$ run time for the
 complete algorithm, which is the best known run time for NFA algorithms. We 
 also consider practical problems such as caching current results, just-in-time
 compilation, and compact memory usage.
@@ -1015,31 +1013,31 @@ To compile the TNFA to a TDFA we have to capture the modifications that we
 encounter between reading characters. After doing so, we need to check if 
 we're in a DFA state that we already encountered and that we can create a new 
 connection to. Equality of TDFA states can't be the same as equality between 
-DFA states -- the equality of the contained NFA states doesn't care for the 
-order in which they are visited and further it doesn't respect that two 
+DFA states -- the equality of the contained NFA states doesn't care about the 
+order in which they are visited and furthermore it doesn't respect that two 
 expansions might have different executed instructions. This has been addressed
-by Laurikari\cite{Laur00a} by finding equivalent or \emph{mappable} TDFA
+by Laurikari~\cite{Laur00a} by finding equivalent or \emph{mappable} TDFA
 states. A mapping is a bijection of two states that needs to be found at
 compilation time. For the details, the interested reader needs to wait for the
 detailed description of our algorithm in chapter~\ref{sec:algo}.
 
 The idea of adding other instructions to the co-routines in the automaton
 that is the finite state machine (be it NFA or DFA) isn't new. The first
-implementation using this to the authors' knowledge is Pike\cite{Pike87a} in
+implementation using this to the author's knowledge is Pike~\cite{Pike87a} in
 his text editor \textsc{sam}. He used a pure tagged NFA algorithm to find one
 match for each capture group quite similar to our or Laurikari's approach. This
 was only published in source code, to a great loss for the academic community.
 
 The correct handling of greediness (not of non-greediness) was implemented by
-Kuklewicz\cite{Kukl07a} for the Haskell implementation\footnote{Or free
+Kuklewicz~\cite{Kukl07a} for the Haskell implementation\footnote{Or free
 interpretation, since Laurikari leaves the matching strategy open.} of
 Laurikari's algorithm. This too was only published in source code, to a great
 loss for the academic community.
 
 Cox calls Laurikari's TDFA a reinvention of Pike's algorithm, but while that 
-is in parts true, Laurikari introduces the mapping step described in 
+is in part true, Laurikari introduces the mapping step described in 
 algorithm~\ref{findmapping}. This leads Laurikari's algorithm to contain 
-fewer states and one would hope that this leads to a better run-time than 
+fewer states and one would hope that this would lead to a better run-time than 
 Google's \textsc{RE2}\footnote{\url{https://code.google.com/p/re2/}},
 which is based on Pike's algorithm. 
 
@@ -1252,7 +1250,7 @@ This structure gives us better asymptotic performance at the cost of
 following $\log m$ pointers, because $T = O(\log m + \log m) = O(\log m)$.
 
 \section{Storing updates}
-Driscoll et al\cite{Dris89a} describe how any pointer machine data structure
+Driscoll et al~\cite{Dris89a} describe how any pointer machine data structure
 with a fixed number of links to each version can be converted to a fully
 persistent data structure in $O(1)$ amortized time. This section shows
 the steps involved to equip an array with such an interface.
@@ -1336,7 +1334,7 @@ requires us however to determine the relative positions of $t_{stored}$ and
 $t_{querried}$ in the version tree, where the naive implementation would take
 $\log m$ time. This is the order maintenance problem and fittingly can be
 solved using an order maintenance data structure, such as the one proposed by
-Dietz and Sleator\cite{Diet87b} which we discuss in \Secref{order-maintenance}.
+Dietz and Sleator~\cite{Diet87b} which we discuss in \Secref{order-maintenance}.
 
 For the moment let us assume that we have a linear data structure, that
 \begin{enumerate}
@@ -1380,11 +1378,11 @@ $t_2$.
 
 \section{Order maintenance}\seclabel{order-maintenance}
 Dietz and Sleator describe in their paper Two Algorithms for Maintaining
-Order in a List\cite{Diet87b}\footnote{And Bender et al\cite{Bend02a} in
+Order in a List~\cite{Diet87b}\footnote{And Bender et al\cite{Bend02a} in
 their revision of this classical paper}, a simple one that provides amortized
 guarantees and a more involved one, which could offer worst-case guarantees.
 For our purposes the amortized version suffices, as noted by Driscoll et
-al\cite[p. 108]{Dris89a}.
+al~\cite[p. 108]{Dris89a}.
 
 The data structure keeps so called \emph{tags} $\eta(e)$ for elements, which are
 integers that describe the order. In order to query the relative position of
@@ -1409,7 +1407,7 @@ existing nodes.
 \subsection{Relabeling}
 The purpose of the relabeling step is to ensure that there is a gap to fit
 in the new element and reduce the potential of a next reordering step. An
-intuitive perspective is shown by Bender et al\cite{Bend02a}:
+intuitive perspective is shown by Bender et al~\cite{Bend02a}:
 
 The labels can be thought of a coding of paths in a complete binary tree as
 visualized in \Figref{labels-bin-tree}. We can then define the
@@ -1486,7 +1484,7 @@ amortized insert. This can be resolved using a technique known as
 \emph{indirection}.
 
 \subsection{Indirection}
-Indirection is a method introduced by Willard\cite{Will82a} to eliminate
+Indirection is a method introduced by Willard~\cite{Will82a} to eliminate
 annoying $\log$ factors under certain conditions such as the one just
 encountered.  With it we leave the realm of list-labeling and cease to store
 the full label in each node. Instead we now keep a two-level structure
@@ -1874,7 +1872,7 @@ part, not least because the publication medium of source code without
 accompanying article was chosen.
 
 Regular expressions are by no means new and originated with Kleene in the
-1950ies\cite{Sips05a}. This chapter first introduces some standard
+1950~\cite{Sips05a}. This chapter first introduces some standard
 procedures for regular expression matching (without extracting any
 information), such as Backtracking in \Secref{backtracking} and various
 automata based approaches in sections~\ref{sec:nfa-match}, \ref{sec:dfa-match},
@@ -1886,24 +1884,24 @@ Even though we first believed ourselves to be, we are actually not the first
 to produce parse trees in competitive time, as seen in \Secref{parse-trees-related}.
 
 A problematic aspect of the literature is that many authors perceive regular 
-expression parsing a linear problem -- linear in the length of the string 
+expression parsing to be a linear problem -- linear in the length of the string 
 with a constant for the pattern size. This limits the applications, because 
 this means that an algorithm that takes $O(2^m+n)$ time seems very 
-competitive for a fixed $m$, but is prohibitively expensive for large $m$. 
+competitive for a small and fixed $m$, but is prohibitively expensive for large $m$. 
 The argument that the pattern is typically small seems circular to the 
-authors, because would the implementation focus on allowing large patterns, 
+author, because would the implementation focus on allowing large patterns, 
 new applications using large patterns would arise\footnote{To check if a document
 contains features $f_1, f_2, \dots, f_n$, we would match the document
 against regular expression \regex{(f_1)|(f_2)|\dots|(f_n)}.}.
 
-In this paper, we will consider the best known algorithms quadratic. It is 
+In this paper, we will consider the best known algorithms to be quadratic. It is 
 not known if there is any algorithm that beats the $O(n\, m)$ matching, but 
 in \Secref{lower-bound}, a lower bound of $\Theta(n\, \min(m, \abs{\Sigma}))$ 
 is proven.
 
 \section{Revisiting backtracking}\seclabel{revise-backtrack}
 As seen earlier, backtracking makes for easy implementations, but exponential
-run-time in the worst case for many patterns. Norvig\cite{Norv91a} showed that
+run-time in the worst case for many patterns. Norvig~\cite{Norv91a} showed that
 this can be avoided by using memoization for context free grammars.  This
 allows for $O(n^3\, m)$ time parsing. While this is significantly higher than
 the $O(n\, m)$ of the automata based approaches, it is also more general,
@@ -1951,16 +1949,18 @@ also make the memoization approach applicable to the backtracking algorithm
 for regular expressions.
 
 To see the advantage, let's revise the example that produced exponential runtime
-for regular backtracking: \regex{(x*)*y} on the string $x^n$. After failing
-for the first time with greedily consuming the $n$ $x$ characters. This
-memoizes that $x^{n-1}$ is not parsable, so the recursion stops after only
-these steps, finding that the string isn't parsable as a whole.
+for regular backtracking: \regex{(x*)*y} on the string $x^n$. Now consider
+
+\begin{align*}
+  \widehat{bt}(x^n, \regex{(x*)*y}) &= bt(x^{n-1}, \regex{(x*)*y}) || bt(x^{n}, \regex{(x*)*y}) \\
+  &= bt(
+\end{align*}
 
 \section{Packrat parsers}
 The memoization approach can be extended further to so-called \emph{packrat}
-parsing\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain
+parsing~\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain
 $O(n\,m)$, but the memoization gives a space overhead that is
-$O(n)$, with a big constant\cite{Ford02a} -- or to put it in another way: The
+$O(n)$, with a big constant~\cite{Ford02a} -- or to put it in another way: The
 original string is stored several times over. This makes them flexible and fast
 parsers for small input, but cannot be used for big data sets. To understand
 how they work, let's first look at PEG:
@@ -2001,7 +2001,7 @@ possible interpretations.
 
 The downside to this is that Packrat parsers have a large space overhead that
 make them infeasible for large
-inputs\cite{Beck08a}\footnote{\quote{[\dots] the Java parser generated
+inputs~\cite{Beck08a}\footnote{\quote{[\dots] the Java parser generated
 by Pappy requires up to 400 bytes of memory for every byte of input.}}.
 
 \section{Automata based extraction of parse trees}\seclabel{parse-trees-related}
@@ -2197,7 +2197,7 @@ happens, exponentially outperforms back-tracking approaches for pathological
 input, and in a realistic scenario outperforms backtracking by 40\%, even
 though our approach produces the full parse tree, and the backtracking
 implementation doesn't. All source code and all benchmarks are available under
-a free license on Github\cite{Schwarz:10861} at
+a free license on Github~\cite{Schwarz:10861} at
 \url{https://github.com/nes1983/tree-regex}.
 
 \begin{appendices}
