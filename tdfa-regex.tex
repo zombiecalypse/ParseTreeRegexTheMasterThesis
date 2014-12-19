@@ -32,6 +32,11 @@
 \newtheorem*{defn}{Definition}
 \newtheorem{thm}{Theorem}
 
+\newcommand{\ra}{$\rightarrow$}
+\newcommand{\regex}[1]{\ensuremath{\mathtt{/#1/}}}
+\newcommand{\str}[1]{``\ensuremath{\mathtt{#1}}''}
+\newcommand{\abs}[1]{\left|#1\right|}
+
 % ============================================================
 %% Uncomment the next few lines to get sf URL links:
 %\usepackage{url}
@@ -47,9 +52,6 @@
 \usepackage{ifthen}
 \usepackage[normalem]{ulem} % for \sout
 \usepackage{xcolor}
-\newcommand{\ra}{$\rightarrow$}
-\newcommand{\regex}[1]{\ensuremath{\mathtt{/#1/}}}
-\newcommand{\str}[1]{``#1''}
 \newboolean{showedits}
 \setboolean{showedits}{false} % toggle to show or hide edits
 
@@ -149,8 +151,6 @@
 \special{papersize=8.5in,11in}
 \setlength{\pdfpageheight}{\paperheight}
 \setlength{\pdfpagewidth}{\paperwidth}
-
-\newcommand{\abs}[1]{\left|#1\right|}
 
 \frenchspacing
 
@@ -656,7 +656,7 @@ complete algorithm, which is the best known run time for NFA algorithms. We
 also consider practical problems such as caching current results, just-in-time
 compilation, and compact memory usage.
 
-Conceptually, our approach is the following pipeline of four stages:
+Conceptually, our approach consists of four stages:
 \begin{enumerate}
   \item Parse the regular expression string into an AST (\Secref{regex-syntax}).
   \item Transform the AST to an NFA (\Secref{thompson}).
@@ -666,9 +666,9 @@ Conceptually, our approach is the following pipeline of four stages:
 
 In reality, things are a little more involved, since the transformation
 to DFA is lazy, and the compactification only happens after no lazy
-compilation occurred in a while. Worse, compactification can be
+compilation has occurred in a while. Also compactification can be
 undone if needed. Since the essence of the algorithm is step 2 and 3,
-we start with them and proceed see 1 and 4 as part of the implementation.
+we start with them and proceed to see steps 1 and 4 as part of the implementation.
 
 \section{Thompson's construction} 	\seclabel{thompson}
 
@@ -694,7 +694,7 @@ an expression in two steps:
 \item We construct an NFA graph for the expression, without any
 repetition.  \autoref{fig:example-automaton} shows how this plays
 out in our running example, which contains the expression \regex{.*?}.
-An automaton for expression~\regex{.} is constructed. The expression
+An automaton for the expression \regex{.} is constructed. The expression
 \regex{.} is modeled as just two nodes labeled 3 and 4, and a
 transition labeled ``any'' between them.
 
@@ -729,7 +729,7 @@ priority over those of low priority\footnote{See \Secref{tfsm}}.
 
 \section{Logging capture groups in a TNFA}\seclabel{tnfa}
 
-Our algorithm is directly based on algorithm~\ref{alg-coroutine-tagged}, so 
+Our algorithm is directly based on algorithm~\ref{alg:coroutine-tagged}, so 
 this section lays out the storage required by the co-routines and the
 interpretation of the tags that we introduced in the previous section.
 
@@ -775,24 +775,24 @@ We use the following vocabulary.
 	Note that histories can be shared across co-routines if they
 	have the same matches. The order of the co-routines is relevant and a DFA 
   state is thus a list of NFA states.
-\item[Histories] are linked list, where each node stores a position in the
-  input text.  The head is mutable, the rest is immutable. Therefore, histories
+\item[Histories] are linked lists, where each node stores a position in the
+  input text.  The head is mutable, and the rest is immutable. Therefore, histories
   can share any node except their heads. We write $h=[x_1, \dots, x_m]$ to
-  describe that matches occurred at the positions $x_1, \dots, x_m$.
+  describe that matches have occurred at the positions $x_1, \dots, x_m$.
 \item[Co-routines] are denoted as pairs $(q_i, h)$, where $q_i$ is some
 	NFA state, and $h = (h_1, \dots, h_{2n})$ is an array of histories,
 	where $n$ is the number of capture groups.  Each co-routine has an array
   of $2n$ histories. In an array of histories $((h_1, h_2), \dots
   (h_{2n-1}, h_{2n}))$, history $h_1$ is the history of the openings
-	of the first capture group, $h_2$ is the history of the closings of
+	of the first capture group, and $h_2$ is the history of the closings of
   the first capture group, and so on. The visual pairing of the histories is in
   order to visualize which histories denote start and end of which capture group.
-\item[Transitions] are  understood to be between NFA states,
+\item[Transitions] are  understood to be between NFA states, so
 	$q_1\rightarrow q_2$ means a transition from $q_1$ to $q_2$.
 \end{description}
 
 Take for example the regular expression \regex{(..)+} matching
-pairs of characters, on the input string \str{abcd}. The history array of the
+pairs of characters, on the input string \str{\overset{0123}{abcd}}. The history array of the
 finishing co-routine  is $((h_1=[0], h_2=[3]), (h_3=[2,0], h_4=[3,1]))$.
 Histories $h_1$ and $h_2$ contain the positions of the entire match: position 0
 through 3.  Histories $h_3$ and $h_4$ contain the positions of all the matches of
@@ -843,7 +843,9 @@ function as seen in algorithm~\ref{alg:coroutine-tagged}.
 
 The states are given to the algorithm in the order visited, so that the
 coroutine that got furthest is expanded first when the next character is
-read. The \emph{buffer} variable is a detail that ensures this.
+read. The \emph{buffer} variable is a detail that ensures that the correct 
+order of co-routines is produced. If our procedure is consistently used, the
+prioritization will lead to a correct match.
 
 Note that the ordering of co-routines inside of DFA states is relevant.
 In \Figref{example-automaton}, after reading only one comma as an
@@ -856,7 +858,7 @@ a fork of the co-routine of state 6, not 3. This matters, since 6 and
 3 may disagree about their histories.
 
 \begin{example} Execution of algorithm~\ref{alg:coroutine-tagged} with the
-  interpret as above:
+  function $interpret$ as above:
 
 Consider the automaton in figure~\ref{fig:example-automaton} is in
 the DFA state\footnote{This is the starting state.}
@@ -1070,8 +1072,8 @@ This chapter presents some possible data structures, that allow for this.
 
 \section{Fully persistent data structures}	\seclabel{treap}\seclabel{data-structures}
 In order to allow modifications of our list of histories, it is
-necessary to build a data structure that provides the interface a guarantees
-of a copy-on-write array:
+necessary to build a data structure that has the same interface as a
+copy-on-write array:
 
 \begin{definition}
   An \texttt{Arraylike} data structure $A$ of length $m$ must provide the
@@ -1089,10 +1091,10 @@ of a copy-on-write array:
   This is a definition of a fixed-size fully-persistent linear data structure.
 \end{definition}
 
-Note that multiple versions of the data structure can change, every version
-that is in a living co-routine. A way to visualize this is as a tree of
-versions, where each $set$ call forks off a new node, as seen in
-\Figref{version-tree}.
+Every version that is in a living co-routine can change and so a single 
+version can fork into different directions. A way to visualize
+the history is as a tree of versions, where each $set$ call forks off a new node, as
+seen in \Figref{version-tree}.
 
 \begin{figure}[htpb]
   \centering
@@ -1136,8 +1138,8 @@ child {
 };
   \end{tikzpicture}
   \caption{A tree of versions. Forks in the tree mean that multiple threads
-  forked from the same state in the TNFA. The labels describe be the relative
-order of creation. It isn't linear.}
+  were forked from the same state in the TNFA. The labels describe the relative
+order of creation.}
   \figlabel{version-tree}
 \end{figure}
 
@@ -1148,7 +1150,7 @@ $T=O(T_{get} + T_{set}) = O(max(T_{get}, T_{set}))$ measured in amortized time.
 
 \section{Copy-on-write array}
 The arguably simplest class to provide the interface is an array that copies
-itself before making modifications:
+itself before modifications are made:
 
 \begin{description}
   \item[Constructor] $A(m)$ allocate an array of histories $a$ of size $m$.
@@ -1257,15 +1259,18 @@ the steps involved to equip an array with such an interface.
 
 The idea behind the conversion is that instead of modifying the array
 directly, we instead keep a buffer of modifications that is of fixed
-size. Let's for the moment assume that we have a linear order of modifications
-and only add the version tree later.
+size, thus lazily applying the modifications. For the purposes of this 
+chapter, we will call this kind of data structure $LazyApply$.
+
+Let's assume for the moment, that modifications only ever happen in the most
+recent version of our array.
 
 \subsection{Linear versions}
 In this part, we only modify the most recent version $t^\star$ and only
 access the old versions $0 \leq t \leq t^\star$. In order to store the
 modifications, we introduce the struct $Set(t, i, history)$, which can be stored
 in the modification buffer. The implementation of the simple methods can be
-seen in algorithm~\ref{alg:lazy-apply-1}
+seen in algorithm~\ref{alg:lazy-apply-1}.
 
 \begin{algorithm*}
 \begin{algorithmic}[1]
@@ -1296,7 +1301,7 @@ seen in algorithm~\ref{alg:lazy-apply-1}
 \caption{\label{alg:lazy-apply-1}Methods of the $LazyApply$ data structure}
 \end{algorithm*}
 
-The amorized constant time for $get$ and $set$ arise from the fact that while
+The amortized constant time for $get$ and $set$ arise from the fact that while
 we iterate through the changes, we only have a constant number of them.
 
 \subsection{Version tree}
@@ -1307,15 +1312,15 @@ that the modification in $t_1$ also needs to be taken into account in $t_2$,
 $t_2$ can happen before $t_1$, or they can be siblings, so that the
 modifications shouldn't influence each other.
 
-The problem of generalizing this approach to version trees is two fold: The
-first problem is, that we need to determine whether a modification applies to a
+The problem of generalizing this approach to version trees is twofold: The
+first problem is that we need to determine whether a modification applies to a
 version in constant time, otherwise $get$ would become slower. The second
 problem is that modifying the same version reduces to copying the array of
 histories if said version has a full buffer. The latter is more easily solved
 and thus will be discussed first.
 
 \paragraph{Emptying a full buffer} Instead of applying all modifications, we
-can split the modification buffer in two roughly equal parts. In order to do
+can split the modification buffer into two roughly equal parts. In order to do
 that, we can find a subtree $v$ of modifications of size $\approx \frac{p}{2}$.
 Instead of applying all modifications to the array of histories, we only
 apply the ancestors of $v$. Then we delete all modifications in $v$ from the
@@ -1328,17 +1333,17 @@ update the references in amortized constant time.
 
 \paragraph{Constant time ordering of versions}
 In order to determine whether to apply a modification on a read, we need to
-find the relation between the version that is querried and the one that is
-stored. If $t_{stored} < t_{querried}$, we apply the modification. This
+find the relation between the version that is queried and the one that is
+stored. If $t_{stored} < t_{queried}$, we apply the modification. This
 requires us however to determine the relative positions of $t_{stored}$ and
-$t_{querried}$ in the version tree, where the naive implementation would take
+$t_{queried}$ in the version tree, where the naive implementation would take
 $\log m$ time. This is the order maintenance problem and fittingly can be
 solved using an order maintenance data structure, such as the one proposed by
 Dietz and Sleator~\cite{Diet87b} which we discuss in \Secref{order-maintenance}.
 
 For the moment let us assume that we have a linear data structure, that
 \begin{enumerate}
-  \item allows inserting an element next to a known element in $O(1)$ time.
+  \item allows an element to be inserted next to a known element in $O(1)$ time.
   \item allows us to query the order of two elements $a$ and $b$ in the list
     in $O(1)$ time. We'll call this operation $query_<(a, b)$.
 \end{enumerate}
@@ -1464,7 +1469,7 @@ threshold. In this range, the labels changed to make them equally spaced.}
 \begin{defn}
   The \emph{overflow threshold} of a subtree is $1.5^i$ for any
   level\footnote{$a=1.5$ is an arbitrary choice for a number $1 < a < 2$.} $i$,
-  starting counting from the leafs, which are level 0.
+  starting counting from the leaves, which are level 0.
 
   \emph{Overflow} happens, when the number of items in a subtree are bigger
   than the overflow threshold.
@@ -1474,7 +1479,7 @@ With this definition, we can define the region that we relabel to be the
 first subtree that isn't in overflow -- which means that is is filled
 sufficiently sparsely to reduce the potential new relabels. In this subtree
 we spread the labels equally, which ensures that we will not have to
-do any relabeling for another $\floor{1.5^{-i}}$ inserts. Note that a much
+do any relabeling for another $\floor{1.5^{i}}$ inserts. Note that a much
 bigger region might be in overflow, but no checks are done if they are not
 triggered by an overflow at level 0, i.e.\ placing a node between two adjacent
 nodes.
@@ -1820,7 +1825,7 @@ The compromise we found is the following: The canonical representation
 of the transition table is a red-black tree of transitions, each
 transition containing source and target DFA state (both as the full
 list of their NFA states, and histories), an input range, and a
-list of instructions. This structure allows for quick inserting of
+list of instructions. This structure allows for quick insertion of
 new DFA states once they are lazily compiled.  At the same time,
 lookups in a red-black tree are logarithmic.  Then, whenever we
 read a fixed number of input characters without lazily compiling,
@@ -1832,11 +1837,11 @@ generate the missing DFA state, and add it to the red-black tree.
 
 The above algorithm chimes well with the observation that usually,
 regular expression matching needs only a handful of DFA states, and thus,
-compactifying can be done early, and only seldom need to be undone.
+compactification can be done early, and only seldom need to be undone.
 
 \section{Intertwining of the pipeline stages}
 The lazy compilation of the DFA when matching a string enables us
-to avoid compiling states of it that might never be necessary. This
+to avoid compiling states of it that might never be needed. This
 allows us to avoid the full power set construction \cite{Sips05a}, which has
 time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 
@@ -1844,7 +1849,7 @@ time complexity of $O(2^m)$, where $m$ is the size of the NFA.
 Parsing the regular expression into an abstract syntax tree is a detail that
 can easily be missed. Since the algorithm for matching is already very fast,
 preliminary experiments showed that the parsing of the regular expression, even
-in simple regular expressions, this step can take up a major part (25\% in our
+in simple regular expressions, can take up a major part (25\% in our
 experiment) of the time for running the complete match.
 
 The memory model to parse a regular expression is a stack, since capture groups
@@ -1951,10 +1956,26 @@ for regular expressions.
 To see the advantage, let's revise the example that produced exponential runtime
 for regular backtracking: \regex{(x*)*y} on the string $x^n$. Now consider
 
+\newcommand{\opor}{\quad || \quad}
+\newcommand{\bt}{\widehat{bt}}
+
 \begin{align*}
-  \widehat{bt}(x^n, \regex{(x*)*y}) &= bt(x^{n-1}, \regex{(x*)*y}) || bt(x^{n}, \regex{(x*)*y}) \\
-  &= bt(
+  \widehat{bt}(x^n, \regex{(x*)*y}) &= \underbrace{\bt(x^{n}, 
+  \regex{(x*)(x*)*y})}_{\text{1 repetition}} \opor \bt(x^{n}, \regex{y}) \\
+  &= \bt(x^{n-1}, \regex{(x*)(x*)*y}) \opor \bt(x^{n}, \regex{(x*)*y}) \opor \bt(x^{n}, \regex{y}) \\
+  &=\dots \\
+  &= \bt(x^{0}, \regex{(x*)(x*)*y}) \opor \bt(x^{1}, \regex{(x*)*y}) \opor \dots \\
+  &\qquad\opor  \bt(x^{n}, \regex{(x*)*y}) \opor \bt(x^{n}, \regex{y}) \\
+  &= \bt(x^{1}, \regex{(x*)*y}) \opor \dots \opor  \bt(x^{n}, \regex{(x*)*y}) \opor \bt(x^{n}, \regex{y}) \\
+  &= \bt(x^{1}, \regex{y}) \opor \underbrace{\bt(x^{1}, \regex{(x*)(x*)*y})}_{\text{memoized}} \opor \dots \\
+  &\qquad\opor  \bt(x^{n}, \regex{(x*)*y}) \opor \bt(x^{n}, \regex{y}) \\
+  &=\dots\\
+  &= \bt(x^{n}, \regex{y}) \\
+  &= \text{no match}
 \end{align*}
+
+Nearly all backtracking can be avoided, because the branch has been evaluated 
+before.
 
 \section{Packrat parsers}
 The memoization approach can be extended further to so-called \emph{packrat}
@@ -1962,12 +1983,12 @@ parsing~\cite{Mede12a} based on Parsing Expression Grammars (PEG), to obtain
 $O(n\,m)$, but the memoization gives a space overhead that is
 $O(n)$, with a big constant~\cite{Ford02a} -- or to put it in another way: The
 original string is stored several times over. This makes them flexible and fast
-parsers for small input, but cannot be used for big data sets. To understand
-how they work, let's first look at PEG:
+parsers for small input, but they cannot be used for big data sets. To
+understand how they work, let's first look at PEG:
 
 \emph{Parsing Expression Grammars} are grammars similar to context-free
-grammars with the difference, that they allow no left-recursion and no
-ambiguity, each expression has exactly one correct parse tree and consumes at
+grammars with the difference that they allow no left-recursion and no
+ambiguity each expression has exactly one correct parse tree and consumes at
 least one character. In this they are similar to regular expressions, but
 capture more than just regular languages.  Such an expression can contain
 literals, recursive subexpressions, ordered choice, repetitions and
@@ -1994,15 +2015,15 @@ The implementation of these grammars as recursive descent/backtracking
 parsers is quite simple. The corresponding Packrat parser is the straight
 forward memoization of this. This is in principle nothing new, the
 memoization approach to context-free grammars uses the same approach, but the
-restriction to PEG make the problem solved easier: without ambiguity less
+restriction to PEG simplify the problem: without ambiguity fewer
 references need to be stored to possible parses and since parsers consume at
 least a character, each character in the input string has at most $m$
 possible interpretations.
 
 The downside to this is that Packrat parsers have a large space overhead that
 make them infeasible for large
-inputs~\cite{Beck08a}\footnote{\quote{[\dots] the Java parser generated
-by Pappy requires up to 400 bytes of memory for every byte of input.}}.
+inputs~\cite{Beck08a}\footnote{\quote{``The Java parser generated
+by Pappy requires up to 400 bytes of memory for every byte of input.''}}.
 
 \section{Automata based extraction of parse trees}\seclabel{parse-trees-related}
 Memoization is a powerful tool to achieve fast parsers, but they have a
@@ -2062,14 +2083,14 @@ character ranges.
 \section{Large scale data analysis of a stream of text}\label{sec:stream}
 Due to its improvements in requiring only a single pass over the input and
 its memory allocation pattern, our algorithm is especially fitted for a
-scenario, where the input string is of unknown size or of size to big to fit
+scenario where the input string is of unknown size or of size too big to fit
 on a single machine.
 
 Consider the task of finding a parse tree of a regular grammar for a text
 that is stored on machines $M_1, \dots, M_n$. Now in order to parse the
 string, we set aside a machine $P$, that will do the parsing. We only need the NFA of the
 pattern to fit on $P$ and can then receive each of the shards
-from $M_1$ to $M_n$ in turn and discard it afterwards. Even if the parse tree
+from $M_1$ to $M_n$ in turn and discard them afterwards. Even if the parse tree
 (containing the indices of the beginning and end of the groups) is too large
 to fit on the machine, we can send the cells to other machines. Because the
 cells are not touched anymore, there will never be a need for $P$ to retrieve
@@ -2110,7 +2131,7 @@ java.util.regex.}
 $n$ & 13 & 14 & 15 & 16 & 17 & 18 & 19 & 20\tabularnewline
 \midrule
 java.util.regex & 241 & 484 & 1003 & 1874 & 3555 & 7381 & 14561 & 30116\tabularnewline
-Ours & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
+Our implementation & 225 & 252 & 273 & 32 & 327 & 352 & 400 & 421\tabularnewline
 \bottomrule
 \end{tabular}
 \caption[Matching times $\textit{a?}^n\textit{a}^n$ against input $\textit{a}^n$.]{Matching times, in microseconds, for matching
@@ -2151,7 +2172,7 @@ microseconds.}
 \tablabel{abc}
 \end{table}
 
-Finally, as a more realistic example, neither chosen to favor
+Finally, a more realistic example, neither chosen to favor
 back-tracking nor to avoid it,  extracts all class names, with their
 package names, from the project sources itself.  As seen in
 \Tabref{real}, our approach outperforms java.util.regex by 40\%,
@@ -2171,7 +2192,7 @@ java.util.regex & 11,319\tabularnewline
 Ours & 8,047\tabularnewline
 \bottomrule
 \end{tabular}
-\caption[Matching times for finding all java class names]{Runtimes, in microseconds, for finding all java class names in all
+\caption[Matching times for finding all Java class names]{Runtimes, in microseconds, for finding all java class names in all
   .java files in the project itself. The regular expression used is
   \regex{(.*?([a-z]+\textbackslash.)*([A-Z][a-zA-Z]*))*.*?}.
 Runtime in microseconds}
@@ -2180,7 +2201,7 @@ Runtime in microseconds}
 
 
 \chapter{Conclusion}
-Regular expression make for lightweight parsers and there are many cases
+Regular expressions make for lightweight parsers and there are many cases
 where data is extracted this way. If such data is structured
 instead of flat, a parser that produces trees is superior to a standard
 regular expression parser. We provide such an algorithm with modern
